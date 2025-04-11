@@ -12,7 +12,14 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('✅ Connessione a MongoDB riuscita'))
 .catch((err) => console.error('❌ Errore di connessione a MongoDB:', err));
 
-app.use(cors());
+const corsOptions = {
+  origin: '*', // o specifica "https://TUO-FRONTEND.vercel.app"
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+};
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 // "Database" temporaneo in memoria
@@ -60,4 +67,9 @@ app.post('/api/spese', async (req, res) => {
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
+});
+
+
+app.get('/', (req, res) => {
+  res.send('✅ Backend Budget App attivo!');
 });
