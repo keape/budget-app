@@ -6,6 +6,8 @@ import {
 } from 'recharts';
 import React from 'react';
 import { useTheme } from './ThemeContext';
+import BASE_URL from './config';
+
 
 function Filtri() {
   const [spese, setSpese] = useState([]);
@@ -15,7 +17,7 @@ function Filtri() {
   const { darkMode } = useTheme();
 
   useEffect(() => {
-    axios.get('http://localhost:5001/api/spese')
+    axios.get(`${BASE_URL}/api/spese`)
       .then(res => setSpese(res.data))
       .catch(err => console.error('Errore nel caricamento delle spese:', err));
   }, []);
