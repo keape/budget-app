@@ -1,0 +1,24 @@
+{
+  "name": "budget-app",
+  "version": "1.0.0",
+  "main": "testMongo.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keape/budget-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/keape/budget-app/issues"
+  },
+  "homepage": "https://github.com/keape/budget-app#readme",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "mongoose": "^8.13.2"
+  }
+}
