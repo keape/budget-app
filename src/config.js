@@ -1,3 +1,2 @@
-const BASE_URL = 'https://budget-app-ao5r.onrender.com/api/spese';
-
+const BASE_URL = process.env.REACT_APP_BASE_URL;
 export default BASE_URL;
