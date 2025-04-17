@@ -56,18 +56,50 @@ function Budget() {
   const [meseCorrente, setMeseCorrente] = useState(new Date().getMonth());
   const [annoCorrente, setAnnoCorrente] = useState(new Date().getFullYear());
 
+  const mesi = [
+    "Intero anno",
+    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+  ];
+
+  const getBudgetPeriodo = (mese) => {
+    // Se mese è 0 (Intero anno), calcola il budget annuale
+    if (mese === 0) {
+      const budgetAnnuale = {};
+      // Somma i budget di tutti i mesi
+      for (let m = 1; m <= 12; m++) {
+        const budgetMese = getBudgetMensile(m - 1);
+        Object.keys(budgetMese).forEach(categoria => {
+          budgetAnnuale[categoria] = (budgetAnnuale[categoria] || 0) + budgetMese[categoria];
+        });
+      }
+      return budgetAnnuale;
+    }
+    // Altrimenti restituisce il budget del mese selezionato
+    return getBudgetMensile(mese - 1);
+  };
+
   useEffect(() => {
     axios.get(`${BASE_URL}/api/spese`)
       .then(res => {
-        // Filtra le spese per il mese corrente
-        const speseMese = res.data.filter(spesa => {
-          const dataSpesa = new Date(spesa.data);
-          return dataSpesa.getMonth() === meseCorrente && 
-                 dataSpesa.getFullYear() === annoCorrente;
-        });
+        let speseFiltrate;
+        if (meseCorrente === 0) {
+          // Per l'intero anno, filtra solo per anno
+          speseFiltrate = res.data.filter(spesa => {
+            const dataSpesa = new Date(spesa.data);
+            return dataSpesa.getFullYear() === annoCorrente;
+          });
+        } else {
+          // Per un mese specifico, filtra per mese e anno
+          speseFiltrate = res.data.filter(spesa => {
+            const dataSpesa = new Date(spesa.data);
+            return dataSpesa.getMonth() === meseCorrente - 1 && 
+                   dataSpesa.getFullYear() === annoCorrente;
+          });
+        }
 
         // Raggruppa le spese per categoria
-        const spesePerCategoria = speseMese.reduce((acc, spesa) => {
+        const spesePerCategoria = speseFiltrate.reduce((acc, spesa) => {
           acc[spesa.categoria] = (acc[spesa.categoria] || 0) + spesa.importo;
           return acc;
         }, {});
@@ -77,32 +109,27 @@ function Budget() {
       .catch(err => console.error("Errore nel caricamento delle spese:", err));
   }, [meseCorrente, annoCorrente]);
 
-  // Prepara i dati per il grafico usando il budget del mese corrente
-  const budgetMensileCorrente = getBudgetMensile(meseCorrente);
-  const datiGrafico = Object.keys(budgetMensileCorrente).map(categoria => ({
+  // Prepara i dati per il grafico usando il budget del periodo selezionato
+  const budgetPeriodoCorrente = getBudgetPeriodo(meseCorrente);
+  const datiGrafico = Object.keys(budgetPeriodoCorrente).map(categoria => ({
     categoria,
-    budget: budgetMensileCorrente[categoria],
+    budget: budgetPeriodoCorrente[categoria],
     spese: speseMensili[categoria] || 0,
-    differenza: (speseMensili[categoria] || 0) - budgetMensileCorrente[categoria]
+    differenza: (speseMensili[categoria] || 0) - budgetPeriodoCorrente[categoria]
   }));
 
-  // Calcola i totali usando il budget del mese corrente
-  const totaleBudget = Object.values(budgetMensileCorrente).reduce((a, b) => a + b, 0);
+  // Calcola i totali usando il budget del periodo
+  const totaleBudget = Object.values(budgetPeriodoCorrente).reduce((a, b) => a + b, 0);
   const totaleSpese = Object.values(speseMensili).reduce((a, b) => a + b, 0);
   const totaleDifferenza = totaleSpese - totaleBudget;
-
-  const mesi = [
-    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-  ];
 
   return (
     <div className="theme-container p-6">
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
-        Budget mensile 2025
+        Budget {meseCorrente === 0 ? 'annuale' : 'mensile'} {annoCorrente}
       </h2>
 
-      {/* Selettore mese */}
+      {/* Selettore periodo */}
       <div className="flex justify-center mb-8">
         <select
           className="theme-input mr-4"
