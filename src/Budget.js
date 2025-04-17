@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import BASE_URL from './config';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
@@ -55,6 +56,7 @@ function Budget() {
   const [speseMensili, setSpeseMensili] = useState([]);
   const [meseCorrente, setMeseCorrente] = useState(new Date().getMonth());
   const [annoCorrente, setAnnoCorrente] = useState(new Date().getFullYear());
+  const navigate = useNavigate();
 
   const mesi = [
     "Intero anno",
@@ -123,6 +125,27 @@ function Budget() {
   const totaleSpese = Object.values(speseMensili).reduce((a, b) => a + b, 0);
   const totaleDifferenza = totaleSpese - totaleBudget;
 
+  const handleBarClick = (data) => {
+    // Costruisce i parametri per i filtri
+    const params = new URLSearchParams();
+    
+    // Aggiunge la categoria
+    params.append('categoria', data.categoria);
+    
+    // Aggiunge il periodo
+    if (meseCorrente === 0) {
+      // Se è selezionato l'intero anno, passa solo l'anno
+      params.append('anno', annoCorrente.toString());
+    } else {
+      // Se è selezionato un mese specifico, passa sia mese che anno
+      params.append('mese', (meseCorrente - 1).toString());
+      params.append('anno', annoCorrente.toString());
+    }
+
+    // Naviga alla pagina dei filtri con i parametri
+    navigate(`/filtri?${params.toString()}`);
+  };
+
   return (
     <div className="theme-container p-6">
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
@@ -172,7 +195,7 @@ function Budget() {
         </div>
       </div>
 
-      {/* Grafico */}
+      {/* Grafico con onClick */}
       <div className="mb-8">
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={datiGrafico}>
@@ -180,8 +203,20 @@ function Budget() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="budget" name="Budget" fill="#3b82f6" />
-            <Bar dataKey="spese" name="Spese" fill="#22c55e" />
+            <Bar 
+              dataKey="budget" 
+              name="Budget" 
+              fill="#3b82f6" 
+              onClick={handleBarClick}
+              cursor="pointer"
+            />
+            <Bar 
+              dataKey="spese" 
+              name="Spese" 
+              fill="#22c55e" 
+              onClick={handleBarClick}
+              cursor="pointer"
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
