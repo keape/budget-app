@@ -13,9 +13,10 @@ mongoose.connect(process.env.MONGO_URI, {
 .catch((err) => console.error('❌ Errore di connessione a MongoDB:', err));
 
 const corsOptions = {
-  origin: '*', // o specifica "https://TUO-FRONTEND.vercel.app"
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
+  origin: ['https://budget-app-three-psi.vercel.app', 'http://localhost:3000', 'https://budget-app-keape86.vercel.app'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 };
 
 app.use(cors(corsOptions));
