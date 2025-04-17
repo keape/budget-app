@@ -8,30 +8,12 @@ require('dotenv').config();
 const app = express();
 
 // Middleware per aggiungere headers CORS manualmente
-app.use((req, res, next) => {
-  // Accetta richieste sia dall'app web che da iOS Shortcuts
-  const allowedOrigins = [
-    'https://budget-app-three-gules.vercel.app',
-    'http://localhost:3000',
-    'shortcuts://'
-  ];
-  const origin = req.headers.origin;
-  
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Gestione richieste OPTIONS
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
+app.use(cors({
+  origin: ['https://budget-app-three-gules.vercel.app', 'http://localhost:3000', 'shortcuts://'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  credentials: true
+}));
 
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
