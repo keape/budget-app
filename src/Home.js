@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import BASE_URL from './config';
 
 
 function Home() {
@@ -11,7 +12,7 @@ function Home() {
   const totaleMeseCorrente = speseDelMese.reduce((acc, spesa) => acc + spesa.importo, 0);
 
   useEffect(() => {
-    axios.get('http://localhost:5001/api/spese')
+    axios.get(`${BASE_URL}/api/spese`)
       .then(res => {
         const oggi = new Date();
         const meseCorrente = oggi.getMonth();
@@ -27,23 +28,23 @@ function Home() {
   
         setSpeseDelMese(speseMese);
       })
-      .catch(err => console.error('Errore nel caricamento delle spese:', err));
+      .catch(err => console.error("Errore nel caricamento delle spese:", err));
   }, []);
   
   const aggiungiSpesa = e => {
     e.preventDefault();
-    axios.post('http://localhost:5001/api/spese', {
+    axios.post(`${BASE_URL}/api/spese`, {
       descrizione,
-      importo,
+      importo: Number(importo),
       categoria
     })
       .then(() => {
         setDescrizione('');
         setImporto('');
         setCategoria('');
-        // alert('Spesa aggiunta con successo!');
+        window.location.reload(); // Ricarica la pagina per mostrare la nuova spesa
       })
-      .catch(err => console.error('❌ Errore nell’aggiunta della spesa:', err));
+      .catch(err => console.error("❌ Errore nell'aggiunta della spesa:", err));
   };
 
   return (
