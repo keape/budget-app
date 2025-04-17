@@ -61,6 +61,33 @@ app.get('/api/spese', async (req, res) => {
   }
 });
 
+// Route GET → restituisce il totale delle spese del mese corrente
+app.get('/api/spese/totale-mese', async (req, res) => {
+  try {
+    const oggi = new Date();
+    const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
+    const fineMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0);
+
+    const spese = await Spesa.find({
+      data: {
+        $gte: inizioMese,
+        $lte: fineMese
+      }
+    });
+
+    const totale = spese.reduce((acc, spesa) => acc + spesa.importo, 0);
+    
+    res.json({
+      totale: totale.toFixed(2),
+      mese: oggi.toLocaleString('it-IT', { month: 'long' }),
+      anno: oggi.getFullYear()
+    });
+  } catch (err) {
+    console.error('❌ Errore nel calcolo del totale mensile:', err);
+    res.status(500).json({ error: 'Errore nel calcolo del totale mensile' });
+  }
+});
+
 // Route POST → aggiunge una nuova spesa
 app.post('/api/spese', async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
