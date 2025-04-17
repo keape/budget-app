@@ -309,7 +309,6 @@ function Filtri() {
       {/* Lista delle transazioni */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {transazioniFiltrate.map(transazione => {
-          // Verifichiamo che il tipo sia corretto
           const isEntrata = transazione.tipo === 'entrata';
           const importo = Number(transazione.importo); // Convertiamo in numero per sicurezza
 
