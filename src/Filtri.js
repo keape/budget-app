@@ -85,15 +85,12 @@ function Filtri() {
   };
 
   const transazioniFiltrate = transazioni.filter(t => {
-    // Se il tipo non è 'tutte', filtra per tipo
-    if (filtroTipo !== 'tutte' && t.tipo !== filtroTipo) {
-      return false;
-    }
+    // Se il tipo non è 'tutte', filtra per tipo specifico (uscita/entrata)
+    if (filtroTipo === 'uscita' && t.tipo !== 'uscita') return false;
+    if (filtroTipo === 'entrata' && t.tipo !== 'entrata') return false;
     
     // Se c'è una categoria selezionata, filtra per categoria
-    if (filtroCategoria && t.categoria !== filtroCategoria) {
-      return false;
-    }
+    if (filtroCategoria && t.categoria !== filtroCategoria) return false;
   
     // Se ci sono date impostate, filtra per date
     if (dataInizio || dataFine) {
@@ -333,6 +330,19 @@ function Filtri() {
                 </div>
               </div>
               <div className="flex flex-col gap-2">
+                {/* Pulsante modifica (solo per le spese) */}
+                {transazione.tipo === 'uscita' && (
+                  <button
+                    onClick={() => apriModifica(transazione)}
+                    className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100 transition-colors duration-200"
+                    title="Modifica transazione"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                )}
+                {/* Pulsante elimina */}
                 <button
                   onClick={() => eliminaTransazione(transazione._id, transazione.tipo)}
                   className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
