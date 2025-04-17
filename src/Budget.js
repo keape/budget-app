@@ -56,6 +56,7 @@ function Budget() {
   const [speseMensili, setSpeseMensili] = useState([]);
   const [meseCorrente, setMeseCorrente] = useState(new Date().getMonth());
   const [annoCorrente, setAnnoCorrente] = useState(new Date().getFullYear());
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const navigate = useNavigate();
 
   const mesi = [
@@ -146,6 +147,40 @@ function Budget() {
     navigate(`/filtri?${params.toString()}`);
   };
 
+  // Funzione per gestire l'ordinamento
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Funzione per ordinare i dati
+  const sortedData = React.useMemo(() => {
+    if (!sortConfig.key) return datiGrafico;
+
+    return [...datiGrafico].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [datiGrafico, sortConfig]);
+
+  // Funzione per ottenere la classe di stile per l'header della colonna
+  const getSortClass = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === 'asc' 
+        ? 'after:content-["↑"] after:ml-1'
+        : 'after:content-["↓"] after:ml-1';
+    }
+    return '';
+  };
+
   return (
     <div className="theme-container p-6">
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
@@ -226,14 +261,34 @@ function Budget() {
         <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-2 text-left text-gray-900 dark:text-white">Categoria</th>
-              <th className="px-4 py-2 text-right text-gray-900 dark:text-white">Budget</th>
-              <th className="px-4 py-2 text-right text-gray-900 dark:text-white">Spese</th>
-              <th className="px-4 py-2 text-right text-gray-900 dark:text-white">Differenza</th>
+              <th 
+                className={`px-4 py-2 text-left text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('categoria')}`}
+                onClick={() => handleSort('categoria')}
+              >
+                Categoria
+              </th>
+              <th 
+                className={`px-4 py-2 text-right text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('budget')}`}
+                onClick={() => handleSort('budget')}
+              >
+                Budget
+              </th>
+              <th 
+                className={`px-4 py-2 text-right text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('spese')}`}
+                onClick={() => handleSort('spese')}
+              >
+                Spese
+              </th>
+              <th 
+                className={`px-4 py-2 text-right text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('differenza')}`}
+                onClick={() => handleSort('differenza')}
+              >
+                Differenza
+              </th>
             </tr>
           </thead>
           <tbody>
-            {datiGrafico.map(({ categoria, budget, spese, differenza }) => (
+            {sortedData.map(({ categoria, budget, spese, differenza }) => (
               <tr key={categoria} className="border-t border-gray-200 dark:border-gray-700">
                 <td className="px-4 py-2 text-gray-900 dark:text-white">{categoria}</td>
                 <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{budget.toFixed(2)} €</td>
