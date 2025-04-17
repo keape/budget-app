@@ -203,8 +203,18 @@ function Budget() {
           value={annoCorrente}
           onChange={(e) => setAnnoCorrente(parseInt(e.target.value))}
         >
-          <option value={2024}>2024</option>
-          <option value={2025}>2025</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+          <option value="2020">2020</option>
+          <option value="2019">2019</option>
+          <option value="2018">2018</option>
+          <option value="2017">2017</option>
+          <option value="2016">2016</option>
+          <option value="2015">2015</option>
+          <option value="2014">2014</option>
         </select>
       </div>
 
@@ -288,24 +298,16 @@ function Budget() {
             </tr>
           </thead>
           <tbody>
-            {sortedData.map(({ categoria, budget, spese, differenza }) => (
-              <tr key={categoria} className="border-t border-gray-200 dark:border-gray-700">
-                <td className="px-4 py-2 text-gray-900 dark:text-white">{categoria}</td>
-                <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{budget.toFixed(2)} €</td>
-                <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{spese.toFixed(2)} €</td>
-                <td className={`px-4 py-2 text-right ${differenza > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                  {differenza.toFixed(2)} €
+            {sortedData.map((item, index) => (
+              <tr key={index} className="hover:bg-gray-100 dark:hover:bg-gray-700">
+                <td className="px-4 py-2">{item.categoria}</td>
+                <td className="px-4 py-2 text-right">{item.budget.toFixed(2)} €</td>
+                <td className="px-4 py-2 text-right">{item.spese.toFixed(2)} €</td>
+                <td className={`px-4 py-2 text-right ${item.differenza > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {item.differenza.toFixed(2)} €
                 </td>
               </tr>
             ))}
-            <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
-              <td className="px-4 py-2 text-gray-900 dark:text-white">TOTALE</td>
-              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{totaleBudget.toFixed(2)} €</td>
-              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{totaleSpese.toFixed(2)} €</td>
-              <td className={`px-4 py-2 text-right ${totaleDifferenza > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                {totaleDifferenza.toFixed(2)} €
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
