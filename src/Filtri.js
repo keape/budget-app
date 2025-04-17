@@ -1,6 +1,7 @@
 // Filtri.js
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend, LabelList
 } from 'recharts';
@@ -10,11 +11,41 @@ import BASE_URL from './config';
 
 
 function Filtri() {
+  const [searchParams] = useSearchParams();
   const [spese, setSpese] = useState([]);
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [dataInizio, setDataInizio] = useState('');
   const [dataFine, setDataFine] = useState('');
   const { darkMode } = useTheme();
+
+  // Legge i parametri dall'URL all'avvio
+  useEffect(() => {
+    const categoria = searchParams.get('categoria');
+    const mese = searchParams.get('mese');
+    const anno = searchParams.get('anno');
+
+    // Imposta la categoria se presente nell'URL
+    if (categoria) {
+      setFiltroCategoria(categoria);
+    }
+
+    // Imposta le date in base al mese e anno se presenti nell'URL
+    if (anno) {
+      if (mese) {
+        // Se abbiamo sia mese che anno, impostiamo l'intervallo per quel mese specifico
+        const primoDelMese = new Date(anno, parseInt(mese), 1);
+        const ultimoDelMese = new Date(anno, parseInt(mese) + 1, 0);
+        setDataInizio(primoDelMese.toISOString().split('T')[0]);
+        setDataFine(ultimoDelMese.toISOString().split('T')[0]);
+      } else {
+        // Se abbiamo solo l'anno, impostiamo l'intervallo per l'intero anno
+        const primoGiornoAnno = new Date(anno, 0, 1);
+        const ultimoGiornoAnno = new Date(anno, 11, 31);
+        setDataInizio(primoGiornoAnno.toISOString().split('T')[0]);
+        setDataFine(ultimoGiornoAnno.toISOString().split('T')[0]);
+      }
+    }
+  }, [searchParams]);
 
   const caricaSpese = () => {
     axios.get(`${BASE_URL}/api/spese`)
