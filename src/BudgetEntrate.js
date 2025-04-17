@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useTheme } from './ThemeContext';
 import './Budget.css';
 
 const BudgetEntrate = () => {
+  const { darkMode } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
@@ -17,7 +19,7 @@ const BudgetEntrate = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/entrate');
+      const response = await fetch('https://budget-app-api-alpha.vercel.app/api/entrate');
       const entrate = await response.json();
       
       // Filtra per anno e mese selezionati
@@ -101,7 +103,7 @@ const BudgetEntrate = () => {
   ];
 
   return (
-    <div className="budget-container">
+    <div className={`budget-container ${darkMode ? 'dark' : ''}`}>
       <h1>Budget Entrate {selectedYear}</h1>
       
       <div className="filters">
