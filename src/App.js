@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './Home';
 import Filtri from './Filtri';
 import Budget from './Budget';
+import BudgetEntrate from './BudgetEntrate';
 import Navbar from './Navbar';
 import { ThemeProvider } from './ThemeContext';
 
@@ -18,6 +19,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/filtri" element={<Filtri />} />
             <Route path="/budget" element={<Budget />} />
+            <Route path="/budget-entrate" element={<BudgetEntrate />} />
           </Routes>
         </Router>
       </div>
