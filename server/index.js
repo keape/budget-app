@@ -5,6 +5,22 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
+
+// Middleware per aggiungere headers CORS manualmente
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://budget-app-three-gules.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Gestione richieste OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -12,19 +28,13 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => console.log('✅ Connessione a MongoDB riuscita'))
 .catch((err) => console.error('❌ Errore di connessione a MongoDB:', err));
 
-const corsOptions = {
-  origin: 'https://budget-app-three-gules.vercel.app',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
-
-app.use(cors(corsOptions));
-
-// Middleware per gestire le richieste preflight OPTIONS
-app.options('*', cors(corsOptions));
-
 app.use(express.json());
+
+// Middleware per il logging delle richieste
+app.use((req, res, next) => {
+  console.log(`📝 ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
+  next();
+});
 
 // "Database" temporaneo in memoria
 let elencoSpese = [
@@ -39,6 +49,7 @@ app.get('/api/spese', async (req, res) => {
     const spese = await Spesa.find().sort({ data: -1 });
     res.json(spese);
   } catch (err) {
+    console.error('❌ Errore nel recupero delle spese:', err);
     res.status(500).json({ error: 'Errore nel recupero delle spese' });
   }
 });
@@ -48,7 +59,6 @@ app.post('/api/spese', async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
   const { descrizione, importo, categoria } = req.body;
 
-
   if (!importo || !categoria) {
     return res.status(400).json({ error: 'Dati mancanti' });
   }  
@@ -56,23 +66,21 @@ app.post('/api/spese', async (req, res) => {
   try {
     const nuovaSpesa = new Spesa({
       descrizione,
-      importo,
+      importo: Number(importo),
       categoria
     });
     const spesaSalvata = await nuovaSpesa.save();
     res.status(201).json(spesaSalvata);
   } catch (err) {
+    console.error('❌ Errore nel salvataggio della spesa:', err);
     res.status(500).json({ error: 'Errore nel salvataggio della spesa' });
   }
 });
-
-
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
 });
-
 
 app.get('/', (req, res) => {
   res.send('✅ Backend Budget App attivo!');
