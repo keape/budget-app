@@ -8,7 +8,14 @@ const app = express();
 
 // Middleware per aggiungere headers CORS manualmente
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://budget-app-three-gules.vercel.app');
+  // Accetta richieste sia dall'app web che da iOS Shortcuts
+  const allowedOrigins = ['https://budget-app-three-gules.vercel.app', 'shortcuts://'];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -59,21 +66,52 @@ app.post('/api/spese', async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
   const { descrizione, importo, categoria } = req.body;
 
-  if (!importo || !categoria) {
-    return res.status(400).json({ error: 'Dati mancanti' });
-  }  
+  // Validazione più robusta per iOS Shortcuts
+  if (!importo) {
+    return res.status(400).json({ 
+      error: 'Importo mancante',
+      message: 'Inserisci un importo valido'
+    });
+  }
+
+  if (!categoria) {
+    return res.status(400).json({ 
+      error: 'Categoria mancante',
+      message: 'Seleziona una categoria'
+    });
+  }
+
+  // Validazione del formato dell'importo
+  const importoNumerico = Number(importo);
+  if (isNaN(importoNumerico)) {
+    return res.status(400).json({ 
+      error: 'Importo non valido',
+      message: 'L\'importo deve essere un numero valido'
+    });
+  }
 
   try {
     const nuovaSpesa = new Spesa({
-      descrizione,
-      importo: Number(importo),
-      categoria
+      descrizione: descrizione || '',
+      importo: importoNumerico,
+      categoria,
+      data: new Date()
     });
+    
     const spesaSalvata = await nuovaSpesa.save();
-    res.status(201).json(spesaSalvata);
+    
+    // Risposta formattata per iOS Shortcuts
+    res.status(201).json({
+      success: true,
+      message: `Spesa di ${importoNumerico.toFixed(2)}€ aggiunta con successo`,
+      data: spesaSalvata
+    });
   } catch (err) {
     console.error('❌ Errore nel salvataggio della spesa:', err);
-    res.status(500).json({ error: 'Errore nel salvataggio della spesa' });
+    res.status(500).json({ 
+      error: 'Errore nel salvataggio',
+      message: 'Non è stato possibile salvare la spesa. Riprova.'
+    });
   }
 });
 
