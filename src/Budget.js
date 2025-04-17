@@ -121,32 +121,6 @@ function Budget() {
     differenza: (speseMensili[categoria] || 0) - budgetPeriodoCorrente[categoria]
   }));
 
-  // Calcola i totali usando il budget del periodo
-  const totaleBudget = Object.values(budgetPeriodoCorrente).reduce((a, b) => a + b, 0);
-  const totaleSpese = Object.values(speseMensili).reduce((a, b) => a + b, 0);
-  const totaleDifferenza = totaleSpese - totaleBudget;
-
-  const handleBarClick = (data) => {
-    // Costruisce i parametri per i filtri
-    const params = new URLSearchParams();
-    
-    // Aggiunge la categoria
-    params.append('categoria', data.categoria);
-    
-    // Aggiunge il periodo
-    if (meseCorrente === 0) {
-      // Se è selezionato l'intero anno, passa solo l'anno
-      params.append('anno', annoCorrente.toString());
-    } else {
-      // Se è selezionato un mese specifico, passa sia mese che anno
-      params.append('mese', (meseCorrente - 1).toString());
-      params.append('anno', annoCorrente.toString());
-    }
-
-    // Naviga alla pagina dei filtri con i parametri
-    navigate(`/filtri?${params.toString()}`);
-  };
-
   // Funzione per gestire l'ordinamento
   const handleSort = (key) => {
     let direction = 'asc';
@@ -179,6 +153,32 @@ function Budget() {
         : 'after:content-["↓"] after:ml-1';
     }
     return '';
+  };
+
+  // Calcola i totali usando il budget del periodo
+  const totaleBudget = Object.values(budgetPeriodoCorrente).reduce((a, b) => a + b, 0);
+  const totaleSpese = sortedData.reduce((acc, item) => acc + item.spese, 0);
+  const totaleDifferenza = totaleSpese - totaleBudget;
+
+  const handleBarClick = (data) => {
+    // Costruisce i parametri per i filtri
+    const params = new URLSearchParams();
+    
+    // Aggiunge la categoria
+    params.append('categoria', data.categoria);
+    
+    // Aggiunge il periodo
+    if (meseCorrente === 0) {
+      // Se è selezionato l'intero anno, passa solo l'anno
+      params.append('anno', annoCorrente.toString());
+    } else {
+      // Se è selezionato un mese specifico, passa sia mese che anno
+      params.append('mese', (meseCorrente - 1).toString());
+      params.append('anno', annoCorrente.toString());
+    }
+
+    // Naviga alla pagina dei filtri con i parametri
+    navigate(`/filtri?${params.toString()}`);
   };
 
   return (
