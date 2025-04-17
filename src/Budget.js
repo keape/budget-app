@@ -5,25 +5,50 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
-const budgetMensile = {
-  "Mutuo": 278.50,
-  "Elettricità": 50.00,
-  "Acqua": 26.00,
-  "Manutenzione/Arredamento casa": 70.00,
-  "Alimentari": 150.00,
-  "Tecnologia": 60.00,
-  "Abbigliamento": 100.00,
-  "Ristorante": 150.00,
-  "Giardinaggio/Agricoltura/Falegnameria": 120.00,
-  "Abbonamenti": 45.00,
-  "Vacanza": 50.00,
-  "Vela": 20.00,
-  "Sport/Attrezzatura sportiva": 25.00,
-  "Bar": 25.00,
-  "Salute": 20.00,
-  "Cinema Mostre Cultura": 5.00,
-  "Regali": 20.00,
-  "Altre spese": 50.00
+const getBudgetMensile = (mese) => {
+  const baseBudget = {
+    "Mutuo": 278.50,
+    "Elettricità": 50.00,
+    "Acqua": 26.00,
+    "Manutenzione/Arredamento casa": 70.00,
+    "Alimentari": 150.00,
+    "Tecnologia": 60.00,
+    "Abbigliamento": 100.00,
+    "Ristorante": 150.00,
+    "Giardinaggio/Agricoltura/Falegnameria": 120.00,
+    "Abbonamenti": 45.00,
+    "Vacanza": 50.00,
+    "Vela": 20.00,
+    "Sport/Attrezzatura sportiva": 25.00,
+    "Bar": 25.00,
+    "Salute": 20.00,
+    "Cinema Mostre Cultura": 5.00,
+    "Regali": 20.00,
+    "Altre spese": 50.00
+  };
+
+  // Crea una copia del budget base
+  const budgetMese = { ...baseBudget };
+
+  // Gestisce i casi speciali per mese
+  switch (mese) {
+    case 1: // Febbraio
+      budgetMese["Vela"] = 750.00;
+      break;
+    case 5: // Giugno
+      budgetMese["Vacanza"] = 750.00;
+      break;
+    case 6: // Luglio
+      budgetMese["Vacanza"] = 750.00;
+      budgetMese["Abbigliamento"] = 0.00;
+      budgetMese["Regali"] = 400.00;
+      break;
+    case 11: // Dicembre
+      budgetMese["Altre spese"] = 150.00;
+      break;
+  }
+
+  return budgetMese;
 };
 
 function Budget() {
@@ -52,16 +77,17 @@ function Budget() {
       .catch(err => console.error("Errore nel caricamento delle spese:", err));
   }, [meseCorrente, annoCorrente]);
 
-  // Prepara i dati per il grafico
-  const datiGrafico = Object.keys(budgetMensile).map(categoria => ({
+  // Prepara i dati per il grafico usando il budget del mese corrente
+  const budgetMensileCorrente = getBudgetMensile(meseCorrente);
+  const datiGrafico = Object.keys(budgetMensileCorrente).map(categoria => ({
     categoria,
-    budget: budgetMensile[categoria],
+    budget: budgetMensileCorrente[categoria],
     spese: speseMensili[categoria] || 0,
-    differenza: (speseMensili[categoria] || 0) - budgetMensile[categoria]
+    differenza: (speseMensili[categoria] || 0) - budgetMensileCorrente[categoria]
   }));
 
-  // Calcola i totali
-  const totaleBudget = Object.values(budgetMensile).reduce((a, b) => a + b, 0);
+  // Calcola i totali usando il budget del mese corrente
+  const totaleBudget = Object.values(budgetMensileCorrente).reduce((a, b) => a + b, 0);
   const totaleSpese = Object.values(speseMensili).reduce((a, b) => a + b, 0);
   const totaleDifferenza = totaleSpese - totaleBudget;
 
@@ -138,28 +164,28 @@ function Budget() {
         <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-2 text-left">Categoria</th>
-              <th className="px-4 py-2 text-right">Budget</th>
-              <th className="px-4 py-2 text-right">Spese</th>
-              <th className="px-4 py-2 text-right">Differenza</th>
+              <th className="px-4 py-2 text-left text-gray-900 dark:text-white">Categoria</th>
+              <th className="px-4 py-2 text-right text-gray-900 dark:text-white">Budget</th>
+              <th className="px-4 py-2 text-right text-gray-900 dark:text-white">Spese</th>
+              <th className="px-4 py-2 text-right text-gray-900 dark:text-white">Differenza</th>
             </tr>
           </thead>
           <tbody>
             {datiGrafico.map(({ categoria, budget, spese, differenza }) => (
               <tr key={categoria} className="border-t border-gray-200 dark:border-gray-700">
-                <td className="px-4 py-2">{categoria}</td>
-                <td className="px-4 py-2 text-right">{budget.toFixed(2)} €</td>
-                <td className="px-4 py-2 text-right">{spese.toFixed(2)} €</td>
-                <td className={`px-4 py-2 text-right ${differenza > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <td className="px-4 py-2 text-gray-900 dark:text-white">{categoria}</td>
+                <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{budget.toFixed(2)} €</td>
+                <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{spese.toFixed(2)} €</td>
+                <td className={`px-4 py-2 text-right ${differenza > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                   {differenza.toFixed(2)} €
                 </td>
               </tr>
             ))}
             <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
-              <td className="px-4 py-2">TOTALE</td>
-              <td className="px-4 py-2 text-right">{totaleBudget.toFixed(2)} €</td>
-              <td className="px-4 py-2 text-right">{totaleSpese.toFixed(2)} €</td>
-              <td className={`px-4 py-2 text-right ${totaleDifferenza > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <td className="px-4 py-2 text-gray-900 dark:text-white">TOTALE</td>
+              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{totaleBudget.toFixed(2)} €</td>
+              <td className="px-4 py-2 text-right text-gray-900 dark:text-white">{totaleSpese.toFixed(2)} €</td>
+              <td className={`px-4 py-2 text-right ${totaleDifferenza > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                 {totaleDifferenza.toFixed(2)} €
               </td>
             </tr>
