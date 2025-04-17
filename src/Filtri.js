@@ -19,6 +19,9 @@ function Filtri() {
   const { darkMode } = useTheme();
   const [spesaDaModificare, setSpesaDaModificare] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileInputRef = React.useRef();
 
   // Legge i parametri dall'URL all'avvio
   useEffect(() => {
@@ -178,11 +181,90 @@ function Filtri() {
       .catch(err => console.error("Errore nella modifica della spesa:", err));
   };
 
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportResult(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${BASE_URL}/api/spese/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setImportResult({
+        success: true,
+        message: `Importate con successo ${response.data.totaleImportate} spese`
+      });
+      caricaSpese(); // Ricarica le spese dopo l'importazione
+    } catch (error) {
+      setImportResult({
+        success: false,
+        message: error.response?.data?.error || 'Errore durante l\'importazione'
+      });
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''; // Reset input file
+      }
+    }
+  };
+
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
         Filtra spese
       </h2>
+
+      {/* Sezione importazione */}
+      <div className="max-w-4xl mx-auto mb-8 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+          Importa spese da Excel
+        </h3>
+        <div className="flex items-center gap-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".xlsx,.xls"
+            className="block w-full text-sm text-gray-500 dark:text-gray-400
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-md file:border-0
+              file:text-sm file:font-semibold
+              file:bg-blue-50 file:text-blue-700
+              dark:file:bg-blue-900 dark:file:text-blue-200
+              hover:file:bg-blue-100 dark:hover:file:bg-blue-800"
+            disabled={importing}
+          />
+          {importing && (
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700 dark:border-blue-300"></div>
+          )}
+        </div>
+        {importResult && (
+          <div className={`mt-4 p-3 rounded ${
+            importResult.success 
+              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200' 
+              : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200'
+          }`}>
+            {importResult.message}
+          </div>
+        )}
+        <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+          <p>Il file Excel deve contenere le seguenti colonne:</p>
+          <ul className="list-disc list-inside mt-2">
+            <li>descrizione (opzionale)</li>
+            <li>importo (obbligatorio, numerico)</li>
+            <li>categoria (obbligatoria, deve corrispondere a una categoria esistente)</li>
+            <li>data (opzionale, formato data)</li>
+          </ul>
+        </div>
+      </div>
 
       <div className="max-w-4xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
