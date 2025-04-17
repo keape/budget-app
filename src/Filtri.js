@@ -19,7 +19,7 @@ function Filtri() {
   useEffect(() => {
     axios.get(`${BASE_URL}/api/spese`)
       .then(res => setSpese(res.data))
-      .catch(err => console.error('Errore nel caricamento delle spese:', err));
+      .catch(err => console.error("Errore nel caricamento delle spese:", err));
   }, []);
 
   const speseFiltrate = spese.filter(spesa => {
