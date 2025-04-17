@@ -13,13 +13,16 @@ mongoose.connect(process.env.MONGO_URI, {
 .catch((err) => console.error('❌ Errore di connessione a MongoDB:', err));
 
 const corsOptions = {
-  origin: ['https://budget-app-three-psi.vercel.app', 'http://localhost:3000', 'https://budget-app-keape86.vercel.app'],
+  origin: 'https://budget-app-three-gules.vercel.app',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 };
 
 app.use(cors(corsOptions));
+
+// Middleware per gestire le richieste preflight OPTIONS
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
