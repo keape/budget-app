@@ -277,12 +277,12 @@ function Filtri() {
         {transazioniFiltrate.map(transazione => (
           <div
             key={transazione._id}
-            className={`p-2 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200`}
+            className={`p-4 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200`}
           >
             <div className="flex justify-between items-start">
               <div>
                 <div className="font-bold text-sm">{transazione.categoria}</div>
-                <div className={`font-semibold text-lg ${transazione.tipo === 'entrata' ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`font-semibold text-lg ${transazione.tipo === 'entrata' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {transazione.tipo === 'entrata' ? '+' : '-'}{transazione.importo.toFixed(2)} €
                 </div>
                 {transazione.descrizione && (
@@ -290,6 +290,10 @@ function Filtri() {
                 )}
                 <div className="text-xs text-gray-600 dark:text-gray-400">
                   {new Date(transazione.data).toLocaleDateString()}
+                </div>
+                <div className="text-xs font-medium mt-1 inline-block px-2 py-1 rounded-full bg-opacity-10 
+                  ${transazione.tipo === 'entrata' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}">
+                  {transazione.tipo === 'entrata' ? 'Entrata' : 'Uscita'}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
