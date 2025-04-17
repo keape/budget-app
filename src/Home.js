@@ -7,32 +7,46 @@ function Home() {
   const [descrizione, setDescrizione] = useState('');
   const [importo, setImporto] = useState('');
   const [categoria, setCategoria] = useState('');
-  const [speseDelMese, setSpeseDelMese] = useState([]);
-  const totaleMeseCorrente = speseDelMese.reduce((acc, spesa) => acc + spesa.importo, 0);
+  const [tipo, setTipo] = useState('spesa'); // 'spesa' or 'entrata'
+  const [transazioniDelMese, setTransazioniDelMese] = useState([]);
+
+  const categorieSpese = [
+    "Abbigliamento", "Abbonamenti", "Acqua", "Alimentari", "Altre spese",
+    "Bar", "Cinema Mostre Cultura", "Elettricità",
+    "Giardinaggio/Agricoltura/Falegnameria", "Manutenzione/Arredamento casa",
+    "Mutuo", "Regali", "Ristorante", "Salute", "Sport/Attrezzatura sportiva",
+    "Tecnologia", "Vacanza", "Vela"
+  ];
+
+  const categorieEntrate = [
+    "Stipendio", "Investimenti", "Vendite", "Rimborsi", "Regalo", "Altro"
+  ];
 
   useEffect(() => {
-    axios.get(`${BASE_URL}/api/spese`)
+    const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
+    axios.get(`${BASE_URL}/api/${endpoint}`)
       .then(res => {
         const oggi = new Date();
         const meseCorrente = oggi.getMonth();
         const annoCorrente = oggi.getFullYear();
   
-        const speseMese = res.data.filter(spesa => {
-          const dataSpesa = new Date(spesa.data);
+        const transazioniMese = res.data.filter(t => {
+          const dataTransazione = new Date(t.data);
           return (
-            dataSpesa.getMonth() === meseCorrente &&
-            dataSpesa.getFullYear() === annoCorrente
+            dataTransazione.getMonth() === meseCorrente &&
+            dataTransazione.getFullYear() === annoCorrente
           );
         });
   
-        setSpeseDelMese(speseMese);
+        setTransazioniDelMese(transazioniMese);
       })
-      .catch(err => console.error("Errore nel caricamento delle spese:", err));
-  }, []);
+      .catch(err => console.error(`Errore nel caricamento delle ${tipo === 'spesa' ? 'spese' : 'entrate'}:`, err));
+  }, [tipo]);
   
-  const aggiungiSpesa = e => {
+  const aggiungiTransazione = e => {
     e.preventDefault();
-    axios.post(`${BASE_URL}/api/spese`, {
+    const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
+    axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
       importo: Number(importo),
       categoria
@@ -43,22 +57,40 @@ function Home() {
         setCategoria('');
         window.location.reload();
       })
-      .catch(err => console.error("❌ Errore nell'aggiunta della spesa:", err));
+      .catch(err => console.error(`❌ Errore nell'aggiunta della ${tipo}:`, err));
   };
+
+  const totaleMeseCorrente = transazioniDelMese.reduce((acc, t) => acc + t.importo, 0);
 
   return (
     <div className="theme-container max-w-2xl mx-auto px-4">
       <h1 className="text-4xl font-bold text-center text-blue-800 dark:text-blue-300 mb-8">
-        Aggiungi una spesa
+        Aggiungi {tipo === 'spesa' ? 'una spesa' : "un'entrata"}
       </h1>
 
       <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-8 shadow-md text-center text-xl font-semibold">
-        Totale spese di {new Date().toLocaleString('default', { month: 'long' })}:{' '}
+        Totale {tipo === 'spesa' ? 'spese' : 'entrate'} di {new Date().toLocaleString('default', { month: 'long' })}:{' '}
         {totaleMeseCorrente.toFixed(2)} €
       </div>
 
-      <form onSubmit={aggiungiSpesa} className="space-y-6">
+      <form onSubmit={aggiungiTransazione} className="space-y-6">
         <div className="flex flex-col items-center space-y-4">
+          {/* Tipo di transazione */}
+          <div className="w-full max-w-md">
+            <select
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400"
+              value={tipo}
+              onChange={e => {
+                setTipo(e.target.value);
+                setCategoria(''); // Reset categoria when type changes
+              }}
+              required
+            >
+              <option value="spesa">Spesa</option>
+              <option value="entrata">Entrata</option>
+            </select>
+          </div>
+
           <div className="w-full max-w-md">
             <input
               className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400"
@@ -79,24 +111,9 @@ function Home() {
               required
             >
               <option value="">Seleziona categoria</option>
-              <option value="Abbigliamento">Abbigliamento</option>
-              <option value="Abbonamenti">Abbonamenti</option>
-              <option value="Acqua">Acqua</option>
-              <option value="Alimentari">Alimentari</option>
-              <option value="Altre spese">Altre spese</option>
-              <option value="Bar">Bar</option>
-              <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
-              <option value="Elettricità">Elettricità</option>
-              <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
-              <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
-              <option value="Mutuo">Mutuo</option>
-              <option value="Regali">Regali</option>
-              <option value="Ristorante">Ristorante</option>
-              <option value="Salute">Salute</option>
-              <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
-              <option value="Tecnologia">Tecnologia</option>
-              <option value="Vacanza">Vacanza</option>
-              <option value="Vela">Vela</option>
+              {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
           </div>
 
