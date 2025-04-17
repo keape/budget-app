@@ -77,6 +77,20 @@ app.post('/api/spese', async (req, res) => {
   }
 });
 
+// Route DELETE → elimina una spesa
+app.delete('/api/spese/:id', async (req, res) => {
+  try {
+    const spesa = await Spesa.findByIdAndDelete(req.params.id);
+    if (!spesa) {
+      return res.status(404).json({ error: 'Spesa non trovata' });
+    }
+    res.json({ message: 'Spesa eliminata con successo' });
+  } catch (err) {
+    console.error('❌ Errore nella cancellazione della spesa:', err);
+    res.status(500).json({ error: 'Errore nella cancellazione della spesa' });
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
