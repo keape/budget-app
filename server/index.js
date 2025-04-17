@@ -1,4 +1,5 @@
 const Spesa = require('./models/Spesa');
+const Entrata = require('./models/Entrata');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -188,6 +189,94 @@ app.put('/api/spese/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ Errore nella modifica della spesa:', err);
     res.status(500).json({ error: 'Errore nella modifica della spesa' });
+  }
+});
+
+// Route GET → restituisce l'elenco delle entrate
+app.get('/api/entrate', async (req, res) => {
+  try {
+    const entrate = await Entrata.find().sort({ data: -1 });
+    res.json(entrate);
+  } catch (err) {
+    console.error('❌ Errore nel recupero delle entrate:', err);
+    res.status(500).json({ error: 'Errore nel recupero delle entrate' });
+  }
+});
+
+// Route GET → restituisce il totale delle entrate del mese corrente
+app.get('/api/entrate/totale-mese', async (req, res) => {
+  try {
+    const oggi = new Date();
+    const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
+    const fineMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0);
+
+    const entrate = await Entrata.find({
+      data: {
+        $gte: inizioMese,
+        $lte: fineMese
+      }
+    });
+
+    const totale = entrate.reduce((acc, entrata) => acc + entrata.importo, 0);
+    
+    res.json({
+      totale: totale.toFixed(2),
+      mese: oggi.toLocaleString('it-IT', { month: 'long' }),
+      anno: oggi.getFullYear()
+    });
+  } catch (err) {
+    console.error('❌ Errore nel calcolo del totale mensile delle entrate:', err);
+    res.status(500).json({ error: 'Errore nel calcolo del totale mensile delle entrate' });
+  }
+});
+
+// Route POST → aggiunge una nuova entrata
+app.post('/api/entrate', async (req, res) => {
+  const { descrizione, importo, categoria } = req.body;
+
+  if (!importo) {
+    return res.status(400).json({ 
+      error: 'Importo mancante',
+      message: 'Inserisci un importo valido'
+    });
+  }
+
+  if (!categoria) {
+    return res.status(400).json({ 
+      error: 'Categoria mancante',
+      message: 'Seleziona una categoria'
+    });
+  }
+
+  const importoNumerico = Number(importo);
+  if (isNaN(importoNumerico)) {
+    return res.status(400).json({ 
+      error: 'Importo non valido',
+      message: 'L\'importo deve essere un numero valido'
+    });
+  }
+
+  try {
+    const nuovaEntrata = new Entrata({
+      descrizione: descrizione || '',
+      importo: importoNumerico,
+      categoria,
+      data: new Date()
+    });
+    
+    const entrataSalvata = await nuovaEntrata.save();
+    
+    res.status(201).json({
+      success: true,
+      message: `Entrata di ${importoNumerico.toFixed(2)}€ aggiunta con successo`,
+      data: entrataSalvata
+    });
+  } catch (err) {
+    console.error('❌ Errore nel salvataggio dell\'entrata:', err);
+    res.status(500).json({ 
+      error: 'Errore nel salvataggio',
+      message: 'Non è stato possibile salvare l\'entrata. Riprova.'
+    });
   }
 });
 
