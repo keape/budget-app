@@ -2,8 +2,6 @@ const Spesa = require('./models/Spesa');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const multer = require('multer');
-const XLSX = require('xlsx');
 require('dotenv').config();
 
 const app = express();
@@ -44,23 +42,6 @@ let elencoSpese = [
   { id: 2, descrizione: 'dildo nero', importo: 30.00 },
   { id: 3, descrizione: 'Abbonamento Netflix', importo: 12.99 }
 ];
-
-// Configurazione multer per l'upload dei file
-const storage = multer.memoryStorage();
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // limite di 5MB
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
-        file.mimetype === 'application/vnd.ms-excel') {
-      cb(null, true);
-    } else {
-      cb(new Error('Il file deve essere un Excel (.xlsx o .xls)'));
-    }
-  }
-});
 
 // Route GET → restituisce l'elenco delle spese
 app.get('/api/spese', async (req, res) => {
@@ -142,44 +123,6 @@ app.put('/api/spese/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ Errore nella modifica della spesa:', err);
     res.status(500).json({ error: 'Errore nella modifica della spesa' });
-  }
-});
-
-// Route POST per importazione massiva da Excel
-app.post('/api/spese/import', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Nessun file caricato' });
-  }
-
-  try {
-    // Legge il file Excel
-    const workbook = XLSX.read(req.file.buffer);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
-
-    // Valida e formatta i dati
-    const spese = data.map(row => ({
-      descrizione: row.descrizione || '',
-      importo: Number(row.importo),
-      categoria: row.categoria,
-      data: row.data ? new Date(row.data) : new Date()
-    })).filter(spesa => !isNaN(spesa.importo) && spesa.categoria);
-
-    if (spese.length === 0) {
-      return res.status(400).json({ error: 'Nessuna spesa valida trovata nel file' });
-    }
-
-    // Inserisce le spese in batch
-    const risultato = await Spesa.insertMany(spese, { ordered: false });
-    
-    res.json({ 
-      message: 'Importazione completata con successo',
-      totaleImportate: risultato.length
-    });
-  } catch (err) {
-    console.error('❌ Errore nell\'importazione delle spese:', err);
-    res.status(500).json({ error: 'Errore nell\'importazione delle spese' });
   }
 });
 
