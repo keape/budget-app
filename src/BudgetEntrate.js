@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useTheme } from './ThemeContext';
-import './Budget.css';
+import BASE_URL from './config';
 
 const BudgetEntrate = () => {
   const { darkMode } = useTheme();
@@ -19,7 +19,7 @@ const BudgetEntrate = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('https://budget-app-api-alpha.vercel.app/api/entrate');
+      const response = await fetch(`${BASE_URL}/api/entrate`);
       const entrate = await response.json();
       
       // Filtra per anno e mese selezionati
@@ -102,49 +102,73 @@ const BudgetEntrate = () => {
     'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'
   ];
 
+  const totaleEntrate = sortedData.reduce((sum, item) => sum + item.entrate, 0);
+
   return (
-    <div className={`budget-container ${darkMode ? 'dark' : ''}`}>
-      <h1>Budget Entrate {selectedYear}</h1>
+    <div className="theme-container p-6">
+      <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
+        Entrate {selectedMonth} {selectedYear}
+      </h2>
       
-      <div className="filters">
-        <select value={selectedYear} onChange={handleYearChange}>
+      <div className="flex justify-center gap-4 mb-8">
+        <select
+          className="theme-input"
+          value={selectedYear}
+          onChange={handleYearChange}
+        >
           {Array.from({ length: 12 }, (_, i) => 2014 + i).map(year => (
             <option key={year} value={year}>{year}</option>
           ))}
         </select>
 
-        <select value={selectedMonth} onChange={handleMonthChange}>
+        <select
+          className="theme-input"
+          value={selectedMonth}
+          onChange={handleMonthChange}
+        >
           {months.map(month => (
             <option key={month} value={month}>{month}</option>
           ))}
         </select>
       </div>
 
-      <div className="table-container">
-        <table>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
           <thead>
-            <tr>
-              <th onClick={() => handleSort('categoria')}>
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('categoria')}
+              >
                 Categoria{getSortIndicator('categoria')}
               </th>
-              <th onClick={() => handleSort('entrate')}>
+              <th 
+                className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('entrate')}
+              >
                 Entrate{getSortIndicator('entrate')}
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
             {sortedData.map((item, index) => (
-              <tr key={index}>
-                <td>{item.categoria}</td>
-                <td className="amount">{formatCurrency(item.entrate)}</td>
+              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  {item.categoria}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                  {formatCurrency(item.entrate)}
+                </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr>
-              <td>Totale</td>
-              <td className="amount">
-                {formatCurrency(sortedData.reduce((sum, item) => sum + item.entrate, 0))}
+            <tr className="bg-gray-50 dark:bg-gray-700">
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                Totale
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
+                {formatCurrency(totaleEntrate)}
               </td>
             </tr>
           </tfoot>
