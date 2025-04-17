@@ -11,7 +11,7 @@ const BudgetEntrate = () => {
   const [data, setData] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [selectedYear, setSelectedYear] = useState(searchParams.get('anno') || new Date().getFullYear().toString());
-  const [selectedMonth, setSelectedMonth] = useState(searchParams.get('mese') || format(new Date(), 'MMMM', { locale: it }));
+  const [selectedMonth, setSelectedMonth] = useState(searchParams.get('mese') || new Date().getMonth());
 
   useEffect(() => {
     fetchData();
@@ -19,17 +19,30 @@ const BudgetEntrate = () => {
 
   const fetchData = async () => {
     try {
+      console.log('Fetching data with:', { selectedYear, selectedMonth });
       const response = await fetch(`${BASE_URL}/api/entrate`);
       const entrate = await response.json();
+      console.log('Received entrate:', entrate);
       
       // Filtra per anno e mese selezionati
       const filtered = entrate.filter(entrata => {
         const data = new Date(entrata.data);
-        return (
+        const match = (
           data.getFullYear().toString() === selectedYear &&
-          format(data, 'MMMM', { locale: it }) === selectedMonth
+          data.getMonth() === parseInt(selectedMonth)
         );
+        console.log('Filtering entrata:', {
+          data: entrata.data,
+          year: data.getFullYear(),
+          month: data.getMonth(),
+          selectedYear,
+          selectedMonth,
+          match
+        });
+        return match;
       });
+
+      console.log('Filtered entrate:', filtered);
 
       // Raggruppa per categoria
       const grouped = filtered.reduce((acc, entrata) => {
@@ -41,6 +54,7 @@ const BudgetEntrate = () => {
         return acc;
       }, {});
 
+      console.log('Grouped data:', grouped);
       setData(Object.values(grouped));
     } catch (error) {
       console.error('Errore nel recupero delle entrate:', error);
@@ -77,9 +91,9 @@ const BudgetEntrate = () => {
   };
 
   const handleMonthChange = (e) => {
-    const month = e.target.value;
-    setSelectedMonth(month);
-    searchParams.set('mese', month);
+    const monthIndex = parseInt(e.target.value);
+    setSelectedMonth(monthIndex);
+    searchParams.set('mese', monthIndex.toString());
     setSearchParams(searchParams);
   };
 
@@ -98,8 +112,8 @@ const BudgetEntrate = () => {
   };
 
   const months = [
-    'gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno',
-    'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'
+    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
   ];
 
   const totaleEntrate = sortedData.reduce((sum, item) => sum + item.entrate, 0);
@@ -107,7 +121,7 @@ const BudgetEntrate = () => {
   return (
     <div className="theme-container p-6">
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
-        Entrate {selectedMonth} {selectedYear}
+        Entrate {months[parseInt(selectedMonth)]} {selectedYear}
       </h2>
       
       <div className="flex justify-center gap-4 mb-8">
@@ -126,8 +140,8 @@ const BudgetEntrate = () => {
           value={selectedMonth}
           onChange={handleMonthChange}
         >
-          {months.map(month => (
-            <option key={month} value={month}>{month}</option>
+          {months.map((month, index) => (
+            <option key={index} value={index}>{month}</option>
           ))}
         </select>
       </div>
