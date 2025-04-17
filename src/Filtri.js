@@ -17,6 +17,8 @@ function Filtri() {
   const [dataInizio, setDataInizio] = useState('');
   const [dataFine, setDataFine] = useState('');
   const { darkMode } = useTheme();
+  const [spesaDaModificare, setSpesaDaModificare] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Legge i parametri dall'URL all'avvio
   useEffect(() => {
@@ -152,6 +154,30 @@ function Filtri() {
       }
     }
 
+  // Funzione per aprire il modal di modifica
+  const apriModifica = (spesa) => {
+    setSpesaDaModificare(spesa);
+    setIsModalOpen(true);
+  };
+
+  // Funzione per salvare le modifiche
+  const salvaModifiche = () => {
+    if (!spesaDaModificare) return;
+
+    axios.put(`${BASE_URL}/api/spese/${spesaDaModificare._id}`, {
+      descrizione: spesaDaModificare.descrizione,
+      importo: Number(spesaDaModificare.importo),
+      categoria: spesaDaModificare.categoria,
+      data: spesaDaModificare.data
+    })
+      .then(() => {
+        setIsModalOpen(false);
+        setSpesaDaModificare(null);
+        caricaSpese(); // Ricarica le spese dopo la modifica
+      })
+      .catch(err => console.error("Errore nella modifica della spesa:", err));
+  };
+
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
@@ -247,19 +273,132 @@ function Filtri() {
                   {new Date(spesa.data).toLocaleDateString()}
                 </div>
               </div>
-              <button
-                onClick={() => eliminaSpesa(spesa._id)}
-                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
-                title="Elimina spesa"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => apriModifica(spesa)}
+                  className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100 transition-colors duration-200"
+                  title="Modifica spesa"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => eliminaSpesa(spesa._id)}
+                  className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
+                  title="Elimina spesa"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Modal di modifica */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">
+              Modifica spesa
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Importo
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={spesaDaModificare?.importo || ''}
+                  onChange={e => setSpesaDaModificare({
+                    ...spesaDaModificare,
+                    importo: e.target.value
+                  })}
+                  className="theme-input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Categoria
+                </label>
+                <select
+                  value={spesaDaModificare?.categoria || ''}
+                  onChange={e => setSpesaDaModificare({
+                    ...spesaDaModificare,
+                    categoria: e.target.value
+                  })}
+                  className="theme-input w-full"
+                >
+                  <option value="Abbigliamento">Abbigliamento</option>
+                  <option value="Abbonamenti">Abbonamenti</option>
+                  <option value="Acqua">Acqua</option>
+                  <option value="Alimentari">Alimentari</option>
+                  <option value="Altre spese">Altre spese</option>
+                  <option value="Bar">Bar</option>
+                  <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
+                  <option value="Elettricità">Elettricità</option>
+                  <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
+                  <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
+                  <option value="Mutuo">Mutuo</option>
+                  <option value="Regali">Regali</option>
+                  <option value="Ristorante">Ristorante</option>
+                  <option value="Salute">Salute</option>
+                  <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
+                  <option value="Tecnologia">Tecnologia</option>
+                  <option value="Vacanza">Vacanza</option>
+                  <option value="Vela">Vela</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Descrizione
+                </label>
+                <input
+                  type="text"
+                  value={spesaDaModificare?.descrizione || ''}
+                  onChange={e => setSpesaDaModificare({
+                    ...spesaDaModificare,
+                    descrizione: e.target.value
+                  })}
+                  className="theme-input w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  value={spesaDaModificare?.data ? new Date(spesaDaModificare.data).toISOString().split('T')[0] : ''}
+                  onChange={e => setSpesaDaModificare({
+                    ...spesaDaModificare,
+                    data: e.target.value
+                  })}
+                  className="theme-input w-full"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={salvaModifiche}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors duration-200"
+              >
+                Salva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {filtroCategoria && Object.keys(spesePerMese).length > 0 && (
         <div className="mt-8">

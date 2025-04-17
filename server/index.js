@@ -9,7 +9,7 @@ const app = express();
 // Middleware per aggiungere headers CORS manualmente
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://budget-app-three-gules.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
   
@@ -91,6 +91,38 @@ app.delete('/api/spese/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ Errore nella cancellazione della spesa:', err);
     res.status(500).json({ error: 'Errore nella cancellazione della spesa' });
+  }
+});
+
+// Route PUT → modifica una spesa esistente
+app.put('/api/spese/:id', async (req, res) => {
+  const { id } = req.params;
+  const { descrizione, importo, categoria, data } = req.body;
+
+  if (!importo || !categoria) {
+    return res.status(400).json({ error: 'Dati mancanti' });
+  }
+
+  try {
+    const spesa = await Spesa.findByIdAndUpdate(
+      id,
+      {
+        descrizione,
+        importo: Number(importo),
+        categoria,
+        data: data || Date.now()
+      },
+      { new: true }
+    );
+
+    if (!spesa) {
+      return res.status(404).json({ error: 'Spesa non trovata' });
+    }
+
+    res.json(spesa);
+  } catch (err) {
+    console.error('❌ Errore nella modifica della spesa:', err);
+    res.status(500).json({ error: 'Errore nella modifica della spesa' });
   }
 });
 
