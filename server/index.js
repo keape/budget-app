@@ -9,7 +9,7 @@ const app = express();
 // Middleware per aggiungere headers CORS manualmente
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://budget-app-three-gules.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
   
@@ -79,11 +79,14 @@ app.post('/api/spese', async (req, res) => {
 
 // Route DELETE → elimina una spesa
 app.delete('/api/spese/:id', async (req, res) => {
+  console.log('🗑️ Richiesta eliminazione spesa:', req.params.id);
   try {
     const spesa = await Spesa.findByIdAndDelete(req.params.id);
     if (!spesa) {
+      console.log('❌ Spesa non trovata:', req.params.id);
       return res.status(404).json({ error: 'Spesa non trovata' });
     }
+    console.log('✅ Spesa eliminata con successo:', req.params.id);
     res.json({ message: 'Spesa eliminata con successo' });
   } catch (err) {
     console.error('❌ Errore nella cancellazione della spesa:', err);
