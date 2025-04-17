@@ -248,67 +248,89 @@ function Budget() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar 
-              dataKey="budget" 
-              name="Budget" 
-              fill="#3b82f6" 
-              onClick={handleBarClick}
-              cursor="pointer"
-            />
-            <Bar 
-              dataKey="spese" 
-              name="Spese" 
-              fill="#22c55e" 
-              onClick={handleBarClick}
-              cursor="pointer"
-            />
+            <Bar dataKey="budget" fill="#3182ce" name="Budget" onClick={handleBarClick} />
+            <Bar dataKey="spese" fill="#48bb78" name="Spese" onClick={handleBarClick} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Tabella dettagli */}
+      {/* Tabella */}
       <div className="overflow-x-auto">
         <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
-          <thead className="bg-gray-100 dark:bg-gray-700">
-            <tr>
+          <thead>
+            <tr className="bg-gray-100 dark:bg-gray-700">
               <th 
-                className={`px-4 py-2 text-left text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('categoria')}`}
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('categoria')}`}
                 onClick={() => handleSort('categoria')}
               >
                 Categoria
               </th>
               <th 
-                className={`px-4 py-2 text-right text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('budget')}`}
+                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('budget')}`}
                 onClick={() => handleSort('budget')}
               >
                 Budget
               </th>
               <th 
-                className={`px-4 py-2 text-right text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('spese')}`}
+                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('spese')}`}
                 onClick={() => handleSort('spese')}
               >
                 Spese
               </th>
               <th 
-                className={`px-4 py-2 text-right text-gray-900 dark:text-white cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 ${getSortClass('differenza')}`}
+                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('differenza')}`}
                 onClick={() => handleSort('differenza')}
               >
                 Differenza
               </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
             {sortedData.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-100 dark:hover:bg-gray-700">
-                <td className="px-4 py-2">{item.categoria}</td>
-                <td className="px-4 py-2 text-right">{item.budget.toFixed(2)} €</td>
-                <td className="px-4 py-2 text-right">{item.spese.toFixed(2)} €</td>
-                <td className={`px-4 py-2 text-right ${item.differenza > 0 ? 'text-red-600' : 'text-green-600'}`}>
+              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  {item.categoria}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                  {item.budget.toFixed(2)} €
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                  {item.spese.toFixed(2)} €
+                </td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                  item.differenza > 0 
+                    ? 'text-red-600 dark:text-red-400' 
+                    : item.differenza < 0 
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-900 dark:text-gray-100'
+                }`}>
                   {item.differenza.toFixed(2)} €
                 </td>
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="bg-gray-50 dark:bg-gray-700">
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                Totale
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
+                {totaleBudget.toFixed(2)} €
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
+                {totaleSpese.toFixed(2)} €
+              </td>
+              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                totaleDifferenza > 0 
+                  ? 'text-red-600 dark:text-red-400' 
+                  : totaleDifferenza < 0 
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-gray-900 dark:text-gray-100'
+              }`}>
+                {totaleDifferenza.toFixed(2)} €
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
