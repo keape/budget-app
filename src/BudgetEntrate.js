@@ -31,18 +31,8 @@ const BudgetEntrate = () => {
           data.getFullYear().toString() === selectedYear &&
           data.getMonth() === parseInt(selectedMonth)
         );
-        console.log('Filtering entrata:', {
-          data: entrata.data,
-          year: data.getFullYear(),
-          month: data.getMonth(),
-          selectedYear,
-          selectedMonth,
-          match
-        });
         return match;
       });
-
-      console.log('Filtered entrate:', filtered);
 
       // Raggruppa per categoria
       const grouped = filtered.reduce((acc, entrata) => {
