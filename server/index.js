@@ -10,7 +10,11 @@ const app = express();
 // Middleware per aggiungere headers CORS manualmente
 app.use((req, res, next) => {
   // Accetta richieste sia dall'app web che da iOS Shortcuts
-  const allowedOrigins = ['https://budget-app-three-gules.vercel.app', 'shortcuts://'];
+  const allowedOrigins = [
+    'https://budget-app-three-gules.vercel.app',
+    'http://localhost:3000',
+    'shortcuts://'
+  ];
   const origin = req.headers.origin;
   
   if (allowedOrigins.includes(origin)) {
