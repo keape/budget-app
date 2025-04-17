@@ -16,11 +16,25 @@ function Filtri() {
   const [dataFine, setDataFine] = useState('');
   const { darkMode } = useTheme();
 
-  useEffect(() => {
+  const caricaSpese = () => {
     axios.get(`${BASE_URL}/api/spese`)
       .then(res => setSpese(res.data))
       .catch(err => console.error("Errore nel caricamento delle spese:", err));
+  };
+
+  useEffect(() => {
+    caricaSpese();
   }, []);
+
+  const eliminaSpesa = (id) => {
+    if (window.confirm('Sei sicuro di voler eliminare questa spesa?')) {
+      axios.delete(`${BASE_URL}/api/spese/${id}`)
+        .then(() => {
+          caricaSpese(); // Ricarica le spese dopo l'eliminazione
+        })
+        .catch(err => console.error("Errore nell'eliminazione della spesa:", err));
+    }
+  };
 
   const speseFiltrate = spese.filter(spesa => {
     if (filtroCategoria && spesa.categoria !== filtroCategoria) return false;
@@ -167,30 +181,36 @@ function Filtri() {
 </div>
 
 
-<ul className="mt-4 space-y-2">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
   {speseFiltrate.map(spesa => (
-  
-<li
-  key={spesa._id}
-  className={`py-2 px-4 rounded-md shadow-sm max-w-xl mx-auto border ${categoriaClasse(spesa.categoria)}`}
->
-
-
- 
- 
-      <div className="flex flex-col space-y-1">
-        <span className="font-bold">{spesa.categoria}</span>
-        <span className="text-green-600 font-semibold">{spesa.importo.toFixed(2)} €</span>
-        {spesa.descrizione && (
-          <span className="italic text-red-700 dark:text-red-400">{spesa.descrizione}</span>
-        )}
-        <span className="text-sm text-gray-900 dark:text-gray-500">
-          {new Date(spesa.data).toLocaleDateString()}
-        </span>
+    <div
+      key={spesa._id}
+      className={`p-2 rounded-md shadow-sm border ${categoriaClasse(spesa.categoria)} hover:shadow-md transition-shadow duration-200`}
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <div className="font-bold text-sm">{spesa.categoria}</div>
+          <div className="text-green-600 font-semibold text-lg">{spesa.importo.toFixed(2)} €</div>
+          {spesa.descrizione && (
+            <div className="italic text-red-700 dark:text-red-400 text-sm">{spesa.descrizione}</div>
+          )}
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {new Date(spesa.data).toLocaleDateString()}
+          </div>
+        </div>
+        <button
+          onClick={() => eliminaSpesa(spesa._id)}
+          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
+          title="Elimina spesa"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
       </div>
-    </li>
+    </div>
   ))}
-</ul>
+</div>
 
 
 
