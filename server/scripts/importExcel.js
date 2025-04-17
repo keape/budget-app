@@ -14,6 +14,35 @@ function cleanImporto(importo) {
   return importo;
 }
 
+// Funzione per convertire la data Excel in formato JavaScript
+function parseExcelDate(excelDate) {
+  if (!excelDate) return new Date();
+  
+  // Se è già una stringa in formato ISO, la usiamo direttamente
+  if (typeof excelDate === 'string' && excelDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+    return new Date(excelDate);
+  }
+  
+  // Se è un numero (formato Excel), convertiamo
+  if (typeof excelDate === 'number') {
+    // Excel usa il sistema del 1900, dove 1 è il 1/1/1900
+    // 25569 è il numero di giorni tra 1/1/1900 e 1/1/1970 (epoch Unix)
+    const utcDays = excelDate - 25569;
+    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+    return new Date(utcDays * millisecondsPerDay);
+  }
+  
+  // Se è una stringa in formato italiano (dd/mm/yyyy)
+  if (typeof excelDate === 'string') {
+    const [day, month, year] = excelDate.split('/').map(Number);
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      return new Date(year, month - 1, day);
+    }
+  }
+  
+  return new Date();
+}
+
 // Funzione principale di importazione
 async function importaSpese(filePath) {
   try {
@@ -25,7 +54,9 @@ async function importaSpese(filePath) {
     console.log('✅ Connesso a MongoDB');
 
     // Leggi il file Excel
-    const workbook = XLSX.readFile(filePath);
+    const workbook = XLSX.readFile(filePath, {
+      cellDates: true  // Questo dice a XLSX di convertire le date automaticamente
+    });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
@@ -42,11 +73,17 @@ async function importaSpese(filePath) {
         descrizione: row.Descrizione || '',
         importo: importoFinale,
         categoria: row.Categoria,
-        data: row.Data ? new Date(row.Data) : new Date()
+        data: parseExcelDate(row.Data)
       };
     }).filter(spesa => !isNaN(spesa.importo) && spesa.categoria);
 
     console.log(`✨ ${spese.length} spese valide pronte per l'importazione`);
+    
+    // Log delle prime 5 spese per verifica
+    console.log('🔍 Prime 5 spese di esempio:');
+    spese.slice(0, 5).forEach(spesa => {
+      console.log(`   ${spesa.data.toISOString().split('T')[0]} - ${spesa.categoria}: ${spesa.importo}€`);
+    });
 
     // Inserisci le spese in batch
     const risultato = await Spesa.insertMany(spese, { ordered: false });
