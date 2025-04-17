@@ -53,16 +53,26 @@ function Filtri() {
         axios.get(`${BASE_URL}/api/entrate`)
       ]);
 
-      const spese = speseRes.data.map(s => ({ ...s, tipo: 'uscita' }));
-      const entrate = entrateRes.data.map(e => ({ ...e, tipo: 'entrata' }));
+      // Log per debug
+      console.log('Spese raw:', speseRes.data);
+      console.log('Entrate raw:', entrateRes.data);
+
+      const spese = speseRes.data.map(s => ({
+        ...s,
+        tipo: 'uscita',
+        importo: Number(s.importo) // Assicuriamoci che l'importo sia un numero
+      }));
+
+      const entrate = entrateRes.data.map(e => ({
+        ...e,
+        tipo: 'entrata',
+        importo: Number(e.importo) // Assicuriamoci che l'importo sia un numero
+      }));
+
+      console.log('Spese processate:', spese);
+      console.log('Entrate processate:', entrate);
       
-      console.log('Spese caricate:', spese.length);
-      console.log('Entrate caricate:', entrate.length);
-      
-      const tutteLeTransazioni = [...spese, ...entrate];
-      console.log('Totale transazioni:', tutteLeTransazioni.length);
-      
-      setTransazioni(tutteLeTransazioni);
+      setTransazioni([...spese, ...entrate]);
     } catch (err) {
       console.error("Errore nel caricamento delle transazioni:", err);
     }
@@ -298,64 +308,69 @@ function Filtri() {
 
       {/* Lista delle transazioni */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-        {transazioniFiltrate.map(transazione => (
-          <div
-            key={transazione._id}
-            className={`p-4 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800`}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{transazione.categoria}</div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    transazione.tipo === 'entrata' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-                      : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+        {transazioniFiltrate.map(transazione => {
+          // Verifichiamo che il tipo sia corretto
+          const isEntrata = transazione.tipo === 'entrata';
+          const importo = Number(transazione.importo); // Convertiamo in numero per sicurezza
+
+          return (
+            <div
+              key={transazione._id}
+              className={`p-4 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800`}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{transazione.categoria}</div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      isEntrata
+                        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                        : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                    }`}>
+                      {isEntrata ? 'Entrata' : 'Uscita'}
+                    </span>
+                  </div>
+                  <div className={`font-semibold text-lg ${
+                    isEntrata
+                      ? 'text-green-600 dark:text-green-400' 
+                      : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {transazione.tipo === 'entrata' ? 'Entrata' : 'Uscita'}
-                  </span>
+                    {isEntrata ? '+' : '-'}{Math.abs(importo).toFixed(2)} €
+                  </div>
+                  {transazione.descrizione && (
+                    <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
+                  )}
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {new Date(transazione.data).toLocaleDateString()}
+                  </div>
                 </div>
-                <div className={`font-semibold text-lg ${
-                  transazione.tipo === 'entrata' 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
-                  {transazione.tipo === 'entrata' ? '+' : '-'}{transazione.importo.toFixed(2)} €
-                </div>
-                {transazione.descrizione && (
-                  <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
-                )}
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {new Date(transazione.data).toLocaleDateString()}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                {/* Pulsante modifica (solo per le spese) */}
-                {transazione.tipo === 'uscita' && (
+                <div className="flex flex-col gap-2">
+                  {/* Pulsante modifica (solo per le spese) */}
+                  {!isEntrata && (
+                    <button
+                      onClick={() => apriModifica(transazione)}
+                      className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100 transition-colors duration-200"
+                      title="Modifica transazione"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
                   <button
-                    onClick={() => apriModifica(transazione)}
-                    className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100 transition-colors duration-200"
-                    title="Modifica transazione"
+                    onClick={() => eliminaTransazione(transazione._id, transazione.tipo)}
+                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
+                    title="Elimina transazione"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
-                )}
-                {/* Pulsante elimina */}
-                <button
-                  onClick={() => eliminaTransazione(transazione._id, transazione.tipo)}
-                  className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
-                  title="Elimina transazione"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Grafici statistici */}
