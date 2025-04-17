@@ -14,6 +14,9 @@ function Navbar() {
           <Link to="/budget" className="text-blue-700 dark:text-blue-300 font-semibold hover:underline">
             Budget 2025
           </Link>
+          <Link to="/budget-entrate" className="text-blue-700 dark:text-blue-300 font-semibold hover:underline">
+            Entrate
+          </Link>
           <Link to="/filtri" className="text-blue-700 dark:text-blue-300 font-semibold hover:underline">
             Filtri
           </Link>
