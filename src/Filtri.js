@@ -123,7 +123,7 @@ function Filtri() {
 
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
-      <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 dark:text-gray-200">
+      <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
         Filtra spese
       </h2>
 
@@ -131,7 +131,7 @@ function Filtri() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Filtro Categoria */}
           <div>
-            <label className="block font-bold mb-2 text-gray-700 dark:text-gray-300">
+            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
               Filtra per categoria
             </label>
             <select
@@ -163,7 +163,7 @@ function Filtri() {
 
           {/* Filtro Date */}
           <div>
-            <label className="block font-bold mb-2 text-gray-700 dark:text-gray-300">
+            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
               Intervallo date: Da...A
             </label>
             <div className="flex gap-2">
