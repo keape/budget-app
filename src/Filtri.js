@@ -55,7 +55,14 @@ function Filtri() {
 
       const spese = speseRes.data.map(s => ({ ...s, tipo: 'uscita' }));
       const entrate = entrateRes.data.map(e => ({ ...e, tipo: 'entrata' }));
-      setTransazioni([...spese, ...entrate]);
+      
+      console.log('Spese caricate:', spese.length);
+      console.log('Entrate caricate:', entrate.length);
+      
+      const tutteLeTransazioni = [...spese, ...entrate];
+      console.log('Totale transazioni:', tutteLeTransazioni.length);
+      
+      setTransazioni(tutteLeTransazioni);
     } catch (err) {
       console.error("Errore nel caricamento delle transazioni:", err);
     }
@@ -78,18 +85,38 @@ function Filtri() {
   };
 
   const transazioniFiltrate = transazioni.filter(t => {
-    if (filtroTipo !== 'tutte' && t.tipo !== filtroTipo) return false;
-    if (filtroCategoria && t.categoria !== filtroCategoria) return false;
+    // Se il tipo non è 'tutte', filtra per tipo
+    if (filtroTipo !== 'tutte' && t.tipo !== filtroTipo) {
+      return false;
+    }
+    
+    // Se c'è una categoria selezionata, filtra per categoria
+    if (filtroCategoria && t.categoria !== filtroCategoria) {
+      return false;
+    }
   
-    const dataTransazione = new Date(t.data).setHours(0, 0, 0, 0);
-    const inizio = dataInizio ? new Date(dataInizio).setHours(0, 0, 0, 0) : null;
-    const fine = dataFine ? new Date(dataFine).setHours(0, 0, 0, 0) : null;
-  
-    if (inizio && dataTransazione < inizio) return false;
-    if (fine && dataTransazione > fine) return false;
+    // Se ci sono date impostate, filtra per date
+    if (dataInizio || dataFine) {
+      const dataTransazione = new Date(t.data).setHours(0, 0, 0, 0);
+      
+      if (dataInizio) {
+        const inizio = new Date(dataInizio).setHours(0, 0, 0, 0);
+        if (dataTransazione < inizio) return false;
+      }
+      
+      if (dataFine) {
+        const fine = new Date(dataFine).setHours(0, 0, 0, 0);
+        if (dataTransazione > fine) return false;
+      }
+    }
   
     return true;
   });
+
+  // Aggiungi log per debug
+  console.log('Filtro tipo:', filtroTipo);
+  console.log('Transazioni filtrate:', transazioniFiltrate.length);
+  console.log('Dettaglio transazioni filtrate:', transazioniFiltrate);
 
   const colors = ['#60a5fa', '#818cf8', '#34d399', '#f472b6', '#fcd34d', '#f87171'];
 
@@ -277,23 +304,32 @@ function Filtri() {
         {transazioniFiltrate.map(transazione => (
           <div
             key={transazione._id}
-            className={`p-4 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200`}
+            className={`p-4 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800`}
           >
             <div className="flex justify-between items-start">
               <div>
-                <div className="font-bold text-sm">{transazione.categoria}</div>
-                <div className={`font-semibold text-lg ${transazione.tipo === 'entrata' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                <div className="flex items-center gap-2">
+                  <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{transazione.categoria}</div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    transazione.tipo === 'entrata' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
+                      : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                  }`}>
+                    {transazione.tipo === 'entrata' ? 'Entrata' : 'Uscita'}
+                  </span>
+                </div>
+                <div className={`font-semibold text-lg ${
+                  transazione.tipo === 'entrata' 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-red-600 dark:text-red-400'
+                }`}>
                   {transazione.tipo === 'entrata' ? '+' : '-'}{transazione.importo.toFixed(2)} €
                 </div>
                 {transazione.descrizione && (
-                  <div className="italic text-gray-600 dark:text-gray-400 text-sm">{transazione.descrizione}</div>
+                  <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
                 )}
-                <div className="text-xs text-gray-600 dark:text-gray-400">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {new Date(transazione.data).toLocaleDateString()}
-                </div>
-                <div className="text-xs font-medium mt-1 inline-block px-2 py-1 rounded-full bg-opacity-10 
-                  ${transazione.tipo === 'entrata' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}">
-                  {transazione.tipo === 'entrata' ? 'Entrata' : 'Uscita'}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
