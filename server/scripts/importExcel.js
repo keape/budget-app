@@ -1,13 +1,24 @@
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 const mongoose = require('mongoose');
 const XLSX = require('xlsx');
 const Spesa = require('../models/Spesa');
+
+const MONGO_URI = 'mongodb+srv://keape86:f55GawwEdx5S1BoZ@budgetapp.enqupoz.mongodb.net/test?retryWrites=true&w=majority&appName=budgetapp';
+
+// Funzione per pulire l'importo
+function cleanImporto(importo) {
+  if (typeof importo === 'string') {
+    // Rimuove il simbolo € e gli spazi
+    return parseFloat(importo.replace('€', '').replace(/\s/g, ''));
+  }
+  return importo;
+}
 
 // Funzione principale di importazione
 async function importaSpese(filePath) {
   try {
     // Connessione a MongoDB
-    await mongoose.connect(process.env.MONGO_URI, {
+    await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true
     });
@@ -22,12 +33,18 @@ async function importaSpese(filePath) {
     console.log(`📊 Trovate ${data.length} righe nel file Excel`);
 
     // Valida e formatta i dati
-    const spese = data.map(row => ({
-      descrizione: row.descrizione || '',
-      importo: Number(row.importo),
-      categoria: row.categoria,
-      data: row.data ? new Date(row.data) : new Date()
-    })).filter(spesa => !isNaN(spesa.importo) && spesa.categoria);
+    const spese = data.map(row => {
+      const importo = cleanImporto(row.Importo);
+      // Converti l'importo in positivo se è una spesa (negativo nel file)
+      const importoFinale = importo < 0 ? Math.abs(importo) : importo;
+      
+      return {
+        descrizione: row.Descrizione || '',
+        importo: importoFinale,
+        categoria: row.Categoria,
+        data: row.Data ? new Date(row.Data) : new Date()
+      };
+    }).filter(spesa => !isNaN(spesa.importo) && spesa.categoria);
 
     console.log(`✨ ${spese.length} spese valide pronte per l'importazione`);
 
