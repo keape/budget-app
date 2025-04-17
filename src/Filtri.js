@@ -123,96 +123,112 @@ function Filtri() {
 
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
-      <div className="flex justify-between items-center">
-        <h2 className="theme-title">Filtra spese</h2>
-      </div>
+      <h2 className="text-3xl font-bold text-center mb-8 text-gray-800 dark:text-gray-200">
+        Filtra spese
+      </h2>
 
-      <div className="theme-form">
-  <select
-    className="theme-input"
-    value={filtroCategoria}
-    onChange={e => setFiltroCategoria(e.target.value)}
-  >
-    <option value="">Tutte le categorie</option>
-    <option value="Abbigliamento">Abbigliamento</option>
-    <option value="Abbonamenti">Abbonamenti</option>
-    <option value="Acqua">Acqua</option>
-    <option value="Alimentari">Alimentari</option>
-    <option value="Altre spese">Altre spese</option>
-    <option value="Bar">Bar</option>
-    <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
-    <option value="Elettricità">Elettricità</option>
-    <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
-    <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
-    <option value="Mutuo">Mutuo</option>
-    <option value="Regali">Regali</option>
-    <option value="Ristorante">Ristorante</option>
-    <option value="Salute">Salute</option>
-    <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
-    <option value="Tecnologia">Tecnologia</option>
-    <option value="Vacanza">Vacanza</option>
-    <option value="Vela">Vela</option>
-  </select>
+      <div className="max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Filtro Categoria */}
+          <div>
+            <label className="block font-bold mb-2 text-gray-700 dark:text-gray-300">
+              Filtra per categoria
+            </label>
+            <select
+              className="theme-input w-full"
+              value={filtroCategoria}
+              onChange={e => setFiltroCategoria(e.target.value)}
+            >
+              <option value="">Tutte le categorie</option>
+              <option value="Abbigliamento">Abbigliamento</option>
+              <option value="Abbonamenti">Abbonamenti</option>
+              <option value="Acqua">Acqua</option>
+              <option value="Alimentari">Alimentari</option>
+              <option value="Altre spese">Altre spese</option>
+              <option value="Bar">Bar</option>
+              <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
+              <option value="Elettricità">Elettricità</option>
+              <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
+              <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
+              <option value="Mutuo">Mutuo</option>
+              <option value="Regali">Regali</option>
+              <option value="Ristorante">Ristorante</option>
+              <option value="Salute">Salute</option>
+              <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
+              <option value="Tecnologia">Tecnologia</option>
+              <option value="Vacanza">Vacanza</option>
+              <option value="Vela">Vela</option>
+            </select>
+          </div>
 
-
-  <div className="mb-2 font-semibold text-gray-700 dark:text-gray-400">Intervallo date: Da...A</div>
-  <input
-    className="theme-input"
-    type="date"
-    value={dataInizio}
-    onChange={e => setDataInizio(e.target.value)}
-  />
-  <input
-    className="theme-input"
-    type="date"
-    value={dataFine}
-    onChange={e => setDataFine(e.target.value)}
-  />
-  <button
-    className="bg-gray-300 hover:bg-gray-400 text-black font-medium py-2 px-4 rounded"
-    onClick={() => {
-      setFiltroCategoria('');
-      setDataInizio('');
-      setDataFine('');
-    }}
-  >
-    Pulisci filtri
-  </button>
-</div>
-
-
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-  {speseFiltrate.map(spesa => (
-    <div
-      key={spesa._id}
-      className={`p-2 rounded-md shadow-sm border ${categoriaClasse(spesa.categoria)} hover:shadow-md transition-shadow duration-200`}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="font-bold text-sm">{spesa.categoria}</div>
-          <div className="text-green-600 font-semibold text-lg">{spesa.importo.toFixed(2)} €</div>
-          {spesa.descrizione && (
-            <div className="italic text-red-700 dark:text-red-400 text-sm">{spesa.descrizione}</div>
-          )}
-          <div className="text-xs text-gray-600 dark:text-gray-400">
-            {new Date(spesa.data).toLocaleDateString()}
+          {/* Filtro Date */}
+          <div>
+            <label className="block font-bold mb-2 text-gray-700 dark:text-gray-300">
+              Intervallo date: Da...A
+            </label>
+            <div className="flex gap-2">
+              <input
+                className="theme-input flex-1"
+                type="date"
+                value={dataInizio}
+                onChange={e => setDataInizio(e.target.value)}
+              />
+              <input
+                className="theme-input flex-1"
+                type="date"
+                value={dataFine}
+                onChange={e => setDataFine(e.target.value)}
+              />
+            </div>
           </div>
         </div>
-        <button
-          onClick={() => eliminaSpesa(spesa._id)}
-          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
-          title="Elimina spesa"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+
+        {/* Pulsante Pulisci Filtri */}
+        <div className="flex justify-center mb-8">
+          <button
+            className="bg-gray-300 hover:bg-gray-400 text-black font-medium py-2 px-6 rounded transition-colors duration-200"
+            onClick={() => {
+              setFiltroCategoria('');
+              setDataInizio('');
+              setDataFine('');
+            }}
+          >
+            Pulisci filtri
+          </button>
+        </div>
       </div>
-    </div>
-  ))}
-</div>
 
-
+      {/* Lista delle spese */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {speseFiltrate.map(spesa => (
+          <div
+            key={spesa._id}
+            className={`p-2 rounded-md shadow-sm border ${categoriaClasse(spesa.categoria)} hover:shadow-md transition-shadow duration-200`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-bold text-sm">{spesa.categoria}</div>
+                <div className="text-green-600 font-semibold text-lg">{spesa.importo.toFixed(2)} €</div>
+                {spesa.descrizione && (
+                  <div className="italic text-red-700 dark:text-red-400 text-sm">{spesa.descrizione}</div>
+                )}
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {new Date(spesa.data).toLocaleDateString()}
+                </div>
+              </div>
+              <button
+                onClick={() => eliminaSpesa(spesa._id)}
+                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
+                title="Elimina spesa"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {filtroCategoria && Object.keys(spesePerMese).length > 0 && (
         <div className="mt-8">
