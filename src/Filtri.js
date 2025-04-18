@@ -334,7 +334,7 @@ function Filtri() {
                       ? 'text-green-600 dark:text-green-400' 
                       : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {isEntrata ? '+' : '-'}{Math.abs(importo).toFixed(2)} €
+                    {isEntrata ? '+' : '-'}{Math.abs(isEntrata ? importo : -importo).toFixed(2)} €
                   </div>
                   {transazione.descrizione && (
                     <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
