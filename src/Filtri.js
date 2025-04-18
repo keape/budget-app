@@ -61,14 +61,14 @@ function Filtri() {
       const spese = speseRes.data.map(s => ({
         ...s,
         tipo: 'uscita',
-        importo: -Math.abs(Number(s.importo))
+        importo: s.importo > 0 ? -s.importo : s.importo // Se positivo, rendiamolo negativo
       }));
 
       // Gestiamo le entrate come valori positivi
       const entrate = entrateRes.data.map(e => ({
         ...e,
         tipo: 'entrata',
-        importo: Math.abs(Number(e.importo))
+        importo: Math.abs(e.importo) // Assicuriamoci che sia positivo
       }));
 
       console.log('Spese processate:', spese);
@@ -313,7 +313,7 @@ function Filtri() {
         {transazioniFiltrate.map(transazione => {
           const isEntrata = transazione.tipo === 'entrata';
           const importo = Number(transazione.importo);
-          const displayImporto = isEntrata ? Math.abs(importo) : Math.abs(importo);
+          const displayImporto = Math.abs(importo);
           const segno = isEntrata ? '+' : '-';
 
           return (
