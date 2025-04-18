@@ -60,13 +60,13 @@ function Filtri() {
       const spese = speseRes.data.map(s => ({
         ...s,
         tipo: 'uscita',
-        importo: Number(s.importo) // Assicuriamoci che l'importo sia un numero
+        importo: -Math.abs(Number(s.importo)) // Assicuriamoci che le spese siano negative
       }));
 
       const entrate = entrateRes.data.map(e => ({
         ...e,
         tipo: 'entrata',
-        importo: Number(e.importo) // Assicuriamoci che l'importo sia un numero
+        importo: Math.abs(Number(e.importo)) // Assicuriamoci che le entrate siano positive
       }));
 
       console.log('Spese processate:', spese);
