@@ -9,7 +9,7 @@ const app = express();
 
 // Middleware per aggiungere headers CORS manualmente
 app.use(cors({
-  origin: ['https://budget-app-three-gules.vercel.app', 'http://localhost:3000', 'shortcuts://'],
+  origin: ['https://budget-app-three-gules.vercel.app', 'http://localhost:3000', 'shortcuts://', 'https://budget-app.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
   credentials: true
