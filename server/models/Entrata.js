@@ -19,4 +19,12 @@ const entrataSchema = new mongoose.Schema({
   }
 });
 
+// Middleware pre-save per assicurarsi che l'importo sia sempre positivo
+entrataSchema.pre('save', function(next) {
+  if (this.importo < 0) {
+    this.importo = Math.abs(this.importo);
+  }
+  next();
+});
+
 module.exports = mongoose.model('Entrata', entrataSchema); 
