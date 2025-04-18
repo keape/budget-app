@@ -329,6 +329,7 @@ function Filtri() {
                 <option value="Rimborsi">Rimborsi</option>
                 <option value="Regalo">Regalo</option>
                 <option value="MBO">MBO</option>
+                <option value="Welfare">Welfare</option>
                 <option value="Altro">Altro</option>
               </>}
             </select>
@@ -546,7 +547,11 @@ function Filtri() {
                     <>
                       <option value="Stipendio">Stipendio</option>
                       <option value="Investimenti">Investimenti</option>
-                      <option value="Bonus">Bonus</option>
+                      <option value="Vendite">Vendite</option>
+                      <option value="Rimborsi">Rimborsi</option>
+                      <option value="Regalo">Regalo</option>
+                      <option value="MBO">MBO</option>
+                      <option value="Welfare">Welfare</option>
                       <option value="Altro">Altro</option>
                     </>
                   ) : (
