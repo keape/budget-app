@@ -64,8 +64,8 @@ function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-center mb-8 text-white">
-        Budget mensile 2025
+      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-600 dark:text-indigo-300">
+        Budget
       </h1>
 
       <div className="bg-indigo-100 dark:bg-indigo-900 text-white p-4 rounded-lg mb-8 shadow-md text-center">
