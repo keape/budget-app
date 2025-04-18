@@ -214,7 +214,15 @@ function Filtri() {
   };
 
   const handleEdit = (transaction) => {
-    setEditingTransaction(transaction);
+    // Formatta la data per l'input type="date"
+    const formattedDate = transaction.data 
+      ? new Date(transaction.data).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    
+    setEditingTransaction({
+      ...transaction,
+      data: formattedDate
+    });
     setShowEditModal(true);
   };
 
@@ -224,11 +232,16 @@ function Filtri() {
         ? 'entrate'
         : 'spese';
 
+      // Formatta la data nel formato ISO
+      const formattedDate = editingTransaction.data 
+        ? new Date(editingTransaction.data).toISOString()
+        : new Date().toISOString();
+
       const response = await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
         importo: editingTransaction.tipo === 'entrata' ? Math.abs(editingTransaction.importo) : -Math.abs(editingTransaction.importo),
         descrizione: editingTransaction.descrizione || '',
         categoria: editingTransaction.categoria,
-        data: editingTransaction.data || new Date()
+        data: formattedDate
       });
 
       if (response.data) {
