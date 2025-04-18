@@ -183,9 +183,9 @@ function Budget() {
 
   return (
     <div className="theme-container p-6">
-      <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
-        Budget {meseCorrente === 0 ? 'annuale' : 'mensile'} {annoCorrente}
-      </h2>
+      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
+        Budget
+      </h1>
 
       {/* Selettore periodo */}
       <div className="flex justify-center mb-8">
