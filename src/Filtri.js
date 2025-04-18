@@ -415,18 +415,43 @@ function Filtri() {
           {/* Grafico a barre per andamento temporale quando si filtra per categoria */}
           {filtroCategoria && (
             <div className="mt-8 mb-8">
-              <h3 className="theme-title mb-4">Andamento temporale - {filtroCategoria}</h3>
+              <h3 className="text-2xl font-bold text-center mb-6 text-indigo-700 dark:text-indigo-300">
+                {filtroCategoria}
+              </h3>
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart
-                  data={transazioniFiltrate
-                    .sort((a, b) => new Date(a.data) - new Date(b.data))
-                    .map(t => ({
-                      data: new Date(t.data).toLocaleDateString(),
-                      importo: Math.abs(t.importo)
-                    }))}
+                  data={Object.entries(
+                    transazioniFiltrate.reduce((acc, t) => {
+                      // Estrai anno e mese dalla data
+                      const data = new Date(t.data);
+                      const chiave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                      acc[chiave] = (acc[chiave] || 0) + Math.abs(t.importo);
+                      return acc;
+                    }, {})
+                  )
+                    .map(([data, importo]) => ({
+                      data: new Date(data + '-01').toLocaleDateString('it-IT', { 
+                        year: 'numeric',
+                        month: 'long'
+                      }),
+                      importo
+                    }))
+                    .sort((a, b) => {
+                      const dataA = new Date(a.data.split(' ')[1], ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'].indexOf(a.data.split(' ')[0]));
+                      const dataB = new Date(b.data.split(' ')[1], ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'].indexOf(b.data.split(' ')[0]));
+                      return dataA - dataB;
+                    })}
                 >
-                  <XAxis dataKey="data" angle={-45} textAnchor="end" height={100} />
-                  <YAxis />
+                  <XAxis 
+                    dataKey="data" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={100}
+                    tick={{ fill: darkMode ? '#e5e7eb' : '#374151' }}
+                  />
+                  <YAxis
+                    tick={{ fill: darkMode ? '#e5e7eb' : '#374151' }}
+                  />
                   <Tooltip />
                   <Bar
                     dataKey="importo"
