@@ -65,12 +65,14 @@ function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
-        Aggiungi movimento
+        Budget mensile 2025
       </h1>
 
-      <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-8 shadow-md text-center text-xl font-semibold">
-        Totale {tipo === 'spesa' ? 'spese' : 'entrate'} di {new Date().toLocaleString('default', { month: 'long' })}:{' '}
-        {totaleMeseCorrente.toFixed(2)} €
+      <div className="bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 p-4 rounded-lg mb-8 shadow-md text-center">
+        <h2 className="text-2xl font-bold">
+          Totale {tipo === 'spesa' ? 'spese' : 'entrate'} di {new Date().toLocaleString('default', { month: 'long' })}:{' '}
+          {totaleMeseCorrente.toFixed(2)} €
+        </h2>
       </div>
 
       <form onSubmit={aggiungiTransazione} className="space-y-6">
