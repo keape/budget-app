@@ -218,7 +218,8 @@ function Filtri() {
       const response = await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
         importo: editingTransaction.tipo === 'entrata' ? Math.abs(editingTransaction.importo) : -Math.abs(editingTransaction.importo),
         descrizione: editingTransaction.descrizione || '',
-        categoria: editingTransaction.categoria
+        categoria: editingTransaction.categoria,
+        data: editingTransaction.data || new Date()
       });
 
       if (response.data) {
@@ -381,7 +382,7 @@ function Filtri() {
                   {/* Pulsante modifica (per tutte le transazioni) */}
                   <button
                     onClick={() => handleEdit(transazione)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-white"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -457,12 +458,12 @@ function Filtri() {
                 </label>
                 <input
                   type="number"
-                  value={editingTransaction.importo}
+                  value={Math.abs(editingTransaction.importo)}
                   onChange={(e) => setEditingTransaction({
                     ...editingTransaction,
                     importo: e.target.value
                   })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
 
@@ -477,7 +478,22 @@ function Filtri() {
                     ...editingTransaction,
                     descrizione: e.target.value
                   })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  value={editingTransaction.data ? new Date(editingTransaction.data).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    data: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
 
@@ -491,7 +507,7 @@ function Filtri() {
                     ...editingTransaction,
                     categoria: e.target.value
                   })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
                   {editingTransaction.tipo === 'entrata' ? (
                     <>
@@ -502,11 +518,24 @@ function Filtri() {
                     </>
                   ) : (
                     <>
-                      <option value="Cibo">Cibo</option>
-                      <option value="Trasporti">Trasporti</option>
-                      <option value="Casa">Casa</option>
-                      <option value="Svago">Svago</option>
-                      <option value="Altro">Altro</option>
+                      <option value="Abbigliamento">Abbigliamento</option>
+                      <option value="Abbonamenti">Abbonamenti</option>
+                      <option value="Acqua">Acqua</option>
+                      <option value="Alimentari">Alimentari</option>
+                      <option value="Altre spese">Altre spese</option>
+                      <option value="Bar">Bar</option>
+                      <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
+                      <option value="Elettricità">Elettricità</option>
+                      <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
+                      <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
+                      <option value="Mutuo">Mutuo</option>
+                      <option value="Regali">Regali</option>
+                      <option value="Ristorante">Ristorante</option>
+                      <option value="Salute">Salute</option>
+                      <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
+                      <option value="Tecnologia">Tecnologia</option>
+                      <option value="Vacanza">Vacanza</option>
+                      <option value="Vela">Vela</option>
                     </>
                   )}
                 </select>
@@ -516,7 +545,7 @@ function Filtri() {
             <div className="mt-6 flex justify-end space-x-3">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
               >
                 Annulla
               </button>
