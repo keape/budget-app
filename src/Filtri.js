@@ -22,6 +22,16 @@ function Filtri() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
 
+  const categorieEntrate = [
+    "Stipendio",
+    "Investimenti",
+    "Vendite",
+    "Rimborsi",
+    "Regalo",
+    "MBO",
+    "Altro"
+  ];
+
   // Legge i parametri dall'URL all'avvio
   useEffect(() => {
     const categoria = searchParams.get('categoria');
@@ -257,9 +267,9 @@ function Filtri() {
 
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
-      <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
+      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-600 dark:text-indigo-300">
         Filtra transazioni
-      </h2>
+      </h1>
 
       <div className="max-w-4xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -318,6 +328,7 @@ function Filtri() {
                 <option value="Vendite">Vendite</option>
                 <option value="Rimborsi">Rimborsi</option>
                 <option value="Regalo">Regalo</option>
+                <option value="MBO">MBO</option>
                 <option value="Altro">Altro</option>
               </>}
             </select>
