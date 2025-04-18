@@ -215,15 +215,17 @@ function Filtri() {
         ? 'entrate'
         : 'spese';
 
-      await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
-        importo: Math.abs(editingTransaction.importo), // Assicuriamoci che l'importo sia positivo
-        descrizione: editingTransaction.descrizione,
-        categoria: editingTransaction.categoria,
+      const response = await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
+        importo: editingTransaction.tipo === 'entrata' ? Math.abs(editingTransaction.importo) : -Math.abs(editingTransaction.importo),
+        descrizione: editingTransaction.descrizione || '',
+        categoria: editingTransaction.categoria
       });
 
-      setShowEditModal(false);
-      setEditingTransaction(null);
-      caricaTransazioni(); // Ricarica le transazioni dopo la modifica
+      if (response.data) {
+        setShowEditModal(false);
+        setEditingTransaction(null);
+        await caricaTransazioni(); // Ricarica le transazioni dopo la modifica
+      }
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
       alert('Si è verificato un errore durante il salvataggio. Riprova.');
