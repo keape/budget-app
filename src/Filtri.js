@@ -50,27 +50,35 @@ function Filtri() {
 
   const caricaTransazioni = async () => {
     try {
+      console.log('Inizio caricamento transazioni...');
+      console.log('URL base:', BASE_URL);
+      
       const [speseRes, entrateRes] = await Promise.all([
-        axios.get(`${BASE_URL}/api/spese`),
-        axios.get(`${BASE_URL}/api/entrate`)
+        axios.get(`${BASE_URL}/api/spese`).catch(err => {
+          console.error('Errore nel caricamento delle spese:', err.response || err);
+          return { data: [] };
+        }),
+        axios.get(`${BASE_URL}/api/entrate`).catch(err => {
+          console.error('Errore nel caricamento delle entrate:', err.response || err);
+          return { data: [] };
+        })
       ]);
 
-      // Log per debug
-      console.log('Spese raw:', speseRes.data);
-      console.log('Entrate raw:', entrateRes.data);
+      console.log('Risposta spese:', speseRes.data);
+      console.log('Risposta entrate:', entrateRes.data);
 
       // Gestiamo le spese come valori negativi
-      const spese = speseRes.data.map(s => ({
+      const spese = (speseRes.data || []).map(s => ({
         ...s,
         tipo: 'uscita',
-        importo: s.importo > 0 ? -s.importo : s.importo // Se positivo, rendiamolo negativo
+        importo: s.importo > 0 ? -s.importo : s.importo
       }));
 
       // Gestiamo le entrate come valori positivi
-      const entrate = entrateRes.data.map(e => ({
+      const entrate = (entrateRes.data || []).map(e => ({
         ...e,
         tipo: 'entrata',
-        importo: Math.abs(e.importo) // Assicuriamoci che sia positivo
+        importo: Math.abs(e.importo)
       }));
 
       console.log('Spese processate:', spese);
@@ -79,6 +87,7 @@ function Filtri() {
       setTransazioni([...spese, ...entrate]);
     } catch (err) {
       console.error("Errore nel caricamento delle transazioni:", err);
+      alert('Si è verificato un errore nel caricamento delle transazioni. Riprova.');
     }
   };
 
