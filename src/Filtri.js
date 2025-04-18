@@ -57,16 +57,18 @@ function Filtri() {
       console.log('Spese raw:', speseRes.data);
       console.log('Entrate raw:', entrateRes.data);
 
+      // Gestiamo le spese come valori negativi
       const spese = speseRes.data.map(s => ({
         ...s,
         tipo: 'uscita',
-        importo: Number(s.importo) // Gli importi sono già negativi dal backend
+        importo: -Math.abs(Number(s.importo))
       }));
 
+      // Gestiamo le entrate come valori positivi
       const entrate = entrateRes.data.map(e => ({
         ...e,
         tipo: 'entrata',
-        importo: Number(e.importo) // Gli importi sono già positivi dal backend
+        importo: Math.abs(Number(e.importo))
       }));
 
       console.log('Spese processate:', spese);
@@ -311,6 +313,8 @@ function Filtri() {
         {transazioniFiltrate.map(transazione => {
           const isEntrata = transazione.tipo === 'entrata';
           const importo = Number(transazione.importo);
+          const displayImporto = isEntrata ? Math.abs(importo) : Math.abs(importo);
+          const segno = isEntrata ? '+' : '-';
 
           return (
             <div
@@ -334,7 +338,7 @@ function Filtri() {
                       ? 'text-green-600 dark:text-green-400' 
                       : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {isEntrata ? '+' : ''}{importo.toFixed(2)} €
+                    {segno}{displayImporto.toFixed(2)} €
                   </div>
                   {transazione.descrizione && (
                     <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
