@@ -162,7 +162,7 @@ app.put('/api/spese/:id', async (req, res) => {
         descrizione,
         importo: Number(importo),
         categoria,
-        data: data || Date.now()
+        data: data ? new Date(data) : undefined
       },
       { new: true }
     );
@@ -270,7 +270,7 @@ app.post('/api/entrate', async (req, res) => {
 app.put('/api/entrate/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { importo, descrizione, categoria } = req.body;
+    const { importo, descrizione, categoria, data } = req.body;
 
     if (!importo || !categoria) {
       return res.status(400).json({ error: 'Importo e categoria sono richiesti' });
@@ -285,9 +285,9 @@ app.put('/api/entrate/:id', async (req, res) => {
       id,
       {
         descrizione: descrizione || '',
-        importo: Math.abs(importoNumerico), // Assicuriamoci che l'importo sia positivo
+        importo: Math.abs(importoNumerico),
         categoria,
-        data: new Date()
+        data: data ? new Date(data) : undefined
       },
       { new: true }
     );
