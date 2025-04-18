@@ -266,6 +266,37 @@ app.post('/api/entrate', async (req, res) => {
   }
 });
 
+// Route per sistemare gli importi delle transazioni
+app.post('/api/fix-transactions', async (req, res) => {
+  try {
+    // Fix spese
+    const spese = await Spesa.find();
+    console.log(`Trovate ${spese.length} spese da sistemare`);
+    
+    for (const spesa of spese) {
+      spesa.importo = -Math.abs(spesa.importo);
+      await spesa.save();
+    }
+
+    // Fix entrate
+    const entrate = await Entrata.find();
+    console.log(`Trovate ${entrate.length} entrate da sistemare`);
+    
+    for (const entrata of entrate) {
+      entrata.importo = Math.abs(entrata.importo);
+      await entrata.save();
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Sistemate ${spese.length} spese e ${entrate.length} entrate` 
+    });
+  } catch (err) {
+    console.error('❌ Errore nella correzione delle transazioni:', err);
+    res.status(500).json({ error: 'Errore nella correzione delle transazioni' });
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
