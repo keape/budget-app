@@ -212,30 +212,21 @@ function Filtri() {
   const handleSaveEdit = async () => {
     try {
       const endpoint = editingTransaction.tipo === 'entrata' 
-        ? `/api/entrate/${editingTransaction._id}`
-        : `/api/spese/${editingTransaction._id}`;
+        ? 'entrate'
+        : 'spese';
 
-      const response = await fetch(endpoint, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          importo: editingTransaction.importo,
-          descrizione: editingTransaction.descrizione,
-          categoria: editingTransaction.categoria,
-        }),
+      await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
+        importo: Math.abs(editingTransaction.importo), // Assicuriamoci che l'importo sia positivo
+        descrizione: editingTransaction.descrizione,
+        categoria: editingTransaction.categoria,
       });
 
-      if (!response.ok) {
-        throw new Error('Errore durante il salvataggio');
-      }
-
       setShowEditModal(false);
-      caricaTransazioni();
+      setEditingTransaction(null);
+      caricaTransazioni(); // Ricarica le transazioni dopo la modifica
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
-      alert('Si è verificato un errore durante il salvataggio');
+      alert('Si è verificato un errore durante il salvataggio. Riprova.');
     }
   };
 
