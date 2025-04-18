@@ -282,16 +282,24 @@ function Budget() {
             {totaleTransazioni.toFixed(2)} €
           </p>
         </div>
-        <div className={`p-4 rounded-lg ${totaleDifferenza > 0 ? 
-          (tipoTransazione === 'entrate' ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900') : 
-          'bg-green-100 dark:bg-green-900'}`}>
+        <div className={`p-4 rounded-lg ${
+          tipoTransazione === 'entrate'
+            ? (totaleDifferenza > 0 
+                ? 'bg-green-100 dark:bg-green-900' 
+                : 'bg-red-100 dark:bg-red-900')
+            : (totaleDifferenza > 0 
+                ? 'bg-red-100 dark:bg-red-900' 
+                : 'bg-green-100 dark:bg-green-900')
+        }`}>
           <h3 className="text-lg font-semibold mb-2">Differenza</h3>
           <p className={`text-2xl font-bold ${
-            totaleDifferenza > 0 
-              ? (tipoTransazione === 'entrate' 
+            tipoTransazione === 'entrate'
+              ? (totaleDifferenza > 0 
                   ? 'text-green-800 dark:text-green-200' 
                   : 'text-red-800 dark:text-red-200')
-              : 'text-green-800 dark:text-green-200'
+              : (totaleDifferenza > 0 
+                  ? 'text-red-800 dark:text-red-200' 
+                  : 'text-green-800 dark:text-green-200')
           }`}>
             {totaleDifferenza.toFixed(2)} €
           </p>
@@ -388,15 +396,13 @@ function Budget() {
                 {totaleTransazioni.toFixed(2)} €
               </td>
               <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                totaleDifferenza > 0 
-                  ? (tipoTransazione === 'entrate'
+                tipoTransazione === 'entrate'
+                  ? (totaleDifferenza > 0 
                       ? 'text-green-600 dark:text-green-400'
                       : 'text-red-600 dark:text-red-400')
-                  : totaleDifferenza < 0 
-                    ? (tipoTransazione === 'entrate'
-                        ? 'text-red-600 dark:text-red-400'
-                        : 'text-green-600 dark:text-green-400')
-                    : 'text-gray-900 dark:text-gray-100'
+                  : (totaleDifferenza > 0 
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-green-600 dark:text-green-400')
               }`}>
                 {totaleDifferenza.toFixed(2)} €
               </td>
