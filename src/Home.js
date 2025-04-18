@@ -19,7 +19,7 @@ function Home() {
   ];
 
   const categorieEntrate = [
-    "Stipendio", "Investimenti", "Vendite", "Rimborsi", "Regalo", "MBO", "Altro"
+    "Stipendio", "Investimenti", "Vendite", "Rimborsi", "Regalo", "MBO", "Welfare", "Altro"
   ];
 
   useEffect(() => {
