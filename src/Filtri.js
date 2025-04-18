@@ -373,6 +373,72 @@ function Filtri() {
         </div>
       </div>
 
+      {/* Grafici statistici */}
+      {transazioniFiltrate.length > 0 && (
+        <>
+          {/* Grafico a torta per distribuzione per categoria */}
+          <div className="mt-8 mb-8">
+            <h3 className="theme-title mb-4">Distribuzione per categoria</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={Object.entries(
+                    transazioniFiltrate.reduce((acc, t) => {
+                      acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
+                      return acc;
+                    }, {})
+                  )
+                    .map(([categoria, valore]) => ({ categoria, valore }))
+                    .sort((a, b) => b.valore - a.valore)}
+                  dataKey="valore"
+                  nameKey="categoria"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={150}
+                  fill="#8884d8"
+                  label={({ categoria, percent }) => `${categoria}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {Object.entries(transazioniFiltrate.reduce((acc, t) => {
+                    acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
+                    return acc;
+                  }, {})).map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend layout="vertical" align="right" verticalAlign="middle" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Grafico a barre per andamento temporale quando si filtra per categoria */}
+          {filtroCategoria && (
+            <div className="mt-8 mb-8">
+              <h3 className="theme-title mb-4">Andamento temporale - {filtroCategoria}</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={transazioniFiltrate
+                    .sort((a, b) => new Date(a.data) - new Date(b.data))
+                    .map(t => ({
+                      data: new Date(t.data).toLocaleDateString(),
+                      importo: Math.abs(t.importo)
+                    }))}
+                >
+                  <XAxis dataKey="data" angle={-45} textAnchor="end" height={100} />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar
+                    dataKey="importo"
+                    fill={filtroTipo === 'entrata' ? '#48bb78' : '#ef4444'}
+                    name={filtroTipo === 'entrata' ? 'Entrata' : 'Spesa'}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Lista delle transazioni */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {transazioniFiltrate.map(transazione => {
@@ -437,45 +503,6 @@ function Filtri() {
           );
         })}
       </div>
-
-      {/* Grafici statistici */}
-      {transazioniFiltrate.length > 0 && (
-        <>
-          <div className="mt-8">
-            <h3 className="theme-title">Distribuzione per categoria</h3>
-            <ResponsiveContainer width="100%" height={700}>
-              <PieChart>
-                <Pie
-                  data={Object.entries(
-                    transazioniFiltrate.reduce((acc, t) => {
-                      acc[t.categoria] = (acc[t.categoria] || 0) + t.importo;
-                      return acc;
-                    }, {})
-                  )
-                    .map(([categoria, valore]) => ({ categoria, valore }))
-                    .sort((a, b) => b.valore - a.valore)}
-                  dataKey="valore"
-                  nameKey="categoria"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={250}
-                  fill="#8884d8"
-                  label={({ categoria, percent }) => `${categoria}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {Object.entries(transazioniFiltrate.reduce((acc, t) => {
-                    acc[t.categoria] = (acc[t.categoria] || 0) + t.importo;
-                    return acc;
-                  }, {})).map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend layout="vertical" align="right" verticalAlign="middle" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </>
-      )}
 
       {/* Modal di modifica */}
       {showEditModal && editingTransaction && (
