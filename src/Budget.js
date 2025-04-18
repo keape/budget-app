@@ -56,6 +56,7 @@ function Budget() {
   const [speseMensili, setSpeseMensili] = useState([]);
   const [meseCorrente, setMeseCorrente] = useState(new Date().getMonth());
   const [annoCorrente, setAnnoCorrente] = useState(new Date().getFullYear());
+  const [tipoTransazione, setTipoTransazione] = useState('uscite');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const navigate = useNavigate();
 
@@ -83,42 +84,44 @@ function Budget() {
   };
 
   useEffect(() => {
-    axios.get(`${BASE_URL}/api/spese`)
+    const endpoint = tipoTransazione === 'entrate' ? '/api/entrate' : '/api/spese';
+    
+    axios.get(`${BASE_URL}${endpoint}`)
       .then(res => {
-        let speseFiltrate;
+        let transazioniFiltrate;
         if (meseCorrente === 0) {
           // Per l'intero anno, filtra solo per anno
-          speseFiltrate = res.data.filter(spesa => {
-            const dataSpesa = new Date(spesa.data);
-            return dataSpesa.getFullYear() === annoCorrente;
+          transazioniFiltrate = res.data.filter(transazione => {
+            const dataTransazione = new Date(transazione.data);
+            return dataTransazione.getFullYear() === annoCorrente;
           });
         } else {
           // Per un mese specifico, filtra per mese e anno
-          speseFiltrate = res.data.filter(spesa => {
-            const dataSpesa = new Date(spesa.data);
-            return dataSpesa.getMonth() === meseCorrente - 1 && 
-                   dataSpesa.getFullYear() === annoCorrente;
+          transazioniFiltrate = res.data.filter(transazione => {
+            const dataTransazione = new Date(transazione.data);
+            return dataTransazione.getMonth() === meseCorrente - 1 && 
+                   dataTransazione.getFullYear() === annoCorrente;
           });
         }
 
-        // Raggruppa le spese per categoria
-        const spesePerCategoria = speseFiltrate.reduce((acc, spesa) => {
-          acc[spesa.categoria] = (acc[spesa.categoria] || 0) + spesa.importo;
+        // Raggruppa le transazioni per categoria
+        const transazioniPerCategoria = transazioniFiltrate.reduce((acc, transazione) => {
+          acc[transazione.categoria] = (acc[transazione.categoria] || 0) + transazione.importo;
           return acc;
         }, {});
 
-        setSpeseMensili(spesePerCategoria);
+        setSpeseMensili(transazioniPerCategoria);
       })
-      .catch(err => console.error("Errore nel caricamento delle spese:", err));
-  }, [meseCorrente, annoCorrente]);
+      .catch(err => console.error("Errore nel caricamento delle transazioni:", err));
+  }, [meseCorrente, annoCorrente, tipoTransazione]);
 
   // Prepara i dati per il grafico usando il budget del periodo selezionato
-  const budgetPeriodoCorrente = getBudgetPeriodo(meseCorrente);
-  const datiGrafico = Object.keys(budgetPeriodoCorrente).map(categoria => ({
+  const budgetPeriodoCorrente = tipoTransazione === 'entrate' ? {} : getBudgetPeriodo(meseCorrente);
+  const datiGrafico = Object.keys(tipoTransazione === 'entrate' ? speseMensili : budgetPeriodoCorrente).map(categoria => ({
     categoria,
-    budget: budgetPeriodoCorrente[categoria],
-    spese: speseMensili[categoria] || 0,
-    differenza: (speseMensili[categoria] || 0) - budgetPeriodoCorrente[categoria]
+    budget: tipoTransazione === 'entrate' ? 0 : budgetPeriodoCorrente[categoria],
+    importo: speseMensili[categoria] || 0,
+    differenza: tipoTransazione === 'entrate' ? 0 : (speseMensili[categoria] || 0) - budgetPeriodoCorrente[categoria]
   }));
 
   // Funzione per gestire l'ordinamento
@@ -156,9 +159,9 @@ function Budget() {
   };
 
   // Calcola i totali usando il budget del periodo
-  const totaleBudget = Object.values(budgetPeriodoCorrente).reduce((a, b) => a + b, 0);
-  const totaleSpese = sortedData.reduce((acc, item) => acc + item.spese, 0);
-  const totaleDifferenza = totaleSpese - totaleBudget;
+  const totaleBudget = tipoTransazione === 'entrate' ? 0 : Object.values(budgetPeriodoCorrente).reduce((a, b) => a + b, 0);
+  const totaleTransazioni = sortedData.reduce((acc, item) => acc + item.importo, 0);
+  const totaleDifferenza = tipoTransazione === 'entrate' ? 0 : totaleTransazioni - totaleBudget;
 
   const handleBarClick = (data) => {
     // Costruisce i parametri per i filtri
@@ -187,10 +190,10 @@ function Budget() {
         Budget
       </h1>
 
-      {/* Selettore periodo */}
-      <div className="flex justify-center mb-8">
+      {/* Selettori periodo e tipo */}
+      <div className="flex justify-center mb-8 gap-4">
         <select
-          className="theme-input mr-4"
+          className="theme-input"
           value={meseCorrente}
           onChange={(e) => setMeseCorrente(parseInt(e.target.value))}
         >
@@ -216,28 +219,47 @@ function Budget() {
           <option value="2015">2015</option>
           <option value="2014">2014</option>
         </select>
+        <select
+          className="theme-input"
+          value={tipoTransazione}
+          onChange={(e) => setTipoTransazione(e.target.value)}
+        >
+          <option value="uscite">Uscite</option>
+          <option value="entrate">Entrate</option>
+        </select>
       </div>
 
       {/* Totali */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="p-4 rounded-lg bg-blue-100 dark:bg-blue-900">
-          <h3 className="text-lg font-semibold mb-2">Budget Pianificato</h3>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-            {totaleBudget.toFixed(2)} €
-          </p>
-        </div>
-        <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900">
-          <h3 className="text-lg font-semibold mb-2">Spese Effettive</h3>
-          <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-            {totaleSpese.toFixed(2)} €
-          </p>
-        </div>
-        <div className={`p-4 rounded-lg ${totaleDifferenza > 0 ? 'bg-red-100 dark:bg-red-900' : 'bg-green-100 dark:bg-green-900'}`}>
-          <h3 className="text-lg font-semibold mb-2">Differenza</h3>
-          <p className={`text-2xl font-bold ${totaleDifferenza > 0 ? 'text-red-800 dark:text-red-200' : 'text-green-800 dark:text-green-200'}`}>
-            {totaleDifferenza.toFixed(2)} €
-          </p>
-        </div>
+        {tipoTransazione === 'uscite' ? (
+          <>
+            <div className="p-4 rounded-lg bg-blue-100 dark:bg-blue-900">
+              <h3 className="text-lg font-semibold mb-2">Budget Pianificato</h3>
+              <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+                {totaleBudget.toFixed(2)} €
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900">
+              <h3 className="text-lg font-semibold mb-2">Spese Effettive</h3>
+              <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                {totaleTransazioni.toFixed(2)} €
+              </p>
+            </div>
+            <div className={`p-4 rounded-lg ${totaleDifferenza > 0 ? 'bg-red-100 dark:bg-red-900' : 'bg-green-100 dark:bg-green-900'}`}>
+              <h3 className="text-lg font-semibold mb-2">Differenza</h3>
+              <p className={`text-2xl font-bold ${totaleDifferenza > 0 ? 'text-red-800 dark:text-red-200' : 'text-green-800 dark:text-green-200'}`}>
+                {totaleDifferenza.toFixed(2)} €
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900 md:col-span-3">
+            <h3 className="text-lg font-semibold mb-2">Totale Entrate</h3>
+            <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+              {totaleTransazioni.toFixed(2)} €
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Grafico con onClick */}
@@ -248,8 +270,15 @@ function Budget() {
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar dataKey="budget" fill="#3182ce" name="Budget" onClick={handleBarClick} />
-            <Bar dataKey="spese" fill="#48bb78" name="Spese" onClick={handleBarClick} />
+            {tipoTransazione === 'uscite' && (
+              <Bar dataKey="budget" fill="#3182ce" name="Budget" onClick={handleBarClick} />
+            )}
+            <Bar 
+              dataKey="importo" 
+              fill={tipoTransazione === 'entrate' ? '#48bb78' : '#ef4444'} 
+              name={tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'} 
+              onClick={handleBarClick} 
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -265,24 +294,28 @@ function Budget() {
               >
                 Categoria
               </th>
+              {tipoTransazione === 'uscite' && (
+                <th 
+                  className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('budget')}`}
+                  onClick={() => handleSort('budget')}
+                >
+                  Budget
+                </th>
+              )}
               <th 
-                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('budget')}`}
-                onClick={() => handleSort('budget')}
+                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('importo')}`}
+                onClick={() => handleSort('importo')}
               >
-                Budget
+                {tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
               </th>
-              <th 
-                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('spese')}`}
-                onClick={() => handleSort('spese')}
-              >
-                Spese
-              </th>
-              <th 
-                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('differenza')}`}
-                onClick={() => handleSort('differenza')}
-              >
-                Differenza
-              </th>
+              {tipoTransazione === 'uscite' && (
+                <th 
+                  className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('differenza')}`}
+                  onClick={() => handleSort('differenza')}
+                >
+                  Differenza
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
@@ -291,21 +324,25 @@ function Budget() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                   {item.categoria}
                 </td>
+                {tipoTransazione === 'uscite' && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                    {item.budget.toFixed(2)} €
+                  </td>
+                )}
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
-                  {item.budget.toFixed(2)} €
+                  {item.importo.toFixed(2)} €
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
-                  {item.spese.toFixed(2)} €
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
-                  item.differenza > 0 
-                    ? 'text-red-600 dark:text-red-400' 
-                    : item.differenza < 0 
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-gray-900 dark:text-gray-100'
-                }`}>
-                  {item.differenza.toFixed(2)} €
-                </td>
+                {tipoTransazione === 'uscite' && (
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                    item.differenza > 0 
+                      ? 'text-red-600 dark:text-red-400' 
+                      : item.differenza < 0 
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-gray-900 dark:text-gray-100'
+                  }`}>
+                    {item.differenza.toFixed(2)} €
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -314,21 +351,25 @@ function Budget() {
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                 Totale
               </td>
+              {tipoTransazione === 'uscite' && (
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
+                  {totaleBudget.toFixed(2)} €
+                </td>
+              )}
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
-                {totaleBudget.toFixed(2)} €
+                {totaleTransazioni.toFixed(2)} €
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
-                {totaleSpese.toFixed(2)} €
-              </td>
-              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                totaleDifferenza > 0 
-                  ? 'text-red-600 dark:text-red-400' 
-                  : totaleDifferenza < 0 
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-gray-900 dark:text-gray-100'
-              }`}>
-                {totaleDifferenza.toFixed(2)} €
-              </td>
+              {tipoTransazione === 'uscite' && (
+                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
+                  totaleDifferenza > 0 
+                    ? 'text-red-600 dark:text-red-400' 
+                    : totaleDifferenza < 0 
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-900 dark:text-gray-100'
+                }`}>
+                  {totaleDifferenza.toFixed(2)} €
+                </td>
+              )}
             </tr>
           </tfoot>
         </table>
