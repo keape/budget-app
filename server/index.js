@@ -266,6 +266,46 @@ app.post('/api/entrate', async (req, res) => {
   }
 });
 
+// Route DELETE → elimina un'entrata
+app.delete('/api/entrate/:id', async (req, res) => {
+  console.log('🗑️ Richiesta eliminazione entrata:', req.params.id);
+  try {
+    const entrata = await Entrata.findByIdAndDelete(req.params.id);
+    if (!entrata) {
+      console.log('❌ Entrata non trovata:', req.params.id);
+      return res.status(404).json({ error: 'Entrata non trovata' });
+    }
+    console.log('✅ Entrata eliminata con successo:', req.params.id);
+    res.json({ message: 'Entrata eliminata con successo' });
+  } catch (err) {
+    console.error('❌ Errore nella cancellazione dell\'entrata:', err);
+    res.status(500).json({ error: 'Errore nella cancellazione dell\'entrata' });
+  }
+});
+
+// Route PUT → modifica un'entrata esistente
+app.put('/api/entrate/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { importo, descrizione, categoria } = req.body;
+    
+    const entrata = await Entrata.findByIdAndUpdate(
+      id,
+      { importo: Math.abs(importo), descrizione, categoria },
+      { new: true }
+    );
+    
+    if (!entrata) {
+      return res.status(404).json({ message: 'Entrata non trovata' });
+    }
+    
+    res.json(entrata);
+  } catch (error) {
+    console.error('Errore durante la modifica dell\'entrata:', error);
+    res.status(500).json({ message: 'Errore durante la modifica dell\'entrata' });
+  }
+});
+
 // Route per sistemare gli importi delle transazioni
 app.post('/api/fix-transactions', async (req, res) => {
   try {

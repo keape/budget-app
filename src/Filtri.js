@@ -19,6 +19,8 @@ function Filtri() {
   const { darkMode } = useTheme();
   const [transazioneDaModificare, setTransazioneDaModificare] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
 
   // Legge i parametri dall'URL all'avvio
   useEffect(() => {
@@ -202,6 +204,41 @@ function Filtri() {
       .catch(err => console.error("Errore nella modifica della transazione:", err));
   };
 
+  const handleEdit = (transaction) => {
+    setEditingTransaction(transaction);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const endpoint = editingTransaction.tipo === 'entrata' 
+        ? `/api/entrate/${editingTransaction._id}`
+        : `/api/spese/${editingTransaction._id}`;
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          importo: editingTransaction.importo,
+          descrizione: editingTransaction.descrizione,
+          categoria: editingTransaction.categoria,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Errore durante il salvataggio');
+      }
+
+      setShowEditModal(false);
+      caricaTransazioni();
+    } catch (error) {
+      console.error('Errore durante il salvataggio:', error);
+      alert('Si è verificato un errore durante il salvataggio');
+    }
+  };
+
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
       <h2 className="text-3xl font-bold text-center mb-8 text-blue-800 dark:text-blue-200">
@@ -348,18 +385,15 @@ function Filtri() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {/* Pulsante modifica (solo per le spese) */}
-                  {!isEntrata && (
-                    <button
-                      onClick={() => apriModifica(transazione)}
-                      className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100 transition-colors duration-200"
-                      title="Modifica transazione"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  )}
+                  {/* Pulsante modifica (per tutte le transazioni) */}
+                  <button
+                    onClick={() => handleEdit(transazione)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => eliminaTransazione(transazione._id, transazione.tipo)}
                     className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100 transition-colors duration-200"
@@ -413,6 +447,95 @@ function Filtri() {
             </ResponsiveContainer>
           </div>
         </>
+      )}
+
+      {/* Modal di modifica */}
+      {showEditModal && editingTransaction && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+              Modifica {editingTransaction.tipo === 'entrata' ? 'Entrata' : 'Spesa'}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Importo
+                </label>
+                <input
+                  type="number"
+                  value={editingTransaction.importo}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    importo: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Descrizione
+                </label>
+                <input
+                  type="text"
+                  value={editingTransaction.descrizione || ''}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    descrizione: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Categoria
+                </label>
+                <select
+                  value={editingTransaction.categoria}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    categoria: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  {editingTransaction.tipo === 'entrata' ? (
+                    <>
+                      <option value="Stipendio">Stipendio</option>
+                      <option value="Investimenti">Investimenti</option>
+                      <option value="Bonus">Bonus</option>
+                      <option value="Altro">Altro</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Cibo">Cibo</option>
+                      <option value="Trasporti">Trasporti</option>
+                      <option value="Casa">Casa</option>
+                      <option value="Svago">Svago</option>
+                      <option value="Altro">Altro</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Salva
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
