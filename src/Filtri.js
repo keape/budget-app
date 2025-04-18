@@ -60,13 +60,13 @@ function Filtri() {
       const spese = speseRes.data.map(s => ({
         ...s,
         tipo: 'uscita',
-        importo: -Math.abs(Number(s.importo)) // Assicuriamoci che le spese siano negative
+        importo: Number(s.importo) // Gli importi sono già negativi dal backend
       }));
 
       const entrate = entrateRes.data.map(e => ({
         ...e,
         tipo: 'entrata',
-        importo: Math.abs(Number(e.importo)) // Assicuriamoci che le entrate siano positive
+        importo: Number(e.importo) // Gli importi sono già positivi dal backend
       }));
 
       console.log('Spese processate:', spese);
@@ -310,7 +310,7 @@ function Filtri() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
         {transazioniFiltrate.map(transazione => {
           const isEntrata = transazione.tipo === 'entrata';
-          const importo = Number(transazione.importo); // Convertiamo in numero per sicurezza
+          const importo = Number(transazione.importo);
 
           return (
             <div
@@ -334,7 +334,7 @@ function Filtri() {
                       ? 'text-green-600 dark:text-green-400' 
                       : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {isEntrata ? '+' : '-'}{Math.abs(isEntrata ? importo : -importo).toFixed(2)} €
+                    {isEntrata ? '+' : ''}{importo.toFixed(2)} €
                   </div>
                   {transazione.descrizione && (
                     <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
