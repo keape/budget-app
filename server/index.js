@@ -266,6 +266,43 @@ app.post('/api/entrate', async (req, res) => {
   }
 });
 
+// Route PUT → modifica un'entrata esistente
+app.put('/api/entrate/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { importo, descrizione, categoria } = req.body;
+
+    if (!importo || !categoria) {
+      return res.status(400).json({ error: 'Importo e categoria sono richiesti' });
+    }
+
+    const importoNumerico = Number(importo);
+    if (isNaN(importoNumerico)) {
+      return res.status(400).json({ error: 'L\'importo deve essere un numero valido' });
+    }
+
+    const entrata = await Entrata.findByIdAndUpdate(
+      id,
+      {
+        descrizione: descrizione || '',
+        importo: Math.abs(importoNumerico), // Assicuriamoci che l'importo sia positivo
+        categoria,
+        data: new Date()
+      },
+      { new: true }
+    );
+
+    if (!entrata) {
+      return res.status(404).json({ error: 'Entrata non trovata' });
+    }
+
+    res.json(entrata);
+  } catch (err) {
+    console.error('❌ Errore nella modifica dell\'entrata:', err);
+    res.status(500).json({ error: 'Errore nella modifica dell\'entrata' });
+  }
+});
+
 // Route DELETE → elimina un'entrata
 app.delete('/api/entrate/:id', async (req, res) => {
   console.log('🗑️ Richiesta eliminazione entrata:', req.params.id);
@@ -280,29 +317,6 @@ app.delete('/api/entrate/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ Errore nella cancellazione dell\'entrata:', err);
     res.status(500).json({ error: 'Errore nella cancellazione dell\'entrata' });
-  }
-});
-
-// Route PUT → modifica un'entrata esistente
-app.put('/api/entrate/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { importo, descrizione, categoria } = req.body;
-    
-    const entrata = await Entrata.findByIdAndUpdate(
-      id,
-      { importo: Math.abs(importo), descrizione, categoria },
-      { new: true }
-    );
-    
-    if (!entrata) {
-      return res.status(404).json({ message: 'Entrata non trovata' });
-    }
-    
-    res.json(entrata);
-  } catch (error) {
-    console.error('Errore durante la modifica dell\'entrata:', error);
-    res.status(500).json({ message: 'Errore durante la modifica dell\'entrata' });
   }
 });
 
