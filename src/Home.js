@@ -63,9 +63,9 @@ function Home() {
   const totaleMeseCorrente = transazioniDelMese.reduce((acc, t) => acc + t.importo, 0);
 
   return (
-    <div className="theme-container max-w-2xl mx-auto px-4">
-      <h1 className="text-4xl font-bold text-center text-blue-800 dark:text-blue-300 mb-8">
-        Aggiungi {tipo === 'spesa' ? 'una spesa' : "un'entrata"}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
+        Aggiungi movimento
       </h1>
 
       <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 p-4 rounded-lg mb-8 shadow-md text-center text-xl font-semibold">
