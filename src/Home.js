@@ -88,8 +88,8 @@ function Home() {
               }}
               required
             >
-              <option value="spesa">Spesa</option>
-              <option value="entrata">Entrata</option>
+              <option value="spesa" className="text-white">Spesa</option>
+              <option value="entrata" className="text-white">Entrata</option>
             </select>
           </div>
 
@@ -112,9 +112,9 @@ function Home() {
               onChange={e => setCategoria(e.target.value)}
               required
             >
-              <option value="">Seleziona categoria</option>
+              <option value="" className="text-white">Seleziona categoria</option>
               {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat} className="text-white">{cat}</option>
               ))}
             </select>
           </div>
