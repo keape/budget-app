@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:5000';
+const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://budget-app-ao5r.onrender.com';
 
 // Configurazione di axios per includere il token in tutte le richieste
 axios.interceptors.request.use(
