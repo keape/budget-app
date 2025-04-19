@@ -1,8 +1,11 @@
 const Spesa = require('./models/Spesa');
 const Entrata = require('./models/Entrata');
+const User = require('./models/User');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -29,6 +32,24 @@ app.use((req, res, next) => {
   console.log(`📝 ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
   next();
 });
+
+// Middleware di autenticazione
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Token non fornito' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Token non valido' });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // "Database" temporaneo in memoria
 let elencoSpese = [
@@ -351,11 +372,75 @@ app.post('/api/fix-transactions', async (req, res) => {
   }
 });
 
+// Route di test
+app.get('/', (req, res) => {
+  res.send('✅ Backend Budget App attivo!');
+});
+
+// Endpoint di registrazione
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Verifica se l'utente esiste già
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username già in uso' });
+    }
+
+    // Hash della password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Crea il nuovo utente
+    const user = new User({
+      username,
+      password: hashedPassword
+    });
+
+    await user.save();
+    res.status(201).json({ message: 'Utente registrato con successo' });
+  } catch (error) {
+    console.error('❌ Errore durante la registrazione:', error);
+    res.status(500).json({ message: 'Errore durante la registrazione' });
+  }
+});
+
+// Endpoint di login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Cerca l'utente
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ message: 'Credenziali non valide' });
+    }
+
+    // Verifica la password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Credenziali non valide' });
+    }
+
+    // Genera il token
+    const token = jwt.sign(
+      { userId: user._id, username: user.username },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    res.json({ token });
+  } catch (error) {
+    console.error('❌ Errore durante il login:', error);
+    res.status(500).json({ message: 'Errore durante il login' });
+  }
+});
+
+// Proteggi tutte le rotte delle spese e delle entrate
+app.use('/api/spese', authenticateToken);
+app.use('/api/entrate', authenticateToken);
+
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
-});
-
-app.get('/', (req, res) => {
-  res.send('✅ Backend Budget App attivo!');
 });
