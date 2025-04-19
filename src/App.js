@@ -5,7 +5,7 @@ import Budget from './Budget';
 import Filtri from './Filtri';
 import Login from './Login';
 import Register from './Register';
-import Navbar from './Navbar';
+import Navbar from './navbar';
 import ProtectedRoute from './ProtectedRoute';
 import { ThemeProvider } from './ThemeContext';
 
