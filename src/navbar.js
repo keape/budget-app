@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from './ThemeContext';
 
 function Navbar() {
   const { darkMode, toggleDarkMode } = useTheme();
+  const location = useLocation();
 
   console.log('✅ Navbar renderizzata');
 
