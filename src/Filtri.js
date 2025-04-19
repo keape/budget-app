@@ -239,7 +239,7 @@ function Filtri() {
               Tipo di transazione
             </label>
             <select
-              className="theme-input w-full"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
               value={filtroTipo}
               onChange={e => setFiltroTipo(e.target.value)}
             >
@@ -255,7 +255,7 @@ function Filtri() {
               Filtra per categoria
             </label>
             <select
-              className="theme-input w-full"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
               value={filtroCategoria}
               onChange={e => setFiltroCategoria(e.target.value)}
             >
@@ -302,13 +302,13 @@ function Filtri() {
             </label>
             <div className="flex gap-2">
               <input
-                className="theme-input flex-1"
+                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
                 type="date"
                 value={dataInizio}
                 onChange={e => setDataInizio(e.target.value)}
               />
               <input
-                className="theme-input flex-1"
+                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
                 type="date"
                 value={dataFine}
                 onChange={e => setDataFine(e.target.value)}
