@@ -60,44 +60,13 @@ function Filtri() {
 
   const caricaTransazioni = async () => {
     try {
-      console.log('Inizio caricamento transazioni...');
-      console.log('URL base:', BASE_URL);
-      
-      const [speseRes, entrateRes] = await Promise.all([
-        axios.get(`${BASE_URL}/api/spese`).catch(err => {
-          console.error('Errore nel caricamento delle spese:', err.response || err);
-          return { data: [] };
-        }),
-        axios.get(`${BASE_URL}/api/entrate`).catch(err => {
-          console.error('Errore nel caricamento delle entrate:', err.response || err);
-          return { data: [] };
-        })
+      const [spese, entrate] = await Promise.all([
+        axios.get(`${BASE_URL}/api/spese`).then(res => res.data.map(spesa => ({ ...spesa, tipo: 'uscita' }))),
+        axios.get(`${BASE_URL}/api/entrate`).then(res => res.data.map(entrata => ({ ...entrata, tipo: 'entrata' })))
       ]);
-
-      console.log('Risposta spese:', speseRes.data);
-      console.log('Risposta entrate:', entrateRes.data);
-
-      // Gestiamo le spese come valori negativi
-      const spese = (speseRes.data || []).map(s => ({
-        ...s,
-        tipo: 'uscita',
-        importo: s.importo > 0 ? -s.importo : s.importo
-      }));
-
-      // Gestiamo le entrate come valori positivi
-      const entrate = (entrateRes.data || []).map(e => ({
-        ...e,
-        tipo: 'entrata',
-        importo: Math.abs(e.importo)
-      }));
-
-      console.log('Spese processate:', spese);
-      console.log('Entrate processate:', entrate);
-      
       setTransazioni([...spese, ...entrate]);
-    } catch (err) {
-      console.error("Errore nel caricamento delle transazioni:", err);
-      alert('Si è verificato un errore nel caricamento delle transazioni. Riprova.');
+    } catch (error) {
+      console.error('Errore nel caricamento delle transazioni:', error);
     }
   };
 
@@ -111,8 +80,8 @@ function Filtri() {
         const endpoint = tipo === 'entrata' ? 'entrate' : 'spese';
         await axios.delete(`${BASE_URL}/api/${endpoint}/${id}`);
         caricaTransazioni();
-      } catch (err) {
-        console.error("Errore nell'eliminazione della transazione:", err);
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione:', error);
       }
     }
   };
@@ -237,31 +206,22 @@ function Filtri() {
   };
 
   const handleSaveEdit = async () => {
+    if (!editingTransaction) return;
+    
     try {
-      const endpoint = editingTransaction.tipo === 'entrata' 
-        ? 'entrate'
-        : 'spese';
-
-      // Formatta la data nel formato ISO
-      const formattedDate = editingTransaction.data 
-        ? new Date(editingTransaction.data).toISOString()
-        : new Date().toISOString();
-
-      const response = await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
-        importo: editingTransaction.tipo === 'entrata' ? Math.abs(editingTransaction.importo) : -Math.abs(editingTransaction.importo),
-        descrizione: editingTransaction.descrizione || '',
+      const endpoint = editingTransaction.tipo === 'entrata' ? 'entrate' : 'spese';
+      await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
+        importo: editingTransaction.importo,
+        descrizione: editingTransaction.descrizione,
         categoria: editingTransaction.categoria,
-        data: formattedDate
+        data: editingTransaction.data
       });
-
-      if (response.data) {
-        setShowEditModal(false);
-        setEditingTransaction(null);
-        await caricaTransazioni(); // Ricarica le transazioni dopo la modifica
-      }
+      
+      setShowEditModal(false);
+      setEditingTransaction(null);
+      caricaTransazioni();
     } catch (error) {
       console.error('Errore durante il salvataggio:', error);
-      alert('Si è verificato un errore durante il salvataggio. Riprova.');
     }
   };
 

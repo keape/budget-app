@@ -121,35 +121,27 @@ function Budget() {
   };
 
   useEffect(() => {
-    const endpoint = tipoTransazione === 'entrate' ? '/api/entrate' : '/api/spese';
-    
-    axios.get(`${BASE_URL}${endpoint}`)
-      .then(res => {
-        let transazioniFiltrate;
-        if (meseCorrente === 0) {
-          // Per l'intero anno, filtra solo per anno
-          transazioniFiltrate = res.data.filter(transazione => {
-            const dataTransazione = new Date(transazione.data);
-            return dataTransazione.getFullYear() === annoCorrente;
-          });
-        } else {
-          // Per un mese specifico, filtra per mese e anno
-          transazioniFiltrate = res.data.filter(transazione => {
-            const dataTransazione = new Date(transazione.data);
-            return dataTransazione.getMonth() === meseCorrente - 1 && 
-                   dataTransazione.getFullYear() === annoCorrente;
-          });
-        }
-
-        // Raggruppa le transazioni per categoria
-        const transazioniPerCategoria = transazioniFiltrate.reduce((acc, transazione) => {
+    const fetchData = async () => {
+      try {
+        const endpoint = tipoTransazione === 'entrate' ? '/api/entrate' : '/api/spese';
+        const response = await axios.get(`${BASE_URL}${endpoint}`);
+        const transazioni = response.data;
+        
+        const transazioniFiltrate = transazioni.filter(t => {
+          const data = new Date(t.data);
+          return data.getMonth() === meseCorrente && data.getFullYear() === annoCorrente;
+        });
+        
+        setSpeseMensili(transazioniFiltrate.reduce((acc, transazione) => {
           acc[transazione.categoria] = (acc[transazione.categoria] || 0) + transazione.importo;
           return acc;
-        }, {});
+        }, {}));
+      } catch (error) {
+        console.error('Errore nel caricamento delle transazioni:', error);
+      }
+    };
 
-        setSpeseMensili(transazioniPerCategoria);
-      })
-      .catch(err => console.error("Errore nel caricamento delle transazioni:", err));
+    fetchData();
   }, [meseCorrente, annoCorrente, tipoTransazione]);
 
   // Prepara i dati per il grafico usando il budget del periodo selezionato
