@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from './ThemeContext';
+import BASE_URL from './config';
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -12,7 +13,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch(`${BASE_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -25,9 +26,11 @@ function Login() {
         localStorage.setItem('token', data.token);
         navigate('/');
       } else {
-        setError('Credenziali non valide');
+        const errorData = await response.json();
+        setError(errorData.message || 'Credenziali non valide');
       }
     } catch (err) {
+      console.error('Errore durante il login:', err);
       setError('Errore durante il login');
     }
   };
