@@ -1,22 +1,28 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navbar from './navbar';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './Home';
+import Budget from './Budget';
 import Filtri from './Filtri';
-import Entrate from './BudgetEntrate';
 import Login from './Login';
+import Register from './Register';
 import ProtectedRoute from './ProtectedRoute';
+import { ThemeProvider } from './ThemeContext';
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <Navbar />
+    <ThemeProvider>
+      <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/" element={
             <ProtectedRoute>
               <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/budget" element={
+            <ProtectedRoute>
+              <Budget />
             </ProtectedRoute>
           } />
           <Route path="/filtri" element={
@@ -24,15 +30,9 @@ function App() {
               <Filtri />
             </ProtectedRoute>
           } />
-          <Route path="/budget-entrate" element={
-            <ProtectedRoute>
-              <Entrate />
-            </ProtectedRoute>
-          } />
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </div>
-    </Router>
+      </Router>
+    </ThemeProvider>
   );
 }
 
