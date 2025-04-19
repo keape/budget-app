@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Navbar from './Navbar';
 import Home from './Home';
 import Filtri from './Filtri';
-import Entrate from './Entrate';
+import Entrate from './BudgetEntrate';
 import Login from './Login';
 import ProtectedRoute from './ProtectedRoute';
 
