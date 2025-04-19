@@ -65,7 +65,7 @@ function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold text-center mb-8 text-indigo-600 dark:text-indigo-300">
-        Budget
+        Inserisci transazione
       </h1>
 
       <div className="bg-indigo-100 dark:bg-indigo-900 text-white p-4 rounded-lg mb-8 shadow-md text-center">
@@ -80,7 +80,7 @@ function Home() {
           {/* Tipo di transazione */}
           <div className="w-full max-w-md">
             <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
               value={tipo}
               onChange={e => {
                 setTipo(e.target.value);
@@ -88,14 +88,14 @@ function Home() {
               }}
               required
             >
-              <option value="spesa" className="text-white">Spesa</option>
-              <option value="entrata" className="text-white">Entrata</option>
+              <option value="spesa">Spesa</option>
+              <option value="entrata">Entrata</option>
             </select>
           </div>
 
           <div className="w-full max-w-md">
             <input
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
               type="number"
               step="0.01"
               placeholder="Importo"
@@ -107,21 +107,21 @@ function Home() {
 
           <div className="w-full max-w-md">
             <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
               value={categoria}
               onChange={e => setCategoria(e.target.value)}
               required
             >
-              <option value="" className="text-white">Seleziona categoria</option>
+              <option value="">Seleziona categoria</option>
               {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
-                <option key={cat} value={cat} className="text-white">{cat}</option>
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
 
           <div className="w-full max-w-md">
             <input
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
               type="text"
               placeholder="Descrizione (facoltativa)"
               value={descrizione}
