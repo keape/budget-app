@@ -130,7 +130,7 @@ app.post('/api/spese', async (req, res) => {
       descrizione: descrizione || '',
       importo: importoNumerico,
       categoria,
-      data: new Date()
+      data: req.body.data ? new Date(req.body.data) : new Date()
     });
     
     const spesaSalvata = await nuovaSpesa.save();
