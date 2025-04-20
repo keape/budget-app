@@ -47,7 +47,11 @@ function Home() {
   const aggiungiTransazione = e => {
     e.preventDefault();
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-    const dataTransazione = data || new Date().toISOString().split('T')[0]; // usa la data inserita o quella odierna
+    // Assicuriamoci che la data sia impostata a mezzanotte del giorno selezionato
+    const dataTransazione = data 
+      ? new Date(data + 'T00:00:00.000Z').toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    
     axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
       importo: Number(importo),
