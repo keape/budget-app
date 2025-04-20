@@ -129,11 +129,11 @@ function Budget() {
         
         const transazioniFiltrate = transazioni.filter(t => {
           const data = new Date(t.data);
-          return data.getMonth() === meseCorrente && data.getFullYear() === annoCorrente;
+          return data.getMonth() === (meseCorrente - 1) && data.getFullYear() === annoCorrente;
         });
         
         setSpeseMensili(transazioniFiltrate.reduce((acc, transazione) => {
-          acc[transazione.categoria] = (acc[transazione.categoria] || 0) + transazione.importo;
+          acc[transazione.categoria] = (acc[transazione.categoria] || 0) + Math.abs(transazione.importo);
           return acc;
         }, {}));
       } catch (error) {
