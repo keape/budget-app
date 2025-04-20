@@ -24,7 +24,6 @@ const getBudgetMensile = (mese) => {
     "Salute": 20.00,
     "Sport/Attrezzatura sportiva": 25.00,
     "Tecnologia": 60.00,
-    "Ticket": 0.00,
     "Vacanza": 50.00,
     "Vela": 20.00
   };
