@@ -296,6 +296,7 @@ function Filtri() {
                 <option value="Welfare">Welfare</option>
                 <option value="Consulenze">Consulenze</option>
                 <option value="Interessi">Interessi</option>
+                <option value="Ticket">Ticket</option>
                 <option value="Altro">Altro</option>
               </>}
             </select>
@@ -414,11 +415,7 @@ function Filtri() {
                       }),
                       importo
                     }))
-                    .sort((a, b) => {
-                      const dataA = new Date(a.data.split(' ')[1], ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'].indexOf(a.data.split(' ')[0]));
-                      const dataB = new Date(b.data.split(' ')[1], ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'].indexOf(b.data.split(' ')[0]));
-                      return dataA - dataB;
-                    })}
+                    .sort((a, b) => b.importo - a.importo)}
                 >
                   <XAxis 
                     dataKey="data" 
@@ -589,6 +586,7 @@ function Filtri() {
                       <option value="Welfare">Welfare</option>
                       <option value="Consulenze">Consulenze</option>
                       <option value="Interessi">Interessi</option>
+                      <option value="Ticket">Ticket</option>
                       <option value="Altro">Altro</option>
                     </>
                   ) : (
