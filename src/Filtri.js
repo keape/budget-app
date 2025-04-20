@@ -29,6 +29,10 @@ function Filtri() {
     "Rimborsi",
     "Regalo",
     "MBO",
+    "Welfare",
+    "Consulenze",
+    "Interessi",
+    "Ticket",
     "Altro"
   ];
 
@@ -463,7 +467,11 @@ function Filtri() {
                     <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
                   )}
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {new Date(transazione.data).toLocaleDateString()}
+                    {new Date(transazione.data).toLocaleDateString('it-IT', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
