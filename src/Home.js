@@ -8,6 +8,7 @@ function Home() {
   const [importo, setImporto] = useState('');
   const [categoria, setCategoria] = useState('');
   const [tipo, setTipo] = useState('spesa'); // 'spesa' or 'entrata'
+  const [data, setData] = useState(''); // nuovo state per la data
   const [transazioniDelMese, setTransazioniDelMese] = useState([]);
 
   const categorieSpese = [
@@ -46,15 +47,18 @@ function Home() {
   const aggiungiTransazione = e => {
     e.preventDefault();
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
+    const dataTransazione = data || new Date().toISOString().split('T')[0]; // usa la data inserita o quella odierna
     axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
       importo: Number(importo),
-      categoria
+      categoria,
+      data: dataTransazione
     })
       .then(() => {
         setDescrizione('');
         setImporto('');
         setCategoria('');
+        setData(''); // reset del campo data
         window.location.reload();
       })
       .catch(err => console.error(`❌ Errore nell'aggiunta della ${tipo}:`, err));
@@ -126,6 +130,16 @@ function Home() {
               placeholder="Descrizione (facoltativa)"
               value={descrizione}
               onChange={e => setDescrizione(e.target.value)}
+            />
+          </div>
+
+          <div className="w-full max-w-md">
+            <input
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+              type="date"
+              placeholder="Data (facoltativa)"
+              value={data}
+              onChange={e => setData(e.target.value)}
             />
           </div>
 
