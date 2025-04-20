@@ -129,6 +129,11 @@ function Budget() {
         
         const transazioniFiltrate = transazioni.filter(t => {
           const data = new Date(t.data);
+          if (meseCorrente === 0) {
+            // Per l'intero anno, filtra solo per anno
+            return data.getFullYear() === annoCorrente;
+          }
+          // Per un mese specifico, filtra per mese e anno
           return data.getMonth() === (meseCorrente - 1) && data.getFullYear() === annoCorrente;
         });
         
