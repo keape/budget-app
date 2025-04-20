@@ -340,10 +340,10 @@ function Filtri() {
       </div>
 
       {/* Grafici statistici */}
-      {transazioniFiltrate.length > 0 && (filtroTipo !== 'tutte' && (dataInizio || dataFine)) && (
+      {transazioniFiltrate.length > 0 && filtroTipo !== 'tutte' && (
         <>
           {/* Grafico a torta per distribuzione per categoria */}
-          {!filtroCategoria && filtroTipo !== 'tutte' && (
+          {!filtroCategoria && (
             <div className="mt-8 mb-8">
               <ResponsiveContainer width="100%" height={400}>
                 <PieChart>
