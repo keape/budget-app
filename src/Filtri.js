@@ -290,6 +290,8 @@ function Filtri() {
                 <option value="Regalo">Regalo</option>
                 <option value="MBO">MBO</option>
                 <option value="Welfare">Welfare</option>
+                <option value="Consulenze">Consulenze</option>
+                <option value="Interessi">Interessi</option>
                 <option value="Altro">Altro</option>
               </>}
             </select>
@@ -565,6 +567,8 @@ function Filtri() {
                       <option value="Regalo">Regalo</option>
                       <option value="MBO">MBO</option>
                       <option value="Welfare">Welfare</option>
+                      <option value="Consulenze">Consulenze</option>
+                      <option value="Interessi">Interessi</option>
                       <option value="Altro">Altro</option>
                     </>
                   ) : (
