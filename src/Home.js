@@ -47,11 +47,21 @@ function Home() {
   const aggiungiTransazione = e => {
     e.preventDefault();
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-    // Assicuriamoci che la data sia impostata a mezzanotte del giorno selezionato
-    const dataTransazione = data 
-      ? new Date(data + 'T00:00:00.000Z').toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
     
+    // Gestione della data con timezone
+    let dataTransazione;
+    if (data) {
+      // Se è stata selezionata una data, la impostiamo a mezzanotte UTC di quel giorno
+      const selectedDate = new Date(data);
+      selectedDate.setUTCHours(0, 0, 0, 0);
+      dataTransazione = selectedDate.toISOString();
+    } else {
+      // Se non è stata selezionata una data, usiamo la data corrente a mezzanotte UTC
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      dataTransazione = today.toISOString();
+    }
+
     axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
       importo: Number(importo),
