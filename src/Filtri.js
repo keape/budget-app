@@ -340,10 +340,10 @@ function Filtri() {
       </div>
 
       {/* Grafici statistici */}
-      {transazioniFiltrate.length > 0 && (filtroTipo !== 'tutte' || filtroCategoria || dataInizio || dataFine) && (
+      {transazioniFiltrate.length > 0 && (filtroTipo !== 'tutte' && (dataInizio || dataFine)) && (
         <>
           {/* Grafico a torta per distribuzione per categoria */}
-          {!filtroCategoria && (
+          {!filtroCategoria && filtroTipo !== 'tutte' && (
             <div className="mt-8 mb-8">
               <ResponsiveContainer width="100%" height={400}>
                 <PieChart>
@@ -372,7 +372,19 @@ function Filtri() {
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend layout="vertical" align="right" verticalAlign="middle" />
+                  <Legend 
+                    layout="horizontal" 
+                    align="center" 
+                    verticalAlign="bottom"
+                    wrapperStyle={{
+                      paddingTop: "20px",
+                      width: "100%",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: "10px"
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
