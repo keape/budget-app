@@ -11,23 +11,21 @@ require('dotenv').config();
 const app = express();
 
 // Middleware per aggiungere headers CORS manualmente
-app.use(cors({
-  origin: [
-    'https://budget-app-three-gules.vercel.app',
-    'https://budget-app-three-gules-keape.vercel.app',
-    'http://localhost:3000',
-    'shortcuts://',
-    'https://budget-app.vercel.app'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
-  credentials: true,
-  preflightContinue: true,
-  optionsSuccessStatus: 204
-}));
+app.use(cors());  // Permettiamo tutte le origini temporaneamente per debug
 
-// Aggiungiamo un middleware per gestire le richieste OPTIONS
-app.options('*', cors());
+// Aggiungiamo headers CORS manuali per maggiore controllo
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Gestione delle richieste OPTIONS
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
