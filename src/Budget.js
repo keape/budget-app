@@ -8,24 +8,25 @@ import {
 
 const getBudgetMensile = (mese) => {
   const baseBudget = {
-    "Mutuo": 278.50,
-    "Elettricità": 50.00,
-    "Acqua": 26.00,
-    "Manutenzione/Arredamento casa": 70.00,
-    "Alimentari": 150.00,
-    "Tecnologia": 60.00,
     "Abbigliamento": 100.00,
-    "Ristorante": 150.00,
-    "Giardinaggio/Agricoltura/Falegnameria": 120.00,
     "Abbonamenti": 45.00,
-    "Vacanza": 50.00,
-    "Vela": 20.00,
-    "Sport/Attrezzatura sportiva": 25.00,
+    "Acqua": 26.00,
+    "Alimentari": 150.00,
+    "Altre spese": 50.00,
     "Bar": 25.00,
-    "Salute": 20.00,
     "Cinema Mostre Cultura": 5.00,
+    "Elettricità": 50.00,
+    "Giardinaggio/Agricoltura/Falegnameria": 120.00,
+    "Manutenzione/Arredamento casa": 70.00,
+    "Mutuo": 278.50,
     "Regali": 20.00,
-    "Altre spese": 50.00
+    "Ristorante": 150.00,
+    "Salute": 20.00,
+    "Sport/Attrezzatura sportiva": 25.00,
+    "Tecnologia": 60.00,
+    "Ticket": 0.00,
+    "Vacanza": 50.00,
+    "Vela": 20.00
   };
 
   // Crea una copia del budget base
@@ -54,13 +55,13 @@ const getBudgetMensile = (mese) => {
 
 const getBudgetEntrateMensile = (mese) => {
   const baseBudget = {
+    "Altra entrata": 2.00,
+    "Consulenze": 5.00,
+    "Interessi": 5.00,
+    "MBO": 0.00,
     "Stipendio": 2000.00,
     "Ticket": 100.00,
-    "Welfare": 0.00,
-    "MBO": 0.00,
-    "Interessi": 5.00,
-    "Altra entrata": 2.00,
-    "Consulenze": 5.00
+    "Welfare": 0.00
   };
 
   // Crea una copia del budget base
