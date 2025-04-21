@@ -108,7 +108,7 @@ app.get('/api/spese/totale-mese', async (req, res) => {
 // Route POST → aggiunge una nuova spesa
 app.post('/api/spese', async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
-  const { descrizione, importo, categoria } = req.body;
+  const { descrizione, importo, categoria, data } = req.body;
 
   // Validazione più robusta per iOS Shortcuts
   if (!importo) {
@@ -137,9 +137,9 @@ app.post('/api/spese', async (req, res) => {
   try {
     const nuovaSpesa = new Spesa({
       descrizione: descrizione || '',
-      importo: importoNumerico,
+      importo: -Math.abs(importoNumerico), // Assicuriamoci che l'importo sia negativo per le spese
       categoria,
-      data: req.body.data ? new Date(req.body.data) : new Date()
+      data: data ? new Date(data) : new Date()
     });
     
     const spesaSalvata = await nuovaSpesa.save();
@@ -147,7 +147,7 @@ app.post('/api/spese', async (req, res) => {
     // Risposta formattata per iOS Shortcuts
     res.status(201).json({
       success: true,
-      message: `Spesa di ${importoNumerico.toFixed(2)}€ aggiunta con successo`,
+      message: `Spesa di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`,
       data: spesaSalvata
     });
   } catch (err) {
@@ -248,7 +248,7 @@ app.get('/api/entrate/totale-mese', async (req, res) => {
 
 // Route POST → aggiunge una nuova entrata
 app.post('/api/entrate', async (req, res) => {
-  const { descrizione, importo, categoria } = req.body;
+  const { descrizione, importo, categoria, data } = req.body;
 
   if (!importo) {
     return res.status(400).json({ 
@@ -275,16 +275,16 @@ app.post('/api/entrate', async (req, res) => {
   try {
     const nuovaEntrata = new Entrata({
       descrizione: descrizione || '',
-      importo: importoNumerico,
+      importo: Math.abs(importoNumerico), // Assicuriamoci che l'importo sia positivo per le entrate
       categoria,
-      data: new Date()
+      data: data ? new Date(data) : new Date()
     });
     
     const entrataSalvata = await nuovaEntrata.save();
     
     res.status(201).json({
       success: true,
-      message: `Entrata di ${importoNumerico.toFixed(2)}€ aggiunta con successo`,
+      message: `Entrata di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`,
       data: entrataSalvata
     });
   } catch (err) {
