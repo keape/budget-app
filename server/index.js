@@ -15,7 +15,8 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'https://budget-app-ao5r.onrender.com',
-    'https://budget-app-keape.vercel.app'
+    'https://budget-app-keape.vercel.app',
+    'https://budget-app-three-gules.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
