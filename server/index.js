@@ -80,11 +80,28 @@ let elencoSpese = [
   { id: 3, descrizione: 'Abbonamento Netflix', importo: 12.99 }
 ];
 
-// Route GET → restituisce l'elenco delle spese
+// Route GET → restituisce l'elenco delle spese con paginazione
 app.get('/api/spese', async (req, res) => {
   try {
-    const spese = await Spesa.find().sort({ data: -1 });
-    res.json(spese);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    // Conta il totale delle spese per la paginazione
+    const totalSpese = await Spesa.countDocuments();
+    
+    // Recupera le spese per la pagina corrente
+    const spese = await Spesa.find()
+      .sort({ data: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      spese,
+      currentPage: page,
+      totalPages: Math.ceil(totalSpese / limit),
+      totalItems: totalSpese
+    });
   } catch (err) {
     console.error('❌ Errore nel recupero delle spese:', err);
     res.status(500).json({ error: 'Errore nel recupero delle spese' });
@@ -221,11 +238,28 @@ app.put('/api/spese/:id', async (req, res) => {
   }
 });
 
-// Route GET → restituisce l'elenco delle entrate
+// Route GET → restituisce l'elenco delle entrate con paginazione
 app.get('/api/entrate', async (req, res) => {
   try {
-    const entrate = await Entrata.find().sort({ data: -1 });
-    res.json(entrate);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const skip = (page - 1) * limit;
+
+    // Conta il totale delle entrate per la paginazione
+    const totalEntrate = await Entrata.countDocuments();
+    
+    // Recupera le entrate per la pagina corrente
+    const entrate = await Entrata.find()
+      .sort({ data: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      entrate,
+      currentPage: page,
+      totalPages: Math.ceil(totalEntrate / limit),
+      totalItems: totalEntrate
+    });
   } catch (err) {
     console.error('❌ Errore nel recupero delle entrate:', err);
     res.status(500).json({ error: 'Errore nel recupero delle entrate' });
