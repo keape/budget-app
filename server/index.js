@@ -10,15 +10,27 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware per aggiungere headers CORS manualmente
-app.use(cors());  // Permettiamo tutte le origini temporaneamente per debug
+// Configura CORS con opzioni specifiche
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://budget-app-ao5r.onrender.com',
+    'https://budget-app-keape.vercel.app'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  exposedHeaders: ['Authorization']
+};
 
-// Aggiungiamo headers CORS manuali per maggiore controllo
+app.use(cors(corsOptions));
+
+// Middleware per aggiungere headers di sicurezza
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('X-XSS-Protection', '1; mode=block');
   
   // Gestione delle richieste OPTIONS
   if (req.method === 'OPTIONS') {
