@@ -11,19 +11,41 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
     try {
       const response = await axios.post(`${BASE_URL}/api/auth/login`, {
         username,
         password
+      }, {
+        withCredentials: true
       });
       
       if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        navigate('/');
+        try {
+          localStorage.setItem('token', response.data.token);
+          // Verifica che il token sia stato effettivamente salvato
+          const savedToken = localStorage.getItem('token');
+          if (savedToken !== response.data.token) {
+            throw new Error('Token non salvato correttamente');
+          }
+          navigate('/');
+        } catch (storageError) {
+          console.error('Errore nel salvataggio del token:', storageError);
+          setError('Errore nel salvataggio delle credenziali. Verifica che la navigazione privata sia disattivata.');
+        }
+      } else {
+        setError('Token non ricevuto dal server');
       }
     } catch (error) {
-      setError('Credenziali non valide');
       console.error('Errore di login:', error);
+      if (error.response) {
+        setError(error.response.data.message || 'Credenziali non valide');
+      } else if (error.request) {
+        setError('Errore di connessione al server');
+      } else {
+        setError('Errore durante il login');
+      }
     }
   };
 
