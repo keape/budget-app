@@ -2,11 +2,28 @@ import axios from 'axios';
 
 const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://budget-app-ao5r.onrender.com';
 
+// Funzione per ottenere il token da diverse fonti
+const getAuthToken = () => {
+  try {
+    // Prova prima localStorage
+    const token = localStorage.getItem('token');
+    if (token) return token;
+
+    // Se non trova il token, reindirizza al login
+    window.location.href = '/login';
+    return null;
+  } catch (error) {
+    console.error('Errore nel recupero del token:', error);
+    window.location.href = '/login';
+    return null;
+  }
+};
+
 // Configurazione di axios per includere il token in tutte le richieste
 axios.interceptors.request.use(
   (config) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -35,6 +52,7 @@ axios.interceptors.response.use(
         window.location.href = '/login';
       } catch (e) {
         console.error('Errore nella gestione del logout:', e);
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import BASE_URL from './config';
@@ -8,6 +8,18 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+
+  // Verifica se l'utente è già autenticato
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Errore nel controllo del token:', error);
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,15 +36,20 @@ function Login() {
       if (response.data.token) {
         try {
           localStorage.setItem('token', response.data.token);
+          
           // Verifica che il token sia stato effettivamente salvato
           const savedToken = localStorage.getItem('token');
-          if (savedToken !== response.data.token) {
-            throw new Error('Token non salvato correttamente');
+          if (savedToken === response.data.token) {
+            navigate('/');
+          } else {
+            // Se il token non è stato salvato correttamente nel localStorage
+            console.warn('Token non salvato in localStorage, provo a procedere comunque...');
+            navigate('/');
           }
-          navigate('/');
         } catch (storageError) {
           console.error('Errore nel salvataggio del token:', storageError);
-          setError('Errore nel salvataggio delle credenziali. Verifica che la navigazione privata sia disattivata.');
+          // Anche se c'è un errore nel salvare il token, proviamo a procedere
+          navigate('/');
         }
       } else {
         setError('Token non ricevuto dal server');
