@@ -26,21 +26,10 @@ function Home() {
 
   useEffect(() => {
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-    axios.get(`${BASE_URL}/api/${endpoint}`)
+    axios.get(`${BASE_URL}/api/${endpoint}/totale-mese`)
       .then(res => {
-        const oggi = new Date();
-        const meseCorrente = oggi.getMonth();
-        const annoCorrente = oggi.getFullYear();
-  
-        const transazioniMese = res.data.filter(t => {
-          const dataTransazione = new Date(t.data);
-          return (
-            dataTransazione.getMonth() === meseCorrente &&
-            dataTransazione.getFullYear() === annoCorrente
-          );
-        });
-  
-        setTransazioniDelMese(transazioniMese);
+        const totale = parseFloat(res.data.totale);
+        setTransazioniDelMese([{ importo: totale }]);
       })
       .catch(err => console.error(`Errore nel caricamento delle ${tipo === 'spesa' ? 'spese' : 'entrate'}:`, err));
   }, [tipo]);
@@ -74,7 +63,13 @@ function Home() {
         setImporto('');
         setCategoria('');
         setData(''); // reset del campo data
-        window.location.reload();
+        // Aggiorniamo il totale dopo l'aggiunta
+        axios.get(`${BASE_URL}/api/${endpoint}/totale-mese`)
+          .then(res => {
+            const totale = parseFloat(res.data.totale);
+            setTransazioniDelMese([{ importo: totale }]);
+          })
+          .catch(err => console.error(`Errore nell'aggiornamento del totale:`, err));
       })
       .catch(err => console.error(`❌ Errore nell'aggiunta della ${tipo}:`, err));
   };
@@ -90,7 +85,7 @@ function Home() {
       <div className="bg-indigo-100 dark:bg-indigo-900 text-white p-4 rounded-lg mb-8 shadow-md text-center">
         <h2 className="text-2xl font-bold">
           Totale {tipo === 'spesa' ? 'spese' : 'entrate'} di {new Date().toLocaleString('default', { month: 'long' })}:{' '}
-          {totaleMeseCorrente.toFixed(2)} €
+          {Math.abs(totaleMeseCorrente).toFixed(2)} €
         </h2>
       </div>
 
