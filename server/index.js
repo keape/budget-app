@@ -1,6 +1,7 @@
 const Spesa = require('./models/Spesa');
 const Entrata = require('./models/Entrata');
 const User = require('./models/User');
+const SheetTransaction = require('./models/SheetTransaction');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -495,6 +496,69 @@ app.post('/api/auth/login', async (req, res) => {
 // Proteggi tutte le rotte delle spese e delle entrate
 app.use('/api/spese', authenticateToken);
 app.use('/api/entrate', authenticateToken);
+
+// Middleware per verificare il webhook token
+const verifyWebhookToken = (req, res, next) => {
+  const token = req.headers['x-webhook-token'];
+  if (!token || token !== process.env.WEBHOOK_TOKEN) {
+    return res.status(401).json({ error: 'Token non valido' });
+  }
+  next();
+};
+
+// Route POST per ricevere le transazioni da Google Sheets
+app.post('/api/sheets-webhook', verifyWebhookToken, async (req, res) => {
+  try {
+    const transactions = req.body;
+    
+    if (!Array.isArray(transactions)) {
+      return res.status(400).json({ error: 'Il payload deve essere un array di transazioni' });
+    }
+
+    console.log('📝 Ricevute nuove transazioni da Google Sheets:', transactions.length);
+
+    for (const transaction of transactions) {
+      // Verifica se la transazione è già stata processata
+      const existingTransaction = await SheetTransaction.findOne({ sheetId: transaction.sheetId });
+      if (existingTransaction) {
+        console.log('⏭️ Transazione già processata:', transaction.sheetId);
+        continue;
+      }
+
+      // Salva la transazione nel modello SheetTransaction
+      const sheetTransaction = new SheetTransaction({
+        importo: Math.abs(transaction.importo),
+        descrizione: transaction.descrizione || '',
+        categoria: transaction.categoria,
+        tipo: transaction.tipo,
+        data: transaction.data || new Date(),
+        sheetId: transaction.sheetId
+      });
+      await sheetTransaction.save();
+
+      // Crea la transazione nel sistema appropriato (Spesa o Entrata)
+      const TransactionModel = transaction.tipo === 'entrata' ? Entrata : Spesa;
+      const newTransaction = new TransactionModel({
+        importo: transaction.tipo === 'entrata' ? Math.abs(transaction.importo) : -Math.abs(transaction.importo),
+        descrizione: transaction.descrizione || '',
+        categoria: transaction.categoria,
+        data: transaction.data || new Date()
+      });
+      await newTransaction.save();
+
+      // Marca la transazione come processata
+      sheetTransaction.processato = true;
+      await sheetTransaction.save();
+
+      console.log('✅ Transazione processata con successo:', transaction.sheetId);
+    }
+
+    res.json({ success: true, message: `Processate ${transactions.length} transazioni` });
+  } catch (error) {
+    console.error('❌ Errore nel processamento delle transazioni:', error);
+    res.status(500).json({ error: 'Errore nel processamento delle transazioni' });
+  }
+});
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
