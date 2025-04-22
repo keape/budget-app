@@ -2,6 +2,7 @@ const Spesa = require('./models/Spesa');
 const Entrata = require('./models/Entrata');
 const User = require('./models/User');
 const SheetTransaction = require('./models/SheetTransaction');
+const { getLatestTransactions } = require('./services/googleSheets');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -558,6 +559,60 @@ app.post('/api/sheets-webhook', verifyWebhookToken, async (req, res) => {
     console.error('❌ Errore nel processamento delle transazioni:', error);
     res.status(500).json({ error: 'Errore nel processamento delle transazioni' });
   }
+});
+
+// Funzione per sincronizzare le transazioni dal foglio
+async function syncGoogleSheetTransactions() {
+  try {
+    console.log('🔄 Inizio sincronizzazione con Google Sheets...');
+    const transactions = await getLatestTransactions();
+    
+    for (const transaction of transactions) {
+      // Verifica se la transazione è già stata processata
+      const existingTransaction = await SheetTransaction.findOne({ sheetId: transaction.sheetId });
+      if (existingTransaction) {
+        continue;
+      }
+
+      // Salva la transazione nel modello SheetTransaction
+      const sheetTransaction = new SheetTransaction({
+        importo: Math.abs(transaction.importo),
+        descrizione: transaction.descrizione,
+        categoria: transaction.categoria,
+        tipo: transaction.tipo,
+        data: new Date(transaction.data),
+        sheetId: transaction.sheetId
+      });
+      await sheetTransaction.save();
+
+      // Crea la spesa nel sistema
+      const spesa = new Spesa({
+        importo: -Math.abs(transaction.importo),
+        descrizione: transaction.descrizione,
+        categoria: transaction.categoria,
+        data: new Date(transaction.data)
+      });
+      await spesa.save();
+
+      // Marca la transazione come processata
+      sheetTransaction.processato = true;
+      await sheetTransaction.save();
+
+      console.log('✅ Processata nuova transazione dal foglio:', transaction.sheetId);
+    }
+
+    console.log('✅ Sincronizzazione completata');
+  } catch (error) {
+    console.error('❌ Errore durante la sincronizzazione:', error);
+  }
+}
+
+// Esegui la sincronizzazione ogni ora
+setInterval(syncGoogleSheetTransactions, 60 * 60 * 1000);
+
+// Esegui la sincronizzazione all'avvio del server
+app.on('ready', () => {
+  syncGoogleSheetTransactions();
 });
 
 const PORT = process.env.PORT || 5001;
