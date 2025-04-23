@@ -84,12 +84,13 @@ function Filtri() {
         })
       ]);
 
-      const spese = speseResponse.data.spese.map(spesa => ({ ...spesa, tipo: 'uscita' }));
-      const entrate = entrateResponse.data.entrate.map(entrata => ({ ...entrata, tipo: 'entrata' }));
+      // Estrai le spese e le entrate direttamente dalla risposta
+      const spese = (speseResponse.data.spese || []).map(spesa => ({ ...spesa, tipo: 'uscita' }));
+      const entrate = (entrateResponse.data.entrate || []).map(entrata => ({ ...entrata, tipo: 'entrata' }));
       
       // Calcola il totale delle pagine considerando sia spese che entrate
-      const totalSpese = speseResponse.data.totalItems;
-      const totalEntrate = entrateResponse.data.totalItems;
+      const totalSpese = speseResponse.data.totalItems || 0;
+      const totalEntrate = entrateResponse.data.totalItems || 0;
       const totalItems = totalSpese + totalEntrate;
       setTotalPages(Math.ceil(totalItems / itemsPerPage));
 

@@ -20,16 +20,26 @@ function Home() {
   ];
 
   const categorieEntrate = [
-    "Stipendio", "Investimenti", "Vendite", "Rimborsi", "Regalo", "MBO", "Welfare", 
-    "Consulenze", "Interessi", "Ticket", "Altro"
+    "Stipendio", "Investimenti", "Vendite", "Rimborsi", "Regalo", "MBO", "Welfare", "Altro"
   ];
 
   useEffect(() => {
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-    axios.get(`${BASE_URL}/api/${endpoint}/totale-mese`)
+    axios.get(`${BASE_URL}/api/${endpoint}`)
       .then(res => {
-        const totale = parseFloat(res.data.totale);
-        setTransazioniDelMese([{ importo: totale }]);
+        const oggi = new Date();
+        const meseCorrente = oggi.getMonth();
+        const annoCorrente = oggi.getFullYear();
+  
+        const transazioniMese = res.data.filter(t => {
+          const dataTransazione = new Date(t.data);
+          return (
+            dataTransazione.getMonth() === meseCorrente &&
+            dataTransazione.getFullYear() === annoCorrente
+          );
+        });
+  
+        setTransazioniDelMese(transazioniMese);
       })
       .catch(err => console.error(`Errore nel caricamento delle ${tipo === 'spesa' ? 'spese' : 'entrate'}:`, err));
   }, [tipo]);
@@ -37,21 +47,7 @@ function Home() {
   const aggiungiTransazione = e => {
     e.preventDefault();
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-    
-    // Gestione della data con timezone
-    let dataTransazione;
-    if (data) {
-      // Se è stata selezionata una data, la impostiamo a mezzanotte UTC di quel giorno
-      const selectedDate = new Date(data);
-      selectedDate.setUTCHours(0, 0, 0, 0);
-      dataTransazione = selectedDate.toISOString();
-    } else {
-      // Se non è stata selezionata una data, usiamo la data corrente a mezzanotte UTC
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      dataTransazione = today.toISOString();
-    }
-
+    const dataTransazione = data || new Date().toISOString().split('T')[0]; // usa la data inserita o quella odierna
     axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
       importo: Number(importo),
@@ -63,13 +59,7 @@ function Home() {
         setImporto('');
         setCategoria('');
         setData(''); // reset del campo data
-        // Aggiorniamo il totale dopo l'aggiunta
-        axios.get(`${BASE_URL}/api/${endpoint}/totale-mese`)
-          .then(res => {
-            const totale = parseFloat(res.data.totale);
-            setTransazioniDelMese([{ importo: totale }]);
-          })
-          .catch(err => console.error(`Errore nell'aggiornamento del totale:`, err));
+        window.location.reload();
       })
       .catch(err => console.error(`❌ Errore nell'aggiunta della ${tipo}:`, err));
   };
@@ -85,7 +75,7 @@ function Home() {
       <div className="bg-indigo-100 dark:bg-indigo-900 text-white p-4 rounded-lg mb-8 shadow-md text-center">
         <h2 className="text-2xl font-bold">
           Totale {tipo === 'spesa' ? 'spese' : 'entrate'} di {new Date().toLocaleString('default', { month: 'long' })}:{' '}
-          {Math.abs(totaleMeseCorrente).toFixed(2)} €
+          {totaleMeseCorrente.toFixed(2)} €
         </h2>
       </div>
 
