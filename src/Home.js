@@ -31,7 +31,9 @@ function Home() {
         const meseCorrente = oggi.getMonth();
         const annoCorrente = oggi.getFullYear();
   
-        const transazioniMese = res.data.filter(t => {
+        // Estrai le transazioni dalla risposta
+        const transazioni = res.data.spese || res.data.entrate || [];
+        const transazioniMese = transazioni.filter(t => {
           const dataTransazione = new Date(t.data);
           return (
             dataTransazione.getMonth() === meseCorrente &&
