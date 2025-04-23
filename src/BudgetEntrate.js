@@ -21,7 +21,8 @@ const BudgetEntrate = () => {
     try {
       console.log('Fetching data with:', { selectedYear, selectedMonth });
       const response = await fetch(`${BASE_URL}/api/entrate`);
-      const entrate = await response.json();
+      const data = await response.json();
+      const entrate = data.entrate || [];
       console.log('Received entrate:', entrate);
       
       // Filtra per anno e mese selezionati
