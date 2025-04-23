@@ -125,7 +125,8 @@ function Budget() {
       try {
         const endpoint = tipoTransazione === 'entrate' ? '/api/entrate' : '/api/spese';
         const response = await axios.get(`${BASE_URL}${endpoint}`);
-        const transazioni = response.data;
+        // Estrai le transazioni dalla risposta
+        const transazioni = response.data.spese || response.data.entrate || [];
         
         const transazioniFiltrate = transazioni.filter(t => {
           const data = new Date(t.data);
