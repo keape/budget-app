@@ -51,7 +51,9 @@ function Budget() {
   useEffect(() => {
     const fetchBudgetSettings = async () => {
       try {
-        const response = await axios.get(`${BASE_URL}/api/budget-settings`);
+        const response = await axios.get(
+          `${BASE_URL}/api/budget-settings?anno=${annoCorrente}&mese=${meseCorrente}`
+        );
         setBudgetSettings(response.data);
       } catch (error) {
         console.error('Errore nel caricamento delle impostazioni del budget:', error);
@@ -59,7 +61,7 @@ function Budget() {
     };
 
     fetchBudgetSettings();
-  }, []);
+  }, [meseCorrente, annoCorrente]);
 
   useEffect(() => {
     const fetchData = async () => {
