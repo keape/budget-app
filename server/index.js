@@ -1,8 +1,6 @@
 const Spesa = require('./models/Spesa');
 const Entrata = require('./models/Entrata');
 const User = require('./models/User');
-const SheetTransaction = require('./models/SheetTransaction');
-const { getLatestTransactions } = require('./services/googleSheets');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
