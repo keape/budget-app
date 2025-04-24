@@ -54,7 +54,11 @@ function Budget() {
     const fetchData = async () => {
       try {
         const endpoint = tipoTransazione === 'entrate' ? '/api/entrate' : '/api/spese';
-        const response = await axios.get(`${BASE_URL}${endpoint}`);
+        // Recupera tutte le transazioni in un'unica richiesta (limit alto)
+        const response = await axios.get(
+          `${BASE_URL}${endpoint}`,
+          { params: { page: 1, limit: 1000000 } }
+        );
         // Estrai le transazioni dalla risposta
         const transazioni = response.data.spese || response.data.entrate || [];
         
