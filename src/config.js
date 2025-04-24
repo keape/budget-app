@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Forza l'uso del server locale
-const BASE_URL = 'http://localhost:5001';
+// URL del backend su Render
+const BASE_URL = 'https://budget-app-ao5r.onrender.com';
 
 // Debug log per il token
 const getAuthToken = () => {
