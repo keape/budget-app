@@ -48,6 +48,7 @@ function BudgetSettings() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    console.log('Componente montato - Token:', token ? 'presente' : 'mancante');
     if (!token) {
       setError('Sessione scaduta. Effettua nuovamente il login.');
       window.location.href = '/login';
@@ -61,26 +62,35 @@ function BudgetSettings() {
     setError(null);
     try {
       const token = localStorage.getItem('token');
-      console.log('Token:', token);
-      console.log('Fetching settings for:', { anno: selectedYear, mese: selectedMonth });
-      
+      console.log('Recupero impostazioni:', {
+        url: `${BASE_URL}/api/budget-settings`,
+        params: { anno: selectedYear, mese: selectedMonth },
+        token: token ? 'presente' : 'mancante'
+      });
+
       const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
         params: {
           anno: selectedYear,
           mese: selectedMonth
         },
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
-      
-      console.log('Received settings:', response.data);
+
+      console.log('Risposta ricevuta:', response.data);
       setBudgetSettings({
         spese: response.data.spese || {},
         entrate: response.data.entrate || {}
       });
     } catch (error) {
-      console.error('Errore nel caricamento delle impostazioni del budget:', error);
+      console.error('Dettagli errore:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
       if (error.response?.status === 401) {
         setError('Sessione scaduta. Effettua nuovamente il login.');
         localStorage.removeItem('token');
@@ -114,33 +124,41 @@ function BudgetSettings() {
         return;
       }
 
-      console.log('Saving settings:', {
-        anno: selectedYear,
-        mese: selectedMonth,
-        settings: budgetSettings
-      });
-      
-      const response = await axios.post(`${BASE_URL}/api/budget-settings`, {
+      const dataToSend = {
         anno: selectedYear,
         mese: selectedMonth,
         settings: {
           spese: budgetSettings.spese || {},
           entrate: budgetSettings.entrate || {}
         }
-      }, {
+      };
+
+      console.log('Invio dati:', {
+        url: `${BASE_URL}/api/budget-settings`,
+        data: dataToSend,
+        token: 'presente'
+      });
+
+      const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
-      
-      console.log('Save response:', response.data);
+
+      console.log('Risposta salvataggio:', response.data);
       alert('Impostazioni salvate con successo!');
       setBudgetSettings({
         spese: response.data.spese || {},
         entrate: response.data.entrate || {}
       });
     } catch (error) {
-      console.error('Errore nel salvataggio delle impostazioni:', error);
+      console.error('Dettagli errore salvataggio:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
       if (error.response?.status === 401) {
         setError('Sessione scaduta. Effettua nuovamente il login.');
         localStorage.removeItem('token');

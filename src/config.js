@@ -1,15 +1,16 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:5001';
+// Forza l'uso del server locale
+const BASE_URL = 'http://localhost:5001';
 
-// Funzione per ottenere il token da diverse fonti
+// Debug log per il token
 const getAuthToken = () => {
   try {
-    // Prova prima localStorage
     const token = localStorage.getItem('token');
+    console.log('Token recuperato:', token ? 'presente' : 'mancante');
     if (token) return token;
 
-    // Se non trova il token, reindirizza al login
+    console.log('Token mancante, reindirizzamento al login');
     window.location.href = '/login';
     return null;
   } catch (error) {
@@ -26,9 +27,11 @@ axios.interceptors.request.use(
       const token = getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('Request headers:', config.headers);
+        console.log('Request URL:', config.url);
       }
-      // Abilita le credenziali per tutte le richieste
-      config.withCredentials = true;
+      // Non abilitiamo withCredentials quando usiamo il server locale
+      // config.withCredentials = true;
       return config;
     } catch (error) {
       console.error('Errore nella configurazione della richiesta:', error);
@@ -43,23 +46,31 @@ axios.interceptors.request.use(
 
 // Interceptor per gestire gli errori di autenticazione
 axios.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Risposta ricevuta:', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
-    console.error('Errore nella risposta:', error);
-    if (error.response && error.response.status === 401) {
-      try {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      } catch (e) {
-        console.error('Errore nella gestione del logout:', e);
-        window.location.href = '/login';
-      }
+    console.error('Errore nella risposta:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      message: error.message,
+      response: error.response?.data
+    });
+    
+    if (error.response?.status === 401) {
+      console.log('Errore di autenticazione, reindirizzamento al login');
+      localStorage.removeItem('token');
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 
-// Aggiungi log per debug
-console.log('BASE_URL:', BASE_URL);
+console.log('Configurazione attiva - BASE_URL:', BASE_URL);
 
 export default BASE_URL;
