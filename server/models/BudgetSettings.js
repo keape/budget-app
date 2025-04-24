@@ -8,18 +8,18 @@ const budgetSettingsSchema = new mongoose.Schema({
   mese: {
     type: Number,
     required: true,
-    min: 1,
-    max: 12
+    min: 0,
+    max: 11
   },
-  budgetSpese: {
+  spese: {
     type: Map,
     of: Number,
-    required: true
+    default: new Map()
   },
-  budgetEntrate: {
+  entrate: {
     type: Map,
     of: Number,
-    required: true
+    default: new Map()
   }
 }, {
   timestamps: true
