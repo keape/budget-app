@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://budget-app-ao5r.onrender.com';
+const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:5001';
 
 // Funzione per ottenere il token da diverse fonti
 const getAuthToken = () => {
