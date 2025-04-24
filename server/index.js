@@ -639,96 +639,10 @@ app.post('/api/sheets-webhook', verifyWebhookToken, async (req, res) => {
   }
 });
 
-// Funzione per sincronizzare le transazioni dal foglio
-async function syncGoogleSheetTransactions() {
-  try {
-    console.log('🔄 Inizio sincronizzazione con Google Sheets...');
-    
-    // Verifica che le credenziali e l'ID del foglio siano configurati
-    if (!process.env.GOOGLE_SHEET_ID) {
-      throw new Error('GOOGLE_SHEET_ID non configurato');
-    }
-
-    const transactions = await getLatestTransactions();
-    console.log(`📊 Trovate ${transactions.length} transazioni nel foglio`);
-    
-    let processed = 0;
-    let skipped = 0;
-    
-    for (const transaction of transactions) {
-      try {
-        // Verifica se la transazione è già stata processata
-        const existingTransaction = await SheetTransaction.findOne({ sheetId: transaction.sheetId });
-        if (existingTransaction) {
-          skipped++;
-          continue;
-        }
-
-        // Verifica che la data sia valida
-        const transactionDate = new Date(transaction.data);
-        if (isNaN(transactionDate.getTime())) {
-          console.warn(`⚠️ Data non valida per la transazione ${transaction.sheetId}:`, transaction.data);
-          continue;
-        }
-
-        // Salva la transazione nel modello SheetTransaction
-        const sheetTransaction = new SheetTransaction({
-          importo: Math.abs(transaction.importo),
-          descrizione: transaction.descrizione,
-          categoria: transaction.categoria,
-          tipo: transaction.tipo,
-          data: transactionDate,
-          sheetId: transaction.sheetId
-        });
-        await sheetTransaction.save();
-
-        // Crea la spesa nel sistema
-        const spesa = new Spesa({
-          importo: -Math.abs(transaction.importo),
-          descrizione: transaction.descrizione,
-          categoria: transaction.categoria,
-          data: transactionDate
-        });
-        await spesa.save();
-
-        // Marca la transazione come processata
-        sheetTransaction.processato = true;
-        await sheetTransaction.save();
-
-        processed++;
-        console.log('✅ Processata nuova transazione dal foglio:', transaction.sheetId);
-      } catch (transactionError) {
-        console.error('❌ Errore nel processare la transazione:', transaction.sheetId, transactionError);
-      }
-    }
-
-    console.log(`✅ Sincronizzazione completata: ${processed} transazioni processate, ${skipped} già esistenti`);
-  } catch (error) {
-    console.error('❌ Errore durante la sincronizzazione:', error);
-  }
-}
-
-// Endpoint per forzare la sincronizzazione
-app.post('/api/sync-sheets', async (req, res) => {
-  try {
-    await syncGoogleSheetTransactions();
-    res.json({ message: 'Sincronizzazione completata con successo' });
-  } catch (error) {
-    console.error('❌ Errore durante la sincronizzazione forzata:', error);
-    res.status(500).json({ error: 'Errore durante la sincronizzazione' });
-  }
-});
-
 // Esegui la sincronizzazione ogni ora
-setInterval(syncGoogleSheetTransactions, 60 * 60 * 1000);
-
-// Esegui la sincronizzazione all'avvio del server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
-  syncGoogleSheetTransactions()
-    .then(() => console.log('🔄 Prima sincronizzazione completata'))
-    .catch(err => console.error('❌ Errore nella prima sincronizzazione:', err));
 });
 
 // Budget Settings Routes
