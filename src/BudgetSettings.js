@@ -47,6 +47,12 @@ function BudgetSettings() {
   ];
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Sessione scaduta. Effettua nuovamente il login.');
+      window.location.href = '/login';
+      return;
+    }
     fetchBudgetSettings();
   }, [selectedYear, selectedMonth]);
 
@@ -54,13 +60,20 @@ function BudgetSettings() {
     setIsLoading(true);
     setError(null);
     try {
+      const token = localStorage.getItem('token');
+      console.log('Token:', token);
       console.log('Fetching settings for:', { anno: selectedYear, mese: selectedMonth });
+      
       const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
         params: {
           anno: selectedYear,
           mese: selectedMonth
+        },
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
       });
+      
       console.log('Received settings:', response.data);
       setBudgetSettings({
         spese: response.data.spese || {},
@@ -68,8 +81,13 @@ function BudgetSettings() {
       });
     } catch (error) {
       console.error('Errore nel caricamento delle impostazioni del budget:', error);
-      setError('Errore nel caricamento delle impostazioni del budget. Riprova più tardi.');
-      // Mantieni i dati esistenti in caso di errore
+      if (error.response?.status === 401) {
+        setError('Sessione scaduta. Effettua nuovamente il login.');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      } else {
+        setError('Errore nel caricamento delle impostazioni del budget. Riprova più tardi.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +107,13 @@ function BudgetSettings() {
     setIsSaving(true);
     setError(null);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Sessione scaduta. Effettua nuovamente il login.');
+        window.location.href = '/login';
+        return;
+      }
+
       console.log('Saving settings:', {
         anno: selectedYear,
         mese: selectedMonth,
@@ -102,18 +127,27 @@ function BudgetSettings() {
           spese: budgetSettings.spese || {},
           entrate: budgetSettings.entrate || {}
         }
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       
       console.log('Save response:', response.data);
       alert('Impostazioni salvate con successo!');
-      // Aggiorna i dati con quelli restituiti dal server
       setBudgetSettings({
         spese: response.data.spese || {},
         entrate: response.data.entrate || {}
       });
     } catch (error) {
       console.error('Errore nel salvataggio delle impostazioni:', error);
-      setError('Errore nel salvataggio delle impostazioni. Riprova più tardi.');
+      if (error.response?.status === 401) {
+        setError('Sessione scaduta. Effettua nuovamente il login.');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      } else {
+        setError('Errore nel salvataggio delle impostazioni. Riprova più tardi.');
+      }
     } finally {
       setIsSaving(false);
     }
