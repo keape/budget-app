@@ -5,9 +5,10 @@ import BASE_URL from './config';
 function BudgetSettings() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [budgetSettings, setBudgetSettings] = useState({});
+  const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const mesi = [
     "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -51,16 +52,24 @@ function BudgetSettings() {
 
   const fetchBudgetSettings = async () => {
     setIsLoading(true);
+    setError(null);
     try {
+      console.log('Fetching settings for:', { anno: selectedYear, mese: selectedMonth });
       const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
         params: {
           anno: selectedYear,
           mese: selectedMonth
         }
       });
-      setBudgetSettings(response.data || {});
+      console.log('Received settings:', response.data);
+      setBudgetSettings({
+        spese: response.data.spese || {},
+        entrate: response.data.entrate || {}
+      });
     } catch (error) {
       console.error('Errore nel caricamento delle impostazioni del budget:', error);
+      setError('Errore nel caricamento delle impostazioni del budget. Riprova più tardi.');
+      // Mantieni i dati esistenti in caso di errore
     } finally {
       setIsLoading(false);
     }
@@ -71,29 +80,40 @@ function BudgetSettings() {
       ...prev,
       [tipo]: {
         ...prev[tipo],
-        [categoria]: parseFloat(valore) || 0
+        [categoria]: valore === '' ? 0 : parseFloat(valore)
       }
     }));
   };
 
   const salvaBudget = async () => {
     setIsSaving(true);
+    setError(null);
     try {
-      // Ensure the data is properly structured
-      const settingsToSave = {
-        spese: budgetSettings.spese || {},
-        entrate: budgetSettings.entrate || {}
-      };
-
-      await axios.post(`${BASE_URL}/api/budget-settings`, {
+      console.log('Saving settings:', {
         anno: selectedYear,
         mese: selectedMonth,
-        settings: settingsToSave
+        settings: budgetSettings
       });
+      
+      const response = await axios.post(`${BASE_URL}/api/budget-settings`, {
+        anno: selectedYear,
+        mese: selectedMonth,
+        settings: {
+          spese: budgetSettings.spese || {},
+          entrate: budgetSettings.entrate || {}
+        }
+      });
+      
+      console.log('Save response:', response.data);
       alert('Impostazioni salvate con successo!');
+      // Aggiorna i dati con quelli restituiti dal server
+      setBudgetSettings({
+        spese: response.data.spese || {},
+        entrate: response.data.entrate || {}
+      });
     } catch (error) {
       console.error('Errore nel salvataggio delle impostazioni:', error);
-      alert('Errore nel salvataggio delle impostazioni');
+      setError('Errore nel salvataggio delle impostazioni. Riprova più tardi.');
     } finally {
       setIsSaving(false);
     }
@@ -104,6 +124,12 @@ function BudgetSettings() {
       <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
         Impostazioni Budget
       </h1>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
+        </div>
+      )}
 
       {/* Selettori periodo */}
       <div className="flex justify-center mb-8 gap-4">
@@ -144,7 +170,7 @@ function BudgetSettings() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={budgetSettings.spese?.[categoria] || ''}
+                    value={budgetSettings.spese?.[categoria] ?? ''}
                     onChange={(e) => handleBudgetChange(categoria, 'spese', e.target.value)}
                     className="w-32 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -164,7 +190,7 @@ function BudgetSettings() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={budgetSettings.entrate?.[categoria] || ''}
+                    value={budgetSettings.entrate?.[categoria] ?? ''}
                     onChange={(e) => handleBudgetChange(categoria, 'entrate', e.target.value)}
                     className="w-32 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
