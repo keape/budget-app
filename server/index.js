@@ -532,7 +532,7 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
       return res.json({
         spese: {},
         entrate: {}
-      });
+});
     }
 
     // Converti le Map in oggetti plain
@@ -571,13 +571,13 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
     Object.entries(settings.spese).forEach(([key, value]) => {
       if (value !== null && value !== undefined && !isNaN(value)) {
         spese.set(key, Number(value));
-      }
-    });
+  }
+});
 
     Object.entries(settings.entrate).forEach(([key, value]) => {
       if (value !== null && value !== undefined && !isNaN(value)) {
         entrate.set(key, Number(value));
-      }
+    }
     });
 
     console.log('Salvando le impostazioni:', {
