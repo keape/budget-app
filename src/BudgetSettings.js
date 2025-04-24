@@ -79,10 +79,16 @@ function BudgetSettings() {
   const salvaBudget = async () => {
     setIsSaving(true);
     try {
+      // Ensure the data is properly structured
+      const settingsToSave = {
+        spese: budgetSettings.spese || {},
+        entrate: budgetSettings.entrate || {}
+      };
+
       await axios.post(`${BASE_URL}/api/budget-settings`, {
         anno: selectedYear,
         mese: selectedMonth,
-        settings: budgetSettings
+        settings: settingsToSave
       });
       alert('Impostazioni salvate con successo!');
     } catch (error) {
