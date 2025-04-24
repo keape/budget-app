@@ -509,143 +509,6 @@ const verifyWebhookToken = (req, res, next) => {
 };
 
 // Route GET per ottenere le impostazioni del budget per un mese specifico
-app.get('/api/budget-settings/:anno/:mese', async (req, res) => {
-  try {
-    const { anno, mese } = req.params;
-    const settings = await BudgetSettings.findOne({ 
-      anno: parseInt(anno), 
-      mese: parseInt(mese) 
-    });
-    
-    if (!settings) {
-      return res.status(404).json({ message: 'Impostazioni non trovate per questo periodo' });
-    }
-    
-    res.json(settings);
-  } catch (err) {
-    console.error('❌ Errore nel recupero delle impostazioni del budget:', err);
-    res.status(500).json({ error: 'Errore nel recupero delle impostazioni del budget' });
-  }
-});
-
-// Route POST per salvare le impostazioni del budget
-app.post('/api/budget-settings', async (req, res) => {
-  try {
-    const { anno, mese, budgetSpese, budgetEntrate } = req.body;
-
-    if (!anno || !mese || !budgetSpese || !budgetEntrate) {
-      return res.status(400).json({ error: 'Dati mancanti' });
-    }
-
-    let settings = await BudgetSettings.findOne({ anno, mese });
-
-    if (settings) {
-      // Aggiorna le impostazioni esistenti
-      settings.budgetSpese = budgetSpese;
-      settings.budgetEntrate = budgetEntrate;
-      await settings.save();
-    } else {
-      // Crea nuove impostazioni
-      settings = new BudgetSettings({
-        anno,
-        mese,
-        budgetSpese,
-        budgetEntrate
-      });
-      await settings.save();
-    }
-
-    res.status(201).json(settings);
-  } catch (err) {
-    console.error('❌ Errore nel salvataggio delle impostazioni del budget:', err);
-    res.status(500).json({ error: 'Errore nel salvataggio delle impostazioni del budget' });
-  }
-});
-
-// Route PUT per aggiornare le impostazioni del budget
-app.put('/api/budget-settings/:anno/:mese', async (req, res) => {
-  try {
-    const { anno, mese } = req.params;
-    const { budgetSpese, budgetEntrate } = req.body;
-
-    if (!budgetSpese || !budgetEntrate) {
-      return res.status(400).json({ error: 'Dati mancanti' });
-    }
-
-    const settings = await BudgetSettings.findOneAndUpdate(
-      { anno: parseInt(anno), mese: parseInt(mese) },
-      { budgetSpese, budgetEntrate },
-      { new: true, upsert: true }
-    );
-
-    res.json(settings);
-  } catch (err) {
-    console.error('❌ Errore nell\'aggiornamento delle impostazioni del budget:', err);
-    res.status(500).json({ error: 'Errore nell\'aggiornamento delle impostazioni del budget' });
-  }
-});
-
-// Route POST per ricevere le transazioni da Google Sheets
-app.post('/api/sheets-webhook', verifyWebhookToken, async (req, res) => {
-  try {
-    const transactions = req.body;
-    
-    if (!Array.isArray(transactions)) {
-      return res.status(400).json({ error: 'Il payload deve essere un array di transazioni' });
-    }
-
-    console.log('📝 Ricevute nuove transazioni da Google Sheets:', transactions.length);
-
-    for (const transaction of transactions) {
-      // Verifica se la transazione è già stata processata
-      const existingTransaction = await SheetTransaction.findOne({ sheetId: transaction.sheetId });
-      if (existingTransaction) {
-        console.log('⏭️ Transazione già processata:', transaction.sheetId);
-        continue;
-      }
-
-      // Salva la transazione nel modello SheetTransaction
-      const sheetTransaction = new SheetTransaction({
-        importo: Math.abs(transaction.importo),
-        descrizione: transaction.descrizione || '',
-        categoria: transaction.categoria,
-        tipo: transaction.tipo,
-        data: transaction.data || new Date(),
-        sheetId: transaction.sheetId
-      });
-      await sheetTransaction.save();
-
-      // Crea la transazione nel sistema appropriato (Spesa o Entrata)
-      const TransactionModel = transaction.tipo === 'entrata' ? Entrata : Spesa;
-      const newTransaction = new TransactionModel({
-        importo: transaction.tipo === 'entrata' ? Math.abs(transaction.importo) : -Math.abs(transaction.importo),
-        descrizione: transaction.descrizione || '',
-        categoria: transaction.categoria,
-        data: transaction.data || new Date()
-      });
-      await newTransaction.save();
-
-      // Marca la transazione come processata
-      sheetTransaction.processato = true;
-      await sheetTransaction.save();
-
-      console.log('✅ Transazione processata con successo:', transaction.sheetId);
-    }
-
-    res.json({ success: true, message: `Processate ${transactions.length} transazioni` });
-  } catch (error) {
-    console.error('❌ Errore nel processamento delle transazioni:', error);
-    res.status(500).json({ error: 'Errore nel processamento delle transazioni' });
-  }
-});
-
-// Esegui la sincronizzazione ogni ora
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`Server in ascolto sulla porta ${PORT}`);
-});
-
-// Budget Settings Routes
 app.get('/api/budget-settings', authenticateToken, async (req, res) => {
   try {
     const { anno, mese } = req.query;
@@ -751,4 +614,10 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
     console.error('Errore nel salvataggio delle impostazioni del budget:', error);
     res.status(500).json({ message: 'Errore nel salvataggio delle impostazioni del budget' });
   }
+});
+
+// Esegui la sincronizzazione ogni ora
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`Server in ascolto sulla porta ${PORT}`);
 });
