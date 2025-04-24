@@ -17,7 +17,6 @@ const corsOptions = {
     'http://localhost:3000',
     'https://budget-app-ao5r.onrender.com',
     'https://budget-app-keape.vercel.app',
-    'https://budget-app-three-gules.vercel.app',
     'https://budget-app-three-gules.vercel.app'
   ],
   credentials: true,
@@ -734,6 +733,7 @@ app.listen(PORT, () => {
 app.get('/api/budget-settings', authenticateToken, async (req, res) => {
   try {
     const { anno, mese } = req.query;
+    console.log('Ricevuta richiesta GET budget settings:', { anno, mese });
     
     if (!anno || mese === undefined) {
       return res.status(400).json({ message: 'Anno e mese sono richiesti' });
@@ -744,10 +744,12 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
       mese: parseInt(mese)
     };
 
+    console.log('Cercando impostazioni con query:', query);
     const settings = await BudgetSettings.findOne(query);
+    console.log('Impostazioni trovate:', settings);
     
     if (!settings) {
-      // Se non esistono impostazioni, restituisci un oggetto vuoto
+      console.log('Nessuna impostazione trovata, restituisco oggetto vuoto');
       return res.json({
         spese: {},
         entrate: {}
@@ -760,6 +762,7 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
       entrate: Object.fromEntries(settings.entrate)
     };
 
+    console.log('Invio risultato:', result);
     res.json(result);
   } catch (error) {
     console.error('Errore nel recupero delle impostazioni del budget:', error);
@@ -770,7 +773,7 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
 app.post('/api/budget-settings', authenticateToken, async (req, res) => {
   try {
     const { anno, mese, settings } = req.body;
-    console.log('Received budget settings:', { anno, mese, settings });
+    console.log('Ricevuta richiesta POST budget settings:', { anno, mese, settings });
 
     if (!anno || mese === undefined || !settings) {
       return res.status(400).json({ message: 'Dati mancanti' });
@@ -798,6 +801,13 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
       }
     });
 
+    console.log('Salvando le impostazioni:', {
+      anno,
+      mese,
+      spese: Object.fromEntries(spese),
+      entrate: Object.fromEntries(entrate)
+    });
+
     // Cerca e aggiorna le impostazioni esistenti, o crea nuove se non esistono
     const result = await BudgetSettings.findOneAndUpdate(
       { anno, mese },
@@ -819,6 +829,7 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
       entrate: Object.fromEntries(result.entrate)
     };
 
+    console.log('Invio risposta:', response);
     res.json(response);
   } catch (error) {
     console.error('Errore nel salvataggio delle impostazioni del budget:', error);
