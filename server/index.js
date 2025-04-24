@@ -519,8 +519,8 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
     }
 
     const query = {
-      anno: parseInt(anno),
-      mese: parseInt(mese)
+      anno: parseInt(anno), 
+      mese: parseInt(mese) 
     };
 
     console.log('Cercando impostazioni con query:', query);
