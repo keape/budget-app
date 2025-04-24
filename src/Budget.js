@@ -228,7 +228,7 @@ function Budget() {
       {/* Selettori periodo e tipo */}
       <div className="flex justify-center mb-8 gap-4">
         <select
-          className="theme-input"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
           value={meseCorrente}
           onChange={(e) => setMeseCorrente(parseInt(e.target.value))}
         >
@@ -237,7 +237,7 @@ function Budget() {
           ))}
         </select>
         <select
-          className="theme-input"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
           value={annoCorrente}
           onChange={(e) => setAnnoCorrente(parseInt(e.target.value))}
         >
@@ -255,7 +255,7 @@ function Budget() {
           <option value="2014">2014</option>
         </select>
         <select
-          className="theme-input"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
           value={tipoTransazione}
           onChange={(e) => setTipoTransazione(e.target.value)}
         >
