@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import BASE_URL from './config';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 function Budget() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
   const [speseMensili, setSpeseMensili] = useState([]);
-  const [meseCorrente, setMeseCorrente] = useState(new Date().getMonth());
-  const [annoCorrente, setAnnoCorrente] = useState(new Date().getFullYear());
+  const [meseCorrente, setMeseCorrente] = useState(
+    () => params.has('mese') ? parseInt(params.get('mese')) + 1 : new Date().getMonth() + 1
+  );
+  const [annoCorrente, setAnnoCorrente] = useState(
+    () => params.has('anno') ? parseInt(params.get('anno')) : new Date().getFullYear()
+  );
   const [tipoTransazione, setTipoTransazione] = useState('uscite');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [budgetSettings, setBudgetSettings] = useState(null);
+  const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} });
   const navigate = useNavigate();
 
   const mesi = [
@@ -22,37 +28,18 @@ function Budget() {
   ];
 
   const getBudgetPeriodo = (mese, isEntrate = false) => {
-    // Se non ci sono impostazioni personalizzate, restituisci un oggetto vuoto
-    if (!budgetSettings) return {};
-    
     const tipo = isEntrate ? 'entrate' : 'spese';
-    
-    // Se mese è 0 (Intero anno), calcola il budget annuale
-    if (mese === 0) {
-      const budgetAnnuale = {};
-      // Somma i budget di tutti i mesi
-      for (let m = 1; m <= 12; m++) {
-        try {
-          const budgetMese = budgetSettings[annoCorrente]?.[m - 1]?.[tipo] || {};
-          Object.keys(budgetMese).forEach(categoria => {
-            budgetAnnuale[categoria] = (budgetAnnuale[categoria] || 0) + (budgetMese[categoria] || 0);
-          });
-        } catch (error) {
-          console.error('Errore nel calcolo del budget annuale:', error);
-        }
-      }
-      return budgetAnnuale;
-    }
-    
-    // Altrimenti restituisce il budget del mese selezionato
-    return budgetSettings[annoCorrente]?.[mese - 1]?.[tipo] || {};
+    return budgetSettings[tipo] || {};
   };
 
   useEffect(() => {
     const fetchBudgetSettings = async () => {
       try {
+        const apiMonth = meseCorrente > 0 ? meseCorrente - 1 : 0;
         const response = await axios.get(
-          `${BASE_URL}/api/budget-settings?anno=${annoCorrente}&mese=${meseCorrente}`
+          `${BASE_URL}/api/budget-settings`, {
+            params: { anno: annoCorrente, mese: apiMonth }
+          }
         );
         setBudgetSettings(response.data);
       } catch (error) {

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import BASE_URL from './config';
+import { useNavigate } from 'react-router-dom';
 
 function BudgetSettings() {
+  const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} });
@@ -152,6 +154,7 @@ function BudgetSettings() {
         spese: response.data.spese || {},
         entrate: response.data.entrate || {}
       });
+      navigate(`/budget?anno=${selectedYear}&mese=${selectedMonth}`);
     } catch (error) {
       console.error('Dettagli errore salvataggio:', {
         message: error.message,
