@@ -23,6 +23,10 @@ const getAuthToken = () => {
 // Configurazione di axios per includere il token in tutte le richieste
 axios.interceptors.request.use(
   (config) => {
+    // Skip auth token check for login and register endpoints
+    if (config.url?.endsWith('/api/auth/login') || config.url?.endsWith('/api/auth/register')) {
+      return config;
+    }
     try {
       const token = getAuthToken();
       if (token) {
