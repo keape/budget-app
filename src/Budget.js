@@ -6,93 +6,13 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
-const getBudgetMensile = (mese) => {
-  const baseBudget = {
-    "Abbigliamento": 100.00,
-    "Abbonamenti": 45.00,
-    "Acqua": 26.00,
-    "Alimentari": 150.00,
-    "Altre spese": 50.00,
-    "Bar": 25.00,
-    "Cinema Mostre Cultura": 5.00,
-    "Elettricità": 50.00,
-    "Giardinaggio/Agricoltura/Falegnameria": 120.00,
-    "Manutenzione/Arredamento casa": 70.00,
-    "Mutuo": 278.50,
-    "Regali": 20.00,
-    "Ristorante": 150.00,
-    "Salute": 20.00,
-    "Sport/Attrezzatura sportiva": 25.00,
-    "Tecnologia": 60.00,
-    "Vacanza": 50.00,
-    "Vela": 20.00
-  };
-
-  // Crea una copia del budget base
-  const budgetMese = { ...baseBudget };
-
-  // Gestisce i casi speciali per mese
-  switch (mese) {
-    case 1: // Febbraio
-      budgetMese["Vela"] = 750.00;
-      break;
-    case 5: // Giugno
-      budgetMese["Vacanza"] = 750.00;
-      break;
-    case 6: // Luglio
-      budgetMese["Vacanza"] = 750.00;
-      budgetMese["Abbigliamento"] = 0.00;
-      budgetMese["Regali"] = 400.00;
-      break;
-    case 11: // Dicembre
-      budgetMese["Altre spese"] = 150.00;
-      break;
-  }
-
-  return budgetMese;
-};
-
-const getBudgetEntrateMensile = (mese) => {
-  const baseBudget = {
-    "Altra entrata": 2.00,
-    "Consulenze": 5.00,
-    "Interessi": 5.00,
-    "MBO": 0.00,
-    "Stipendio": 2000.00,
-    "Ticket": 100.00,
-    "Welfare": 0.00
-  };
-
-  // Crea una copia del budget base
-  const budgetMese = { ...baseBudget };
-
-  // Gestisce i casi speciali per mese
-  switch (mese) {
-    case 0: // Gennaio
-      budgetMese["Welfare"] = 3400.00;
-      break;
-    case 2: // Marzo
-      budgetMese["MBO"] = 750.00;
-      break;
-    case 11: // Dicembre
-      budgetMese["Stipendio"] = 4000.00;
-      budgetMese["Ticket"] = 1200.00;
-      budgetMese["Welfare"] = 3400.00;
-      budgetMese["MBO"] = 750.00;
-      budgetMese["Altra entrata"] = 24.00;
-      budgetMese["Consulenze"] = 205.00;
-      break;
-  }
-
-  return budgetMese;
-};
-
 function Budget() {
   const [speseMensili, setSpeseMensili] = useState([]);
   const [meseCorrente, setMeseCorrente] = useState(new Date().getMonth());
   const [annoCorrente, setAnnoCorrente] = useState(new Date().getFullYear());
   const [tipoTransazione, setTipoTransazione] = useState('uscite');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [budgetSettings, setBudgetSettings] = useState(null);
   const navigate = useNavigate();
 
   const mesi = [
@@ -102,23 +22,44 @@ function Budget() {
   ];
 
   const getBudgetPeriodo = (mese, isEntrate = false) => {
-    const budgetFunction = isEntrate ? getBudgetEntrateMensile : getBudgetMensile;
+    // Se non ci sono impostazioni personalizzate, restituisci un oggetto vuoto
+    if (!budgetSettings) return {};
+    
+    const tipo = isEntrate ? 'entrate' : 'spese';
     
     // Se mese è 0 (Intero anno), calcola il budget annuale
     if (mese === 0) {
       const budgetAnnuale = {};
       // Somma i budget di tutti i mesi
       for (let m = 1; m <= 12; m++) {
-        const budgetMese = budgetFunction(m - 1);
-        Object.keys(budgetMese).forEach(categoria => {
-          budgetAnnuale[categoria] = (budgetAnnuale[categoria] || 0) + budgetMese[categoria];
-        });
+        try {
+          const budgetMese = budgetSettings[annoCorrente]?.[m - 1]?.[tipo] || {};
+          Object.keys(budgetMese).forEach(categoria => {
+            budgetAnnuale[categoria] = (budgetAnnuale[categoria] || 0) + (budgetMese[categoria] || 0);
+          });
+        } catch (error) {
+          console.error('Errore nel calcolo del budget annuale:', error);
+        }
       }
       return budgetAnnuale;
     }
+    
     // Altrimenti restituisce il budget del mese selezionato
-    return budgetFunction(mese - 1);
+    return budgetSettings[annoCorrente]?.[mese - 1]?.[tipo] || {};
   };
+
+  useEffect(() => {
+    const fetchBudgetSettings = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/api/budget-settings`);
+        setBudgetSettings(response.data);
+      } catch (error) {
+        console.error('Errore nel caricamento delle impostazioni del budget:', error);
+      }
+    };
+
+    fetchBudgetSettings();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {

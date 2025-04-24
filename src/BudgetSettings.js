@@ -1,0 +1,190 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import BASE_URL from './config';
+
+function BudgetSettings() {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [budgetSettings, setBudgetSettings] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const mesi = [
+    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+  ];
+
+  const categorieSpese = [
+    "Abbigliamento",
+    "Abbonamenti",
+    "Acqua",
+    "Alimentari",
+    "Altre spese",
+    "Bar",
+    "Cinema Mostre Cultura",
+    "Elettricità",
+    "Giardinaggio/Agricoltura/Falegnameria",
+    "Manutenzione/Arredamento casa",
+    "Mutuo",
+    "Regali",
+    "Ristorante",
+    "Salute",
+    "Sport/Attrezzatura sportiva",
+    "Tecnologia",
+    "Vacanza",
+    "Vela"
+  ];
+
+  const categorieEntrate = [
+    "Altra entrata",
+    "Consulenze",
+    "Interessi",
+    "MBO",
+    "Stipendio",
+    "Ticket",
+    "Welfare"
+  ];
+
+  useEffect(() => {
+    fetchBudgetSettings();
+  }, [selectedYear, selectedMonth]);
+
+  const fetchBudgetSettings = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
+        params: {
+          anno: selectedYear,
+          mese: selectedMonth
+        }
+      });
+      setBudgetSettings(response.data || {});
+    } catch (error) {
+      console.error('Errore nel caricamento delle impostazioni del budget:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBudgetChange = (categoria, tipo, valore) => {
+    setBudgetSettings(prev => ({
+      ...prev,
+      [tipo]: {
+        ...prev[tipo],
+        [categoria]: parseFloat(valore) || 0
+      }
+    }));
+  };
+
+  const salvaBudget = async () => {
+    setIsSaving(true);
+    try {
+      await axios.post(`${BASE_URL}/api/budget-settings`, {
+        anno: selectedYear,
+        mese: selectedMonth,
+        settings: budgetSettings
+      });
+      alert('Impostazioni salvate con successo!');
+    } catch (error) {
+      console.error('Errore nel salvataggio delle impostazioni:', error);
+      alert('Errore nel salvataggio delle impostazioni');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="theme-container p-6">
+      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
+        Impostazioni Budget
+      </h1>
+
+      {/* Selettori periodo */}
+      <div className="flex justify-center mb-8 gap-4">
+        <select
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+        >
+          {mesi.map((mese, index) => (
+            <option key={index} value={index}>{mese}</option>
+          ))}
+        </select>
+        <select
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+        >
+          {Array.from({ length: 12 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Sezione Spese */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+            <h2 className="text-2xl font-bold mb-6 text-red-600 dark:text-red-400">Budget Spese</h2>
+            <div className="space-y-4">
+              {categorieSpese.map(categoria => (
+                <div key={categoria} className="flex items-center justify-between">
+                  <label className="text-gray-700 dark:text-gray-300">{categoria}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={budgetSettings.spese?.[categoria] || ''}
+                    onChange={(e) => handleBudgetChange(categoria, 'spese', e.target.value)}
+                    className="w-32 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sezione Entrate */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+            <h2 className="text-2xl font-bold mb-6 text-green-600 dark:text-green-400">Budget Entrate</h2>
+            <div className="space-y-4">
+              {categorieEntrate.map(categoria => (
+                <div key={categoria} className="flex items-center justify-between">
+                  <label className="text-gray-700 dark:text-gray-300">{categoria}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={budgetSettings.entrate?.[categoria] || ''}
+                    onChange={(e) => handleBudgetChange(categoria, 'entrate', e.target.value)}
+                    className="w-32 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pulsante Salva */}
+      <div className="flex justify-center mt-8">
+        <button
+          onClick={salvaBudget}
+          disabled={isSaving || isLoading}
+          className={`px-8 py-4 text-lg font-semibold text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 ${
+            isSaving || isLoading
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+        >
+          {isSaving ? 'Salvataggio in corso...' : 'Salva impostazioni'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default BudgetSettings; 
