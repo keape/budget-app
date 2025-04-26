@@ -378,7 +378,8 @@ app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
 
     res.json(entrata);
   } catch (err) {
-    console.error('❌ Errore nella modifica dell'entrata:', err);
+    // Fixed this line to use double quotes
+    console.error("❌ Errore nella modifica dell'entrata:", err);
     res.status(500).json({ error: "Errore nella modifica dell'entrata" });
   }
 });
@@ -395,7 +396,7 @@ app.delete('/api/entrate/:id', authenticateToken, async (req, res) => {
     console.log('✅ Entrata eliminata con successo:', req.params.id);
     res.json({ message: "Entrata eliminata con successo" });
   } catch (err) {
-    console.error('❌ Errore nella cancellazione dell'entrata:', err);
+    console.error("❌ Errore nella cancellazione dell'entrata:", err); // Fixed this line too
     res.status(500).json({ error: "Errore nella cancellazione dell'entrata" });
   }
 });
