@@ -84,147 +84,129 @@ const authenticateToken = (req, res, next) => {
 
 // GET Budget Settings (Handles Monthly and Yearly)
 app.get('/api/budget-settings', authenticateToken, async (req, res) => {
-  // Log diagnostico
-  console.log(`[DIAGNOSTIC LOG - GET v1.2] Received request for anno=${req.query.anno}, mese=${req.query.mese}, user=${req.user.userId}`);
   try {
-    const { anno } = req.query;
-    let { mese } = req.query;
+    const { anno, mese } = req.query;
+    console.log('Ricevuta richiesta GET budget settings:', { anno, mese });
 
     if (!anno) {
-      return res.status(400).json({ message: 'Anno è richiesto' });
+      return res.status(400).json({ message: "Anno è richiesto" });
     }
 
-    const parsedAnno = parseInt(anno);
-    let parsedMese = (mese !== undefined && mese !== null && !isNaN(parseInt(mese)) && parseInt(mese) >= 0 && parseInt(mese) <= 11) 
-                     ? parseInt(mese) 
-                     : null; 
+    const query = {
+      anno: parseInt(anno)
+    };
 
-    let query;
-    let settings = null;
-
-    // Costruisci la query base con user e anno
-    const baseQuery = { user: req.user.userId, anno: parsedAnno };
-
-    if (parsedMese !== null) {
-      // Cerca prima il mese specifico
-      query = { ...baseQuery, mese: parsedMese };
-      console.log(`[GET Budget v1.2] Searching specific month for user ${req.user.userId}:`, query);
-      settings = await BudgetSettings.findOne(query);
-      
-      // Se non trovato, cerca il fallback annuale
-      if (!settings) {
-        query = { ...baseQuery, mese: null };
-        console.log(`[GET Budget v1.2] Specific not found, searching annual fallback for user ${req.user.userId}:`, query);
-        settings = await BudgetSettings.findOne(query);
-      }
+    // If mese is provided and is a valid number (0-11), search for monthly settings.
+    // Otherwise, search for yearly settings (mese: null).
+    const meseInt = parseInt(mese);
+    if (!isNaN(meseInt) && meseInt >= 0 && meseInt <= 11) {
+        query.mese = meseInt;
+        console.log('Cercando impostazioni MENSILI con query:', query);
     } else {
-      // Cerca solo l'annuale
-      query = { ...baseQuery, mese: null };
-      console.log(`[GET Budget v1.2] Searching only annual for user ${req.user.userId}:`, query);
-      settings = await BudgetSettings.findOne(query);
+        query.mese = null; // Use null to find the yearly setting
+        console.log('Cercando impostazioni ANNUALI con query:', query);
     }
 
-    let result = { spese: {}, entrate: {} };
-    if (settings) {
-      console.log(`[GET Budget v1.2] Settings found:`, settings._id, `for query:`, query);
-      result = {
-        spese: settings.spese ? Object.fromEntries(settings.spese) : {},
-        entrate: settings.entrate ? Object.fromEntries(settings.entrate) : {}
-      };
-    } else {
-       console.log(`[GET Budget v1.2] No settings found for query:`, query);
+    const settings = await BudgetSettings.findOne(query);
+    
+    if (!settings) {
+      console.log('Nessuna impostazione trovata, restituisco oggetto vuoto');
+      // Return empty structure if no settings found for that year/month
+      return res.json({
+        spese: {},
+        entrate: {}
+      }); 
     }
+
+    // Convert Map to plain object for JSON response
+    const result = {
+      spese: Object.fromEntries(settings.spese),
+      entrate: Object.fromEntries(settings.entrate)
+    };
+
+    console.log('Invio risultato:', result);
     res.json(result);
 
   } catch (error) {
-    console.error('[GET Budget v1.2] Errore nel recupero delle impostazioni del budget:', error);
-    res.status(500).json({ message: 'Errore interno nel recupero delle impostazioni del budget' });
+    console.error('Errore nel recupero delle impostazioni del budget:', error);
+    res.status(500).json({ message: "Errore nel recupero delle impostazioni del budget" });
   }
 });
 
-// POST Budget Settings (Handles Monthly and Yearly) - VERSIONE CORRETTA
+// POST Budget Settings (Handles Monthly and Yearly)
 app.post('/api/budget-settings', authenticateToken, async (req, res) => {
-  // Log diagnostico aggiornato
-  console.log(`[DIAGNOSTIC LOG - POST v1.2] Received request body:`, JSON.stringify(req.body)); 
-  console.log(`[DIAGNOSTIC LOG - POST v1.2] User ID from auth: ${req.user.userId}`);
-  
   try {
-    // *** LOGICA CORRETTA ***
-    const { anno, settings } = req.body;
-    // mese può essere null per annuale, o un numero 0-11
-    const mese = req.body.mese === null ? null : parseInt(req.body.mese);
-    
-    console.log(`[POST Budget v1.2] Interpreted - Anno: ${anno}, Mese: ${mese} (Type: ${typeof mese}), User: ${req.user.userId}`);
+    const { anno, mese, isYearly, settings } = req.body; // Add isYearly flag
+    console.log('Ricevuta richiesta POST budget settings:', { anno, mese, isYearly, settings });
 
-    // Validazione input
-    if (anno === undefined || mese === undefined || !settings) { // Mese può essere null, quindi checkiamo undefined
-      console.error('[POST Budget v1.2] Validation Error: Dati mancanti');
-      return res.status(400).json({ message: 'Dati mancanti (anno, mese [può essere null], settings)' });
+    if (!anno || !settings) { // Mese is optional now, check isYearly instead
+      return res.status(400).json({ message: "Anno e settings sono richiesti" });
+    }
+    if (settings.spese === undefined || settings.entrate === undefined) {
+      return res.status(400).json({ message: "La struttura dei dati (settings.spese/entrate) non è corretta" });
     }
     
-    const parsedAnno = parseInt(anno);
-    if(isNaN(parsedAnno)) {
-      console.error('[POST Budget v1.2] Validation Error: Anno non valido');
-      return res.status(400).json({ message: 'Anno non valido.' });
+    const annoInt = parseInt(anno);
+    let meseValue = null; // Default to null for yearly
+
+    // If not yearly, validate and parse the month
+    if (!isYearly) {
+        if (mese === undefined || mese === null) {
+             return res.status(400).json({ message: "Mese è richiesto per impostazioni mensili" });
+        }
+        const meseInt = parseInt(mese);
+        if (isNaN(meseInt) || meseInt < 0 || meseInt > 11) {
+            return res.status(400).json({ message: "Mese non valido (deve essere 0-11)" });
+        }
+        meseValue = meseInt;
     }
 
-    // Validazione mese solo se non è null
-    if (mese !== null && (isNaN(mese) || mese < 0 || mese > 11)) {
-         console.error('[POST Budget v1.2] Validation Error: Mese non valido (non nullo)');
-         return res.status(400).json({ message: 'Mese non valido. Deve essere tra 0 e 11, o null per annuale.' });
-    }
-
-    if (!settings.spese || typeof settings.spese !== 'object' || !settings.entrate || typeof settings.entrate !== 'object') {
-        console.error('[POST Budget v1.2] Validation Error: Struttura settings non corretta');
-        return res.status(400).json({ message: 'La struttura dei dati settings non è corretta (spese/entrate devono essere oggetti)' });
-    }
-
-    // Preparazione dati per Mongoose (Map)
+    // Prepare data for saving
     const spese = new Map();
     const entrate = new Map();
     Object.entries(settings.spese).forEach(([key, value]) => {
-      const numValue = parseFloat(value);
-      if (typeof key === 'string' && key.trim() !== '' && value !== null && value !== undefined && !isNaN(numValue)) {
-        spese.set(key.trim(), numValue); 
+      if (value !== null && value !== undefined && !isNaN(value)) {
+        spese.set(key, Number(value));
       }
     });
     Object.entries(settings.entrate).forEach(([key, value]) => {
-       const numValue = parseFloat(value);
-       if (typeof key === 'string' && key.trim() !== '' && value !== null && value !== undefined && !isNaN(numValue)) {
-        entrate.set(key.trim(), numValue);
+      if (value !== null && value !== undefined && !isNaN(value)) {
+        entrate.set(key, Number(value));
       }
     });
 
-    // Query e dati per aggiornamento/inserimento
-    const query = { user: req.user.userId, anno: parsedAnno, mese: mese }; 
-    const update = { user: req.user.userId, anno: parsedAnno, mese: mese, spese, entrate };
-    const options = { new: true, upsert: true, setDefaultsOnInsert: true };
-
-    console.log(`[POST Budget v1.2] Saving settings for user ${req.user.userId} with query:`, query);
-    const result = await BudgetSettings.findOneAndUpdate(query, update, options);
-
-    // Preparazione risposta
-    const response = {
-      spese: result.spese ? Object.fromEntries(result.spese) : {},
-      entrate: result.entrate ? Object.fromEntries(result.entrate) : {}
+    const updateData = { 
+        anno: annoInt,
+        mese: meseValue, 
+        spese,
+        entrate
     };
     
-    console.log(`[POST Budget v1.2] Settings saved/updated successfully for user ${req.user.userId}, query:`, query);
+    console.log('Salvando/Aggiornando le impostazioni con:', updateData);
+
+    // Find and update (or create if not found - upsert)
+    const result = await BudgetSettings.findOneAndUpdate(
+      { anno: annoInt, mese: meseValue }, // Query condition
+      updateData, // Data to set
+      { new: true, upsert: true, setDefaultsOnInsert: true } // Options
+    );
+
+    // Convert Map back to plain object for response
+    const response = {
+      spese: Object.fromEntries(result.spese),
+      entrate: Object.fromEntries(result.entrate)
+    };
+
+    console.log('Invio risposta:', response);
     res.json(response);
 
   } catch (error) {
-    console.error('[POST Budget v1.2] Errore nel salvataggio delle impostazioni del budget:', error);
-    console.error('[POST Budget v1.2] Error details:', error.message, error.stack);
-    if (error.name === 'ValidationError') {
-        console.error('[POST Budget v1.2] Mongoose Validation Error:', error.errors);
-        return res.status(400).json({ message: 'Errore di validazione: ' + error.message, errors: error.errors });
+    console.error('Errore nel salvataggio delle impostazioni del budget:', error);
+    // Handle potential duplicate key error during upsert if needed
+    if (error.code === 11000) {
+         return res.status(409).json({ message: "Errore: impostazione duplicata rilevata." });
     }
-    // Errore chiave duplicata (potrebbe accadere con upsert se gli indici non sono perfetti)
-    if (error.code === 11000) { 
-         console.error('[POST Budget v1.2] Duplicate key error:', error.keyValue);
-         return res.status(409).json({ message: "Errore: Conflitto - Impostazione duplicata rilevata.", details: error.keyValue });
-    }
-    res.status(500).json({ message: 'Errore interno nel salvataggio delle impostazioni del budget' });
+    res.status(500).json({ message: "Errore nel salvataggio delle impostazioni del budget" });
   }
 });
 
@@ -237,8 +219,8 @@ app.get('/api/spese', authenticateToken, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
-    const totalSpese = await Spesa.countDocuments({ user: req.user.userId }); // Filter by user
-    const spese = await Spesa.find({ user: req.user.userId }).sort({ data: -1 }).skip(skip).limit(limit); // Filter by user
+    const totalSpese = await Spesa.countDocuments();
+    const spese = await Spesa.find().sort({ data: -1 }).skip(skip).limit(limit);
     res.json({ spese, currentPage: page, totalPages: Math.ceil(totalSpese / limit), totalItems: totalSpese });
   } catch (err) {
     console.error('❌ Errore nel recupero delle spese:', err);
@@ -252,10 +234,7 @@ app.get('/api/spese/totale-mese', authenticateToken, async (req, res) => {
     const oggi = new Date();
     const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
     const fineMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0);
-    const spese = await Spesa.find({ 
-        user: req.user.userId, // Filter by user
-        data: { $gte: inizioMese, $lte: fineMese } 
-    });
+    const spese = await Spesa.find({ data: { $gte: inizioMese, $lte: fineMese } });
     const totale = spese.reduce((acc, spesa) => acc + spesa.importo, 0);
     res.json({ totale: totale.toFixed(2), mese: oggi.toLocaleString('it-IT', { month: 'long' }), anno: oggi.getFullYear() });
   } catch (err) {
@@ -273,13 +252,7 @@ app.post('/api/spese', authenticateToken, async (req, res) => {
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) return res.status(400).json({ error: "Importo non valido", message: "L'importo deve essere un numero valido" });
   try {
-    const nuovaSpesa = new Spesa({ 
-        descrizione: descrizione || '', 
-        importo: -Math.abs(importoNumerico), 
-        categoria, 
-        data: data ? new Date(data) : new Date(),
-        user: req.user.userId // Associate with user
-    });
+    const nuovaSpesa = new Spesa({ descrizione: descrizione || '', importo: -Math.abs(importoNumerico), categoria, data: data ? new Date(data) : new Date() });
     const spesaSalvata = await nuovaSpesa.save();
     res.status(201).json({ success: true, message: `Spesa di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`, data: spesaSalvata });
   } catch (err) {
@@ -292,9 +265,8 @@ app.post('/api/spese', authenticateToken, async (req, res) => {
 app.delete('/api/spese/:id', authenticateToken, async (req, res) => {
   console.log('🗑️ Richiesta eliminazione spesa:', req.params.id);
   try {
-    // Ensure the user can only delete their own expenses
-    const spesa = await Spesa.findOneAndDelete({ _id: req.params.id, user: req.user.userId });
-    if (!spesa) return res.status(404).json({ error: "Spesa non trovata o non autorizzato" });
+    const spesa = await Spesa.findByIdAndDelete(req.params.id);
+    if (!spesa) return res.status(404).json({ error: "Spesa non trovata" });
     console.log('✅ Spesa eliminata con successo:', req.params.id);
     res.json({ message: "Spesa eliminata con successo" });
   } catch (err) {
@@ -308,16 +280,9 @@ app.put('/api/spese/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { descrizione, importo, categoria, data } = req.body;
   if (!importo || !categoria) return res.status(400).json({ error: "Dati mancanti" });
-  const importoNumerico = Number(importo);
-  if (isNaN(importoNumerico)) return res.status(400).json({ error: "Importo non valido" });
   try {
-    // Ensure the user can only update their own expenses
-    const spesa = await Spesa.findOneAndUpdate(
-        { _id: id, user: req.user.userId }, 
-        { descrizione, importo: -Math.abs(importoNumerico), categoria, data: data ? new Date(data) : undefined }, 
-        { new: true }
-    );
-    if (!spesa) return res.status(404).json({ error: "Spesa non trovata o non autorizzato" });
+    const spesa = await Spesa.findByIdAndUpdate(id, { descrizione, importo: Number(importo), categoria, data: data ? new Date(data) : undefined }, { new: true });
+    if (!spesa) return res.status(404).json({ error: "Spesa non trovata" });
     res.json(spesa);
   } catch (err) {
     console.error('❌ Errore nella modifica della spesa:', err);
@@ -331,8 +296,8 @@ app.get('/api/entrate', authenticateToken, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
-    const totalEntrate = await Entrata.countDocuments({ user: req.user.userId }); // Filter by user
-    const entrate = await Entrata.find({ user: req.user.userId }).sort({ data: -1 }).skip(skip).limit(limit); // Filter by user
+    const totalEntrate = await Entrata.countDocuments();
+    const entrate = await Entrata.find().sort({ data: -1 }).skip(skip).limit(limit);
     res.json({ entrate, currentPage: page, totalPages: Math.ceil(totalEntrate / limit), totalItems: totalEntrate });
   } catch (err) {
     console.error('❌ Errore nel recupero delle entrate:', err);
@@ -346,10 +311,7 @@ app.get('/api/entrate/totale-mese', authenticateToken, async (req, res) => {
     const oggi = new Date();
     const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
     const fineMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0);
-    const entrate = await Entrata.find({ 
-        user: req.user.userId, // Filter by user
-        data: { $gte: inizioMese, $lte: fineMese } 
-    });
+    const entrate = await Entrata.find({ data: { $gte: inizioMese, $lte: fineMese } });
     const totale = entrate.reduce((acc, entrata) => acc + entrata.importo, 0);
     res.json({ totale: totale.toFixed(2), mese: oggi.toLocaleString('it-IT', { month: 'long' }), anno: oggi.getFullYear() });
   } catch (err) {
@@ -366,13 +328,7 @@ app.post('/api/entrate', authenticateToken, async (req, res) => {
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) return res.status(400).json({ error: "Importo non valido", message: "L'importo deve essere un numero valido" });
   try {
-    const nuovaEntrata = new Entrata({ 
-        descrizione: descrizione || '', 
-        importo: Math.abs(importoNumerico), 
-        categoria, 
-        data: data ? new Date(data) : new Date(),
-        user: req.user.userId // Associate with user
-    });
+    const nuovaEntrata = new Entrata({ descrizione: descrizione || '', importo: Math.abs(importoNumerico), categoria, data: data ? new Date(data) : new Date() });
     const entrataSalvata = await nuovaEntrata.save();
     res.status(201).json({ success: true, message: `Entrata di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`, data: entrataSalvata });
   } catch (err) {
@@ -389,13 +345,8 @@ app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
     if (!importo || !categoria) return res.status(400).json({ error: "Importo e categoria sono richiesti" });
     const importoNumerico = Number(importo);
     if (isNaN(importoNumerico)) return res.status(400).json({ error: "L'importo deve essere un numero valido" });
-    // Ensure the user can only update their own income
-    const entrata = await Entrata.findOneAndUpdate(
-        { _id: id, user: req.user.userId }, 
-        { descrizione: descrizione || '', importo: Math.abs(importoNumerico), categoria, data: data ? new Date(data) : undefined }, 
-        { new: true }
-    );
-    if (!entrata) return res.status(404).json({ error: "Entrata non trovata o non autorizzato" });
+    const entrata = await Entrata.findByIdAndUpdate(id, { descrizione: descrizione || '', importo: Math.abs(importoNumerico), categoria, data: data ? new Date(data) : undefined }, { new: true });
+    if (!entrata) return res.status(404).json({ error: "Entrata non trovata" });
     res.json(entrata);
   } catch (err) {
     console.error("❌ Errore nella modifica dell'entrata:", err);
@@ -407,9 +358,8 @@ app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
 app.delete('/api/entrate/:id', authenticateToken, async (req, res) => {
   console.log('🗑️ Richiesta eliminazione entrata:', req.params.id);
   try {
-    // Ensure the user can only delete their own income
-    const entrata = await Entrata.findOneAndDelete({ _id: req.params.id, user: req.user.userId });
-    if (!entrata) return res.status(404).json({ error: "Entrata non trovata o non autorizzato" });
+    const entrata = await Entrata.findByIdAndDelete(req.params.id);
+    if (!entrata) return res.status(404).json({ error: "Entrata non trovata" });
     console.log('✅ Entrata eliminata con successo:', req.params.id);
     res.json({ message: "Entrata eliminata con successo" });
   } catch (err) {
@@ -421,23 +371,13 @@ app.delete('/api/entrate/:id', authenticateToken, async (req, res) => {
 // POST /api/fix-transactions
 app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
   try {
-    const spese = await Spesa.find({ user: req.user.userId }); // Filter by user
-    console.log(`Trovate ${spese.length} spese da sistemare per l'utente ${req.user.userId}`);
-    for (const spesa of spese) { 
-        if (spesa.importo > 0) { // Fix only if positive
-            spesa.importo = -Math.abs(spesa.importo); 
-            await spesa.save(); 
-        }
-    }
-    const entrate = await Entrata.find({ user: req.user.userId }); // Filter by user
-    console.log(`Trovate ${entrate.length} entrate da sistemare per l'utente ${req.user.userId}`);
-    for (const entrata of entrate) { 
-        if (entrata.importo < 0) { // Fix only if negative
-            entrata.importo = Math.abs(entrata.importo); 
-            await entrata.save(); 
-        }
-    }
-    res.json({ success: true, message: `Controllo transazioni completato per l'utente ${req.user.userId}.` });
+    const spese = await Spesa.find();
+    console.log(`Trovate ${spese.length} spese da sistemare`);
+    for (const spesa of spese) { spesa.importo = -Math.abs(spesa.importo); await spesa.save(); }
+    const entrate = await Entrata.find();
+    console.log(`Trovate ${entrate.length} entrate da sistemare`);
+    for (const entrata of entrate) { entrata.importo = Math.abs(entrata.importo); await entrata.save(); }
+    res.json({ success: true, message: `Sistemate ${spese.length} spese e ${entrate.length} entrate` });
   } catch (err) {
     console.error('❌ Errore nella correzione delle transazioni:', err);
     res.status(500).json({ error: "Errore nella correzione delle transazioni" });
@@ -453,12 +393,6 @@ app.get('/', (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ message: "Username e password sono richiesti" });
-    }
-    if (password.length < 6) { // Simple password policy example
-        return res.status(400).json({ message: "La password deve essere almeno 6 caratteri" });
-    }
     const existingUser = await User.findOne({ username });
     if (existingUser) return res.status(400).json({ message: "Username già in uso" });
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -475,21 +409,11 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ message: "Username e password sono richiesti" });
-    }
     const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ message: "Credenziali non valide" });
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) return res.status(401).json({ message: "Credenziali non valide" });
-    
-    // Generate token with user ID
-    const token = jwt.sign(
-        { userId: user._id, username: user.username }, 
-        process.env.JWT_SECRET || 'your-secret-key', 
-        { expiresIn: '24h' } // Token expires in 24 hours
-    );
-    console.log(`✅ Utente ${user.username} (ID: ${user._id}) loggato con successo.`);
+    const token = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
     res.json({ token });
   } catch (error) {
     console.error('❌ Errore durante il login:', error);
