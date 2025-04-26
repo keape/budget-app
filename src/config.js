@@ -39,18 +39,11 @@ axios.interceptors.request.use(
       const token = getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        // console.log('Request headers:', config.headers); // Less noisy logging
-        // console.log('Request URL:', config.url);
-      } else {
-        // If getAuthToken returned null (and already redirected), 
-        // we might want to cancel the request or let it proceed 
-        // where it will likely fail anyway, triggering the response interceptor.
-        // For now, let it proceed.
-      }
+      } 
       return config;
     } catch (error) {
       console.error('Errore nella configurazione della richiesta:', error);
-      return Promise.reject(error); // Reject the request if token retrieval fails unexpectedly
+      return Promise.reject(error); 
     }
   },
   (error) => {
@@ -59,41 +52,45 @@ axios.interceptors.request.use(
   }
 );
 
-// Interceptor per gestire gli errori di autenticazione
-axios.interceptors.response.use(
-  (response) => {
-    // console.log('Risposta ricevuta:', { // Less noisy logging
-    //   status: response.status,
-    //   url: response.config.url,
-    //   data: response.data
-    // });
-    return response;
-  }, // <-- Added missing comma here
-  (error) => {
-    console.error('Errore nella risposta:', {
-      status: error.response?.status,
-      url: error.config?.url,
-      message: error.message,
-      response: error.response?.data
-    });
-    
-    // Check for both 401 (Unauthorized) and 403 (Forbidden) as auth errors
-    const isAuthError = error.response?.status === 401 || error.response?.status === 403;
-    // Avoid redirect loop if already on login/register
-    const isOnAuthPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
+// Define the success handler for the response interceptor
+const handleResponseSuccess = (response) => {
+  // console.log('Risposta ricevuta:', { // Less noisy logging
+  //   status: response.status,
+  //   url: response.config.url,
+  //   data: response.data
+  // });
+  return response;
+};
 
-    if (isAuthError && !isOnAuthPage) {
-      console.log(`Errore di autenticazione (${error.response.status}), reindirizzamento al login`);
-      localStorage.removeItem('token');
-      window.location.href = '/login'; 
-    } else if (isAuthError && isOnAuthPage) {
-       console.log(`Errore di autenticazione (${error.response.status}) sulla pagina di login/registrazione, non reindirizzo.`);
-       // Optionally display an error message to the user on the login page itself
-    }
-    
-    return Promise.reject(error);
+// Define the error handler for the response interceptor
+const handleResponseError = (error) => {
+  console.error('Errore nella risposta:', {
+    status: error.response?.status,
+    url: error.config?.url,
+    message: error.message,
+    response: error.response?.data
+  });
+  
+  // Check for both 401 (Unauthorized) and 403 (Forbidden) as auth errors
+  const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+  // Avoid redirect loop if already on login/register
+  const isOnAuthPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
+
+  if (isAuthError && !isOnAuthPage) {
+    console.log(`Errore di autenticazione (${error.response.status}), reindirizzamento al login`);
+    localStorage.removeItem('token');
+    window.location.href = '/login'; 
+  } else if (isAuthError && isOnAuthPage) {
+     console.log(`Errore di autenticazione (${error.response.status}) sulla pagina di login/registrazione, non reindirizzo.`);
+     // Optionally display an error message to the user on the login page itself
   }
-);
+  
+  return Promise.reject(error);
+};
+
+// Apply the interceptor using the defined handlers
+axios.interceptors.response.use(handleResponseSuccess, handleResponseError);
+
 
 console.log('Configurazione attiva - BASE_URL:', BASE_URL);
 
