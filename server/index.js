@@ -72,12 +72,12 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Token non fornito' });
+    return res.status(401).json({ message: "Token non fornito" });
   }
 
   jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
     if (err) {
-      return res.status(403).json({ message: 'Token non valido' });
+      return res.status(403).json({ message: "Token non valido" });
     }
     req.user = user;
     next();
@@ -337,7 +337,8 @@ app.post('/api/entrate', authenticateToken, async (req, res) => {
       data: entrataSalvata
     });
   } catch (err) {
-    console.error('❌ Errore nel salvataggio dell'entrata:', err);
+    // Fixed this line to use double quotes
+    console.error("❌ Errore nel salvataggio dell'entrata:", err);
     res.status(500).json({ 
       error: "Errore nel salvataggio",
       message: "Non è stato possibile salvare l'entrata. Riprova."
