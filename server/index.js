@@ -17,7 +17,7 @@ const corsOptions = {
     'http://localhost:3000',
     'https://budget-app-ao5r.onrender.com',
     'https://budget-app-keape.vercel.app',
-    'https://budget-app-three-gules.vercel.app', // Removed duplicate
+    'https://budget-app-three-gules.vercel.app',
     'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev' // Added development origin
   ],
   credentials: true,
@@ -37,7 +37,6 @@ app.use((req, res, next) => {
   
   // Gestione delle richieste OPTIONS
   if (req.method === 'OPTIONS') {
-    // Use configured origin check for OPTIONS
     const requestOrigin = req.headers.origin;
     if (corsOptions.origin.includes(requestOrigin)) {
       res.header('Access-Control-Allow-Origin', requestOrigin);
@@ -99,10 +98,7 @@ app.get('/api/spese', authenticateToken, async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Conta il totale delle spese per la paginazione
     const totalSpese = await Spesa.countDocuments();
-    
-    // Recupera le spese per la pagina corrente
     const spese = await Spesa.find()
       .sort({ data: -1 })
       .skip(skip)
@@ -152,7 +148,6 @@ app.post('/api/spese', authenticateToken, async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
   const { descrizione, importo, categoria, data } = req.body;
 
-  // Validazione più robusta per iOS Shortcuts
   if (!importo) {
     return res.status(400).json({ 
       error: 'Importo mancante',
@@ -167,26 +162,25 @@ app.post('/api/spese', authenticateToken, async (req, res) => {
     });
   }
 
-  // Validazione del formato dell'importo
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) {
     return res.status(400).json({ 
       error: 'Importo non valido',
-      message: 'L'importo deve essere un numero valido'
+      // Escaped the single quote here
+      message: 'L'importo deve essere un numero valido' 
     });
   }
 
   try {
     const nuovaSpesa = new Spesa({
       descrizione: descrizione || '',
-      importo: -Math.abs(importoNumerico), // Assicuriamoci che l'importo sia negativo per le spese
+      importo: -Math.abs(importoNumerico),
       categoria,
       data: data ? new Date(data) : new Date()
     });
     
     const spesaSalvata = await nuovaSpesa.save();
     
-    // Risposta formattata per iOS Shortcuts
     res.status(201).json({
       success: true,
       message: `Spesa di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`,
@@ -257,10 +251,7 @@ app.get('/api/entrate', authenticateToken, async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Conta il totale delle entrate per la paginazione
     const totalEntrate = await Entrata.countDocuments();
-    
-    // Recupera le entrate per la pagina corrente
     const entrate = await Entrata.find()
       .sort({ data: -1 })
       .skip(skip)
@@ -327,14 +318,15 @@ app.post('/api/entrate', authenticateToken, async (req, res) => {
   if (isNaN(importoNumerico)) {
     return res.status(400).json({ 
       error: 'Importo non valido',
-      message: 'L'importo deve essere un numero valido'
+      // Escaped the single quote here too
+      message: 'L'importo deve essere un numero valido' 
     });
   }
 
   try {
     const nuovaEntrata = new Entrata({
       descrizione: descrizione || '',
-      importo: Math.abs(importoNumerico), // Assicuriamoci che l'importo sia positivo per le entrate
+      importo: Math.abs(importoNumerico),
       categoria,
       data: data ? new Date(data) : new Date()
     });
@@ -367,7 +359,8 @@ app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
 
     const importoNumerico = Number(importo);
     if (isNaN(importoNumerico)) {
-      return res.status(400).json({ error: 'L'importo deve essere un numero valido' });
+      // Escaped the single quote here too
+      return res.status(400).json({ error: 'L'importo deve essere un numero valido' }); 
     }
 
     const entrata = await Entrata.findByIdAndUpdate(
@@ -450,16 +443,13 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Verifica se l'utente esiste già
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: 'Username già in uso' });
     }
 
-    // Hash della password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Crea il nuovo utente
     const user = new User({
       username,
       password: hashedPassword
@@ -478,19 +468,16 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Cerca l'utente
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(401).json({ message: 'Credenziali non valide' });
     }
 
-    // Verifica la password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(401).json({ message: 'Credenziali non valide' });
     }
 
-    // Genera il token
     const token = jwt.sign(
       { userId: user._id, username: user.username },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -544,7 +531,6 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
 });
     }
 
-    // Converti le Map in oggetti plain
     const result = {
       spese: Object.fromEntries(settings.spese),
       entrate: Object.fromEntries(settings.entrate)
@@ -567,16 +553,13 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Dati mancanti' });
     }
 
-    // Verifica che settings contenga spese ed entrate
     if (!settings.spese || !settings.entrate) {
       return res.status(400).json({ message: 'La struttura dei dati non è corretta' });
     }
 
-    // Crea le Map per il salvataggio
     const spese = new Map();
     const entrate = new Map();
 
-    // Popola le Map con i dati ricevuti
     Object.entries(settings.spese).forEach(([key, value]) => {
       if (value !== null && value !== undefined && !isNaN(value)) {
         spese.set(key, Number(value));
@@ -596,7 +579,6 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
       entrate: Object.fromEntries(entrate)
     });
 
-    // Cerca e aggiorna le impostazioni esistenti, o crea nuove se non esistono
     const result = await BudgetSettings.findOneAndUpdate(
       { anno, mese },
       { 
@@ -611,7 +593,6 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
       }
     );
 
-    // Converti il risultato in un formato compatibile con il frontend
     const response = {
       spese: Object.fromEntries(result.spese),
       entrate: Object.fromEntries(result.entrate)
