@@ -68,7 +68,7 @@ axios.interceptors.response.use(
     //   data: response.data
     // });
     return response;
-  },
+  }, // <-- Added missing comma here
   (error) => {
     console.error('Errore nella risposta:', {
       status: error.response?.status,
