@@ -26,11 +26,10 @@ function Login() {
     setError('');
     
     try {
+      // Removed { withCredentials: true } from the request
       const response = await axios.post(`${BASE_URL}/api/auth/login`, {
         username,
         password
-      }, {
-        withCredentials: true
       });
       
       if (response.data.token) {
@@ -128,4 +127,4 @@ function Login() {
   );
 }
 
-export default Login; 
+export default Login;

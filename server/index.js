@@ -17,9 +17,8 @@ const corsOptions = {
     'http://localhost:3000',
     'https://budget-app-ao5r.onrender.com',
     'https://budget-app-keape.vercel.app',
-    'https://budget-app-three-gules.vercel.app',
-    'https://budget-app-three-gules.vercel.app',
-    'https://budget-app-ao5r.onrender.com'
+    'https://budget-app-three-gules.vercel.app', // Removed duplicate
+    'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev' // Added development origin
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -38,7 +37,17 @@ app.use((req, res, next) => {
   
   // Gestione delle richieste OPTIONS
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    // Use configured origin check for OPTIONS
+    const requestOrigin = req.headers.origin;
+    if (corsOptions.origin.includes(requestOrigin)) {
+      res.header('Access-Control-Allow-Origin', requestOrigin);
+      res.header('Access-Control-Allow-Methods', corsOptions.methods.join(','));
+      res.header('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(','));
+      res.header('Access-Control-Allow-Credentials', 'true');
+      return res.sendStatus(200);
+    } else {
+      return res.sendStatus(403); // Forbidden if origin not allowed
+    }
   }
   next();
 });
@@ -84,7 +93,7 @@ let elencoSpese = [
 ];
 
 // Route GET → restituisce l'elenco delle spese con paginazione
-app.get('/api/spese', async (req, res) => {
+app.get('/api/spese', authenticateToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -112,7 +121,7 @@ app.get('/api/spese', async (req, res) => {
 });
 
 // Route GET → restituisce il totale delle spese del mese corrente
-app.get('/api/spese/totale-mese', async (req, res) => {
+app.get('/api/spese/totale-mese', authenticateToken, async (req, res) => {
   try {
     const oggi = new Date();
     const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
@@ -139,7 +148,7 @@ app.get('/api/spese/totale-mese', async (req, res) => {
 });
 
 // Route POST → aggiunge una nuova spesa
-app.post('/api/spese', async (req, res) => {
+app.post('/api/spese', authenticateToken, async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
   const { descrizione, importo, categoria, data } = req.body;
 
@@ -163,7 +172,7 @@ app.post('/api/spese', async (req, res) => {
   if (isNaN(importoNumerico)) {
     return res.status(400).json({ 
       error: 'Importo non valido',
-      message: 'L\'importo deve essere un numero valido'
+      message: 'L'importo deve essere un numero valido'
     });
   }
 
@@ -193,7 +202,7 @@ app.post('/api/spese', async (req, res) => {
 });
 
 // Route DELETE → elimina una spesa
-app.delete('/api/spese/:id', async (req, res) => {
+app.delete('/api/spese/:id', authenticateToken, async (req, res) => {
   console.log('🗑️ Richiesta eliminazione spesa:', req.params.id);
   try {
     const spesa = await Spesa.findByIdAndDelete(req.params.id);
@@ -210,7 +219,7 @@ app.delete('/api/spese/:id', async (req, res) => {
 });
 
 // Route PUT → modifica una spesa esistente
-app.put('/api/spese/:id', async (req, res) => {
+app.put('/api/spese/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { descrizione, importo, categoria, data } = req.body;
 
@@ -242,7 +251,7 @@ app.put('/api/spese/:id', async (req, res) => {
 });
 
 // Route GET → restituisce l'elenco delle entrate con paginazione
-app.get('/api/entrate', async (req, res) => {
+app.get('/api/entrate', authenticateToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -270,7 +279,7 @@ app.get('/api/entrate', async (req, res) => {
 });
 
 // Route GET → restituisce il totale delle entrate del mese corrente
-app.get('/api/entrate/totale-mese', async (req, res) => {
+app.get('/api/entrate/totale-mese', authenticateToken, async (req, res) => {
   try {
     const oggi = new Date();
     const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
@@ -297,7 +306,7 @@ app.get('/api/entrate/totale-mese', async (req, res) => {
 });
 
 // Route POST → aggiunge una nuova entrata
-app.post('/api/entrate', async (req, res) => {
+app.post('/api/entrate', authenticateToken, async (req, res) => {
   const { descrizione, importo, categoria, data } = req.body;
 
   if (!importo) {
@@ -318,7 +327,7 @@ app.post('/api/entrate', async (req, res) => {
   if (isNaN(importoNumerico)) {
     return res.status(400).json({ 
       error: 'Importo non valido',
-      message: 'L\'importo deve essere un numero valido'
+      message: 'L'importo deve essere un numero valido'
     });
   }
 
@@ -338,16 +347,16 @@ app.post('/api/entrate', async (req, res) => {
       data: entrataSalvata
     });
   } catch (err) {
-    console.error('❌ Errore nel salvataggio dell\'entrata:', err);
+    console.error('❌ Errore nel salvataggio dell'entrata:', err);
     res.status(500).json({ 
       error: 'Errore nel salvataggio',
-      message: 'Non è stato possibile salvare l\'entrata. Riprova.'
+      message: 'Non è stato possibile salvare l'entrata. Riprova.'
     });
   }
 });
 
 // Route PUT → modifica un'entrata esistente
-app.put('/api/entrate/:id', async (req, res) => {
+app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { importo, descrizione, categoria, data } = req.body;
@@ -358,7 +367,7 @@ app.put('/api/entrate/:id', async (req, res) => {
 
     const importoNumerico = Number(importo);
     if (isNaN(importoNumerico)) {
-      return res.status(400).json({ error: 'L\'importo deve essere un numero valido' });
+      return res.status(400).json({ error: 'L'importo deve essere un numero valido' });
     }
 
     const entrata = await Entrata.findByIdAndUpdate(
@@ -378,13 +387,13 @@ app.put('/api/entrate/:id', async (req, res) => {
 
     res.json(entrata);
   } catch (err) {
-    console.error('❌ Errore nella modifica dell\'entrata:', err);
-    res.status(500).json({ error: 'Errore nella modifica dell\'entrata' });
+    console.error('❌ Errore nella modifica dell'entrata:', err);
+    res.status(500).json({ error: 'Errore nella modifica dell'entrata' });
   }
 });
 
 // Route DELETE → elimina un'entrata
-app.delete('/api/entrate/:id', async (req, res) => {
+app.delete('/api/entrate/:id', authenticateToken, async (req, res) => {
   console.log('🗑️ Richiesta eliminazione entrata:', req.params.id);
   try {
     const entrata = await Entrata.findByIdAndDelete(req.params.id);
@@ -395,13 +404,13 @@ app.delete('/api/entrate/:id', async (req, res) => {
     console.log('✅ Entrata eliminata con successo:', req.params.id);
     res.json({ message: 'Entrata eliminata con successo' });
   } catch (err) {
-    console.error('❌ Errore nella cancellazione dell\'entrata:', err);
-    res.status(500).json({ error: 'Errore nella cancellazione dell\'entrata' });
+    console.error('❌ Errore nella cancellazione dell'entrata:', err);
+    res.status(500).json({ error: 'Errore nella cancellazione dell'entrata' });
   }
 });
 
 // Route per sistemare gli importi delle transazioni
-app.post('/api/fix-transactions', async (req, res) => {
+app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
   try {
     // Fix spese
     const spese = await Spesa.find();
@@ -496,8 +505,8 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Proteggi tutte le rotte delle spese e delle entrate
-app.use('/api/spese', authenticateToken);
-app.use('/api/entrate', authenticateToken);
+// app.use('/api/spese', authenticateToken);
+// app.use('/api/entrate', authenticateToken);
 
 // Middleware per verificare il webhook token
 const verifyWebhookToken = (req, res, next) => {
