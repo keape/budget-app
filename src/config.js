@@ -45,7 +45,7 @@ axios.interceptors.request.use(
       console.error('Errore nella configurazione della richiesta:', error);
       return Promise.reject(error); 
     }
-  },
+  }, // <-- Added missing comma here
   (error) => {
     console.error('Errore nell'interceptor della richiesta:', error);
     return Promise.reject(error);
