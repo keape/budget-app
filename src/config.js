@@ -7,7 +7,7 @@ const BASE_URL = 'https://budget-app-ao5r.onrender.com';
 const getAuthToken = () => {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token recuperato:', token ? 'presente' : 'mancante');
+    // console.log('Token recuperato:', token ? 'presente' : 'mancante'); // Less noisy
     if (token) return token;
 
     // Only redirect if not already on login/register page
@@ -26,8 +26,6 @@ const getAuthToken = () => {
 };
 
 // Configurazione di axios per includere il token in tutte le richieste
-// TEMPORARILY COMMENTED OUT FOR DEBUGGING VERCEL BUILD ERROR
-/*
 axios.interceptors.request.use(
   (config) => {
     // Skip auth token check for login and register endpoints
@@ -42,18 +40,24 @@ axios.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } 
+      // If token is null (meaning getAuthToken handled potential redirect),
+      // let the request proceed. The server will likely reject it, 
+      // and the response interceptor will handle the final redirect if needed.
       return config;
     } catch (error) {
-      console.error('Errore nella configurazione della richiesta:', error);
+      // Catch potential errors during token retrieval itself
+      console.error('Errore nella configurazione della richiesta (token retrieval):', error);
+      // Reject the promise to prevent the request from being sent without proper auth attempt
       return Promise.reject(error); 
     }
-  }, 
+  },
   (error) => {
-    console.error('Errore nell'interceptor della richiesta:', error);
+    // Handle errors in setting up the request interceptor
+    console.error('Errore nell'interceptor della richiesta (setup):', error);
     return Promise.reject(error);
   }
 );
-*/
+
 
 // Define the success handler for the response interceptor
 const handleResponseSuccess = (response) => {
