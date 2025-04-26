@@ -24,7 +24,7 @@ const getAuthToken = () => {
   }
 };
 
-// Axios Request Interceptor - Retyped carefully
+// Axios Request Interceptor
 axios.interceptors.request.use(
   (config) => {
     const isAuthEndpoint = config.url?.endsWith('/api/auth/login') || config.url?.endsWith('/api/auth/register');
@@ -51,11 +51,11 @@ axios.interceptors.request.use(
 // Axios Response Interceptor
 axios.interceptors.response.use(
   (response) => {
+    // Pass-through for successful responses
     return response;
-  }
-).then(
-  (response) => response,
+  },
   (error) => {
+    // Error handler logic remains the same
     console.error('Errore nella risposta Axios:', {
       status: error.response?.status,
       url: error.config?.url,
