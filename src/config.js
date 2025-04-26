@@ -26,6 +26,8 @@ const getAuthToken = () => {
 };
 
 // Configurazione di axios per includere il token in tutte le richieste
+// TEMPORARILY COMMENTED OUT FOR DEBUGGING VERCEL BUILD ERROR
+/*
 axios.interceptors.request.use(
   (config) => {
     // Skip auth token check for login and register endpoints
@@ -45,12 +47,13 @@ axios.interceptors.request.use(
       console.error('Errore nella configurazione della richiesta:', error);
       return Promise.reject(error); 
     }
-  }, // <-- Added missing comma here
+  }, 
   (error) => {
     console.error('Errore nell'interceptor della richiesta:', error);
     return Promise.reject(error);
   }
 );
+*/
 
 // Define the success handler for the response interceptor
 const handleResponseSuccess = (response) => {
