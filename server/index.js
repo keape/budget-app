@@ -112,7 +112,7 @@ app.get('/api/spese', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Errore nel recupero delle spese:', err);
-    res.status(500).json({ error: 'Errore nel recupero delle spese' });
+    res.status(500).json({ error: "Errore nel recupero delle spese" });
   }
 });
 
@@ -139,7 +139,7 @@ app.get('/api/spese/totale-mese', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Errore nel calcolo del totale mensile:', err);
-    res.status(500).json({ error: 'Errore nel calcolo del totale mensile' });
+    res.status(500).json({ error: "Errore nel calcolo del totale mensile" });
   }
 });
 
@@ -150,24 +150,23 @@ app.post('/api/spese', authenticateToken, async (req, res) => {
 
   if (!importo) {
     return res.status(400).json({ 
-      error: 'Importo mancante',
-      message: 'Inserisci un importo valido'
+      error: "Importo mancante",
+      message: "Inserisci un importo valido"
     });
   }
 
   if (!categoria) {
     return res.status(400).json({ 
-      error: 'Categoria mancante',
-      message: 'Seleziona una categoria'
+      error: "Categoria mancante",
+      message: "Seleziona una categoria"
     });
   }
 
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) {
     return res.status(400).json({ 
-      error: 'Importo non valido',
-      // Escaped the single quote here
-      message: 'L'importo deve essere un numero valido' 
+      error: "Importo non valido",
+      message: "L'importo deve essere un numero valido"
     });
   }
 
@@ -189,8 +188,8 @@ app.post('/api/spese', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('❌ Errore nel salvataggio della spesa:', err);
     res.status(500).json({ 
-      error: 'Errore nel salvataggio',
-      message: 'Non è stato possibile salvare la spesa. Riprova.'
+      error: "Errore nel salvataggio",
+      message: "Non è stato possibile salvare la spesa. Riprova."
     });
   }
 });
@@ -202,13 +201,13 @@ app.delete('/api/spese/:id', authenticateToken, async (req, res) => {
     const spesa = await Spesa.findByIdAndDelete(req.params.id);
     if (!spesa) {
       console.log('❌ Spesa non trovata:', req.params.id);
-      return res.status(404).json({ error: 'Spesa non trovata' });
+      return res.status(404).json({ error: "Spesa non trovata" });
     }
     console.log('✅ Spesa eliminata con successo:', req.params.id);
-    res.json({ message: 'Spesa eliminata con successo' });
+    res.json({ message: "Spesa eliminata con successo" });
   } catch (err) {
     console.error('❌ Errore nella cancellazione della spesa:', err);
-    res.status(500).json({ error: 'Errore nella cancellazione della spesa' });
+    res.status(500).json({ error: "Errore nella cancellazione della spesa" });
   }
 });
 
@@ -218,7 +217,7 @@ app.put('/api/spese/:id', authenticateToken, async (req, res) => {
   const { descrizione, importo, categoria, data } = req.body;
 
   if (!importo || !categoria) {
-    return res.status(400).json({ error: 'Dati mancanti' });
+    return res.status(400).json({ error: "Dati mancanti" });
   }
 
   try {
@@ -234,13 +233,13 @@ app.put('/api/spese/:id', authenticateToken, async (req, res) => {
     );
 
     if (!spesa) {
-      return res.status(404).json({ error: 'Spesa non trovata' });
+      return res.status(404).json({ error: "Spesa non trovata" });
     }
 
     res.json(spesa);
   } catch (err) {
     console.error('❌ Errore nella modifica della spesa:', err);
-    res.status(500).json({ error: 'Errore nella modifica della spesa' });
+    res.status(500).json({ error: "Errore nella modifica della spesa" });
   }
 });
 
@@ -265,7 +264,7 @@ app.get('/api/entrate', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Errore nel recupero delle entrate:', err);
-    res.status(500).json({ error: 'Errore nel recupero delle entrate' });
+    res.status(500).json({ error: "Errore nel recupero delle entrate" });
   }
 });
 
@@ -292,7 +291,7 @@ app.get('/api/entrate/totale-mese', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Errore nel calcolo del totale mensile delle entrate:', err);
-    res.status(500).json({ error: 'Errore nel calcolo del totale mensile delle entrate' });
+    res.status(500).json({ error: "Errore nel calcolo del totale mensile delle entrate" });
   }
 });
 
@@ -302,24 +301,23 @@ app.post('/api/entrate', authenticateToken, async (req, res) => {
 
   if (!importo) {
     return res.status(400).json({ 
-      error: 'Importo mancante',
-      message: 'Inserisci un importo valido'
+      error: "Importo mancante",
+      message: "Inserisci un importo valido"
     });
   }
 
   if (!categoria) {
     return res.status(400).json({ 
-      error: 'Categoria mancante',
-      message: 'Seleziona una categoria'
+      error: "Categoria mancante",
+      message: "Seleziona una categoria"
     });
   }
 
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) {
     return res.status(400).json({ 
-      error: 'Importo non valido',
-      // Escaped the single quote here too
-      message: 'L'importo deve essere un numero valido' 
+      error: "Importo non valido",
+      message: "L'importo deve essere un numero valido"
     });
   }
 
@@ -341,8 +339,8 @@ app.post('/api/entrate', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('❌ Errore nel salvataggio dell'entrata:', err);
     res.status(500).json({ 
-      error: 'Errore nel salvataggio',
-      message: 'Non è stato possibile salvare l'entrata. Riprova.'
+      error: "Errore nel salvataggio",
+      message: "Non è stato possibile salvare l'entrata. Riprova."
     });
   }
 });
@@ -354,13 +352,12 @@ app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
     const { importo, descrizione, categoria, data } = req.body;
 
     if (!importo || !categoria) {
-      return res.status(400).json({ error: 'Importo e categoria sono richiesti' });
+      return res.status(400).json({ error: "Importo e categoria sono richiesti" });
     }
 
     const importoNumerico = Number(importo);
     if (isNaN(importoNumerico)) {
-      // Escaped the single quote here too
-      return res.status(400).json({ error: 'L'importo deve essere un numero valido' }); 
+      return res.status(400).json({ error: "L'importo deve essere un numero valido" }); 
     }
 
     const entrata = await Entrata.findByIdAndUpdate(
@@ -375,13 +372,13 @@ app.put('/api/entrate/:id', authenticateToken, async (req, res) => {
     );
 
     if (!entrata) {
-      return res.status(404).json({ error: 'Entrata non trovata' });
+      return res.status(404).json({ error: "Entrata non trovata" });
     }
 
     res.json(entrata);
   } catch (err) {
     console.error('❌ Errore nella modifica dell'entrata:', err);
-    res.status(500).json({ error: 'Errore nella modifica dell'entrata' });
+    res.status(500).json({ error: "Errore nella modifica dell'entrata" });
   }
 });
 
@@ -392,13 +389,13 @@ app.delete('/api/entrate/:id', authenticateToken, async (req, res) => {
     const entrata = await Entrata.findByIdAndDelete(req.params.id);
     if (!entrata) {
       console.log('❌ Entrata non trovata:', req.params.id);
-      return res.status(404).json({ error: 'Entrata non trovata' });
+      return res.status(404).json({ error: "Entrata non trovata" });
     }
     console.log('✅ Entrata eliminata con successo:', req.params.id);
-    res.json({ message: 'Entrata eliminata con successo' });
+    res.json({ message: "Entrata eliminata con successo" });
   } catch (err) {
     console.error('❌ Errore nella cancellazione dell'entrata:', err);
-    res.status(500).json({ error: 'Errore nella cancellazione dell'entrata' });
+    res.status(500).json({ error: "Errore nella cancellazione dell'entrata" });
   }
 });
 
@@ -429,7 +426,7 @@ app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Errore nella correzione delle transazioni:', err);
-    res.status(500).json({ error: 'Errore nella correzione delle transazioni' });
+    res.status(500).json({ error: "Errore nella correzione delle transazioni" });
   }
 });
 
@@ -445,7 +442,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     const existingUser = await User.findOne({ username });
     if (existingUser) {
-      return res.status(400).json({ message: 'Username già in uso' });
+      return res.status(400).json({ message: "Username già in uso" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -456,10 +453,10 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
     await user.save();
-    res.status(201).json({ message: 'Utente registrato con successo' });
+    res.status(201).json({ message: "Utente registrato con successo" });
   } catch (error) {
     console.error('❌ Errore durante la registrazione:', error);
-    res.status(500).json({ message: 'Errore durante la registrazione' });
+    res.status(500).json({ message: "Errore durante la registrazione" });
   }
 });
 
@@ -470,12 +467,12 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(401).json({ message: 'Credenziali non valide' });
+      return res.status(401).json({ message: "Credenziali non valide" });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      return res.status(401).json({ message: 'Credenziali non valide' });
+      return res.status(401).json({ message: "Credenziali non valide" });
     }
 
     const token = jwt.sign(
@@ -487,7 +484,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ token });
   } catch (error) {
     console.error('❌ Errore durante il login:', error);
-    res.status(500).json({ message: 'Errore durante il login' });
+    res.status(500).json({ message: "Errore durante il login" });
   }
 });
 
@@ -499,7 +496,7 @@ app.post('/api/auth/login', async (req, res) => {
 const verifyWebhookToken = (req, res, next) => {
   const token = req.headers['x-webhook-token'];
   if (!token || token !== process.env.WEBHOOK_TOKEN) {
-    return res.status(401).json({ error: 'Token non valido' });
+    return res.status(401).json({ error: "Token non valido" });
   }
   next();
 };
@@ -511,7 +508,7 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
     console.log('Ricevuta richiesta GET budget settings:', { anno, mese });
     
     if (!anno || mese === undefined) {
-      return res.status(400).json({ message: 'Anno e mese sono richiesti' });
+      return res.status(400).json({ message: "Anno e mese sono richiesti" });
     }
 
     const query = {
@@ -540,7 +537,7 @@ app.get('/api/budget-settings', authenticateToken, async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Errore nel recupero delle impostazioni del budget:', error);
-    res.status(500).json({ message: 'Errore nel recupero delle impostazioni del budget' });
+    res.status(500).json({ message: "Errore nel recupero delle impostazioni del budget" });
   }
 });
 
@@ -550,11 +547,11 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
     console.log('Ricevuta richiesta POST budget settings:', { anno, mese, settings });
 
     if (!anno || mese === undefined || !settings) {
-      return res.status(400).json({ message: 'Dati mancanti' });
+      return res.status(400).json({ message: "Dati mancanti" });
     }
 
     if (!settings.spese || !settings.entrate) {
-      return res.status(400).json({ message: 'La struttura dei dati non è corretta' });
+      return res.status(400).json({ message: "La struttura dei dati non è corretta" });
     }
 
     const spese = new Map();
@@ -602,7 +599,7 @@ app.post('/api/budget-settings', authenticateToken, async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('Errore nel salvataggio delle impostazioni del budget:', error);
-    res.status(500).json({ message: 'Errore nel salvataggio delle impostazioni del budget' });
+    res.status(500).json({ message: "Errore nel salvataggio delle impostazioni del budget" });
   }
 });
 
