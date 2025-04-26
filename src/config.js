@@ -57,10 +57,11 @@ axios.interceptors.request.use(
 // Axios Response Interceptor
 axios.interceptors.response.use(
   (response) => {
-    // Any status code within the range of 2xx cause this function to trigger
-    // Simply return the response for successful requests
+    // Pass-through for successful responses
     return response;
-  },
+  }
+).then(
+  (response) => response, // Added identity function in .then()
   (error) => {
     // Any status codes outside the range of 2xx cause this function to trigger
     console.error('Errore nella risposta Axios:', {
