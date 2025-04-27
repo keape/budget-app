@@ -40,13 +40,13 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// POST /api/budget-settings - Crea o aggiorna le impostazioni del budget
+// POST /api/budget-settings - Crea o aggiorna le impostazioni del budget per tutti i mesi dell'anno
 router.post('/', auth, async (req, res) => {
   try {
-    const { anno, mese, settings } = req.body;
+    const { anno, settings } = req.body; // Removed mese, as we'll save for all months
 
-    if (!anno || mese === undefined || !settings) {
-      return res.status(400).json({ message: 'Dati mancanti' });
+    if (!anno || !settings) {
+      return res.status(400).json({ message: 'Anno e impostazioni sono richiesti' });
     }
 
     // Verifica che settings contenga spese ed entrate
@@ -54,11 +54,11 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'La struttura dei dati non è corretta' });
     }
 
-    // Crea le Map per il salvataggio
+    // Create Maps for saving
     const spese = new Map();
     const entrate = new Map();
 
-    // Popola le Map con i dati ricevuti
+    // Populate Maps with received data
     Object.entries(settings.spese).forEach(([key, value]) => {
       if (value !== null && value !== undefined && !isNaN(value)) {
         spese.set(key, Number(value));
@@ -71,28 +71,35 @@ router.post('/', auth, async (req, res) => {
       }
     });
 
-    // Cerca e aggiorna le impostazioni esistenti, o crea nuove se non esistono
-    const result = await BudgetSettings.findOneAndUpdate(
-      { anno, mese },
-      { 
-        anno,
-        mese,
-        spese,
-        entrate
-      },
-      { 
-        new: true,
-        upsert: true
-      }
-    );
+    const savedSettings = [];
 
-    // Converti il risultato in un formato compatibile con il frontend
-    const response = {
-      spese: Object.fromEntries(result.spese),
-      entrate: Object.fromEntries(result.entrate)
+    // Save settings for all 12 months
+    for (let mese = 1; mese <= 12; mese++) {
+        const result = await BudgetSettings.findOneAndUpdate(
+          { anno, mese }, // Query by anno and current month
+          {
+            anno,
+            mese,
+            spese,
+            entrate
+          },
+          {
+            new: true,
+            upsert: true // Create if document doesn't exist
+          }
+        );
+        savedSettings.push(result);
+    }
+
+
+    // Respond with success message and the settings saved for Jan as confirmation
+     const response = {
+      spese: Object.fromEntries(savedSettings[0].spese), // Assuming savedSettings[0] corresponds to Jan
+      entrate: Object.fromEntries(savedSettings[0].entrate)
     };
 
-    res.json(response);
+    res.json({ message: `Impostazioni salvate per tutti i mesi del ${anno}`, savedSettings: response });
+
   } catch (error) {
     console.error('Errore nel salvataggio delle impostazioni del budget:', error);
     res.status(500).json({ message: 'Errore nel salvataggio delle impostazioni del budget' });
