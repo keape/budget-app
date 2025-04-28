@@ -9,7 +9,8 @@ import {
 function Budget() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const [speseMensili, setSpeseMensili] = useState([]);
+  const [speseMensili, setSpeseMensili] = useState({}); // Use object for category mapping
+  const [entrateMensili, setEntrateMensili] = useState({}); // Separate state for income
   const [meseCorrente, setMeseCorrente] = useState(
     () => params.has('mese') ? parseInt(params.get('mese')) + 1 : new Date().getMonth() + 1
   );
@@ -18,7 +19,10 @@ function Budget() {
   );
   const [tipoTransazione, setTipoTransazione] = useState('uscite');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} });
+  const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} }); // Holds fetched budget settings
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const navigate = useNavigate();
 
   const mesi = [
@@ -27,7 +31,8 @@ function Budget() {
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
   ];
 
-  const getBudgetPeriodo = (mese, isEntrate = false) => {
+  // Helper to get budget for the selected period (month or year)
+  const getBudgetPeriodo = (isEntrate = false) => {
     const tipo = isEntrate ? 'entrate' : 'spese';
     return budgetSettings[tipo] || {};
   };
@@ -35,35 +40,12 @@ function Budget() {
   useEffect(() => {
     const fetchBudgetSettings = async () => {
       try {
-        // Prima recupera le impostazioni per il mese specifico
         const apiMonth = meseCorrente > 0 ? meseCorrente - 1 : 0;
         const response = await axios.get(
           `${BASE_URL}/api/budget-settings`, {
             params: { anno: annoCorrente, mese: apiMonth }
           }
         );
-        
-        // Se stiamo visualizzando un mese specifico (non l'intero anno)
-        // e non ci sono impostazioni specifiche per quel mese,
-        // recupera le impostazioni annuali (mese = 0)
-        if (meseCorrente > 0 && 
-            (Object.keys(response.data.spese).length === 0 && 
-             Object.keys(response.data.entrate).length === 0)) {
-          
-          const annualResponse = await axios.get(
-            `${BASE_URL}/api/budget-settings`, {
-              params: { anno: annoCorrente, mese: 0 }
-            }
-          );
-          
-          // Usa le impostazioni annuali se disponibili
-          if (Object.keys(annualResponse.data.spese).length > 0 || 
-              Object.keys(annualResponse.data.entrate).length > 0) {
-            setBudgetSettings(annualResponse.data);
-            return;
-          }
-        }
-        
         setBudgetSettings(response.data);
       } catch (error) {
         console.error('Errore nel caricamento delle impostazioni del budget:', error);
@@ -75,48 +57,99 @@ function Budget() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      setSpeseMensili({}); // Clear old data
+      setEntrateMensili({});
+      setBudgetSettings({ spese: {}, entrate: {} }); // Clear old settings
+
       try {
-        const endpoint = tipoTransazione === 'entrate' ? '/api/entrate' : '/api/spese';
-        // Recupera tutte le transazioni in un'unica richiesta (limit alto)
-        const response = await axios.get(
-          `${BASE_URL}${endpoint}`,
-          { params: { page: 1, limit: 1000000 } }
-        );
-        // Estrai le transazioni dalla risposta
-        const transazioni = response.data.spese || response.data.entrate || [];
-        
-        const transazioniFiltrate = transazioni.filter(t => {
-          const data = new Date(t.data);
-          if (meseCorrente === 0) {
-            // Per l'intero anno, filtra solo per anno
-            return data.getFullYear() === annoCorrente;
-          }
-          // Per un mese specifico, filtra per mese e anno
-          return data.getMonth() === (meseCorrente - 1) && data.getFullYear() === annoCorrente;
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Token non trovato');
+
+        // --- 1. Fetch Budget Settings ---
+        const budgetParams = { anno: annoCorrente };
+        if (meseCorrente !== 0) {
+          budgetParams.mese = meseCorrente - 1; // Adjust for 0-based index
+        }
+        console.log('Fetching budget settings with params:', budgetParams);
+        const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+          params: budgetParams,
+          headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        setSpeseMensili(transazioniFiltrate.reduce((acc, transazione) => {
-          acc[transazione.categoria] = (acc[transazione.categoria] || 0) + Math.abs(transazione.importo);
-          return acc;
-        }, {}));
+        console.log('Budget settings received:', settingsResponse.data);
+        const currentBudgetSettings = settingsResponse.data || { spese: {}, entrate: {} };
+        setBudgetSettings(currentBudgetSettings);
+
+        // --- 2. Fetch Transactions (Spese & Entrate) ---
+        console.log('Fetching all transactions for the year...');
+        const [speseResponse, entrateResponse] = await Promise.all([
+          axios.get(`${BASE_URL}/api/spese`, {
+              params: { page: 1, limit: 1000000 }, // Fetch all
+              headers: { 'Authorization': `Bearer ${token}` }
+           }),
+          axios.get(`${BASE_URL}/api/entrate`, {
+              params: { page: 1, limit: 1000000 }, // Fetch all
+              headers: { 'Authorization': `Bearer ${token}` }
+           })
+        ]);
+
+        const allSpese = speseResponse.data.spese || [];
+        const allEntrate = entrateResponse.data.entrate || [];
+        console.log(`Fetched ${allSpese.length} expenses and ${allEntrate.length} incomes.`);
+
+        // --- 3. Filter Transactions by Selected Period ---
+        const filterByPeriod = (t) => {
+          const data = new Date(t.data);
+          const transactionYear = data.getFullYear();
+          if (meseCorrente === 0) { // "Intero anno" selected
+            return transactionYear === annoCorrente; // Filter by year only
+          } else { // Specific month selected
+            const transactionMonth = data.getMonth();
+            return transactionMonth === (meseCorrente - 1) && transactionYear === annoCorrente; // Filter by month and year
+          }
+        };
+
+        const speseFiltrate = allSpese.filter(filterByPeriod);
+        const entrateFiltrate = allEntrate.filter(filterByPeriod);
+        console.log(`Filtered to ${speseFiltrate.length} expenses and ${entrateFiltrate.length} incomes for the period.`);
+
+        // --- 4. Aggregate Filtered Transactions ---
+        const aggregateByCategory = (transactions) =>
+            transactions.reduce((acc, t) => {
+                acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
+                return acc;
+            }, {});
+
+        setSpeseMensili(aggregateByCategory(speseFiltrate));
+        setEntrateMensili(aggregateByCategory(entrateFiltrate));
+        console.log('Aggregation complete.');
+
       } catch (error) {
-        console.error('Errore nel caricamento delle transazioni:', error);
+        console.error('Errore durante il caricamento dei dati del budget:', error);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+             localStorage.removeItem('token');
+             window.location.href = '/login'; // Redirect to login on auth error
+        }
+        // Determine which step failed based on what state is set
+        if (Object.keys(budgetSettings.spese).length === 0 && Object.keys(budgetSettings.entrate).length === 0) {
+            setError('Errore caricamento impostazioni budget.');
+        } else {
+            setError('Errore caricamento transazioni.');
+        }
+        setSpeseMensili({}); // Clear data on error
+        setEntrateMensili({});
+        setBudgetSettings({ spese: {}, entrate: {} }); // Clear settings on error too
+      } finally {
+        setIsLoading(false); // Stop loading after all steps (success or error)
+        console.log('Fetching process finished. Loading set to false.');
       }
     };
 
     fetchData();
-  }, [meseCorrente, annoCorrente, tipoTransazione]);
+  }, [meseCorrente, annoCorrente]); // Re-run when period changes
 
-  // Prepara i dati per il grafico usando il budget del periodo selezionato
-  const budgetPeriodoCorrente = getBudgetPeriodo(meseCorrente, tipoTransazione === 'entrate');
-  const datiGrafico = Object.keys(budgetPeriodoCorrente).map(categoria => ({
-    categoria,
-    budget: budgetPeriodoCorrente[categoria],
-    importo: speseMensili[categoria] || 0,
-    differenza: (speseMensili[categoria] || 0) - budgetPeriodoCorrente[categoria]
-  }));
-
-  // Funzione per gestire l'ordinamento
+  // --- Sorting Logic (remains the same) ---
   const handleSort = (key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -125,246 +158,291 @@ function Budget() {
     setSortConfig({ key, direction });
   };
 
-  // Funzione per ordinare i dati
-  const sortedData = React.useMemo(() => {
-    if (!sortConfig.key) return datiGrafico;
-
-    return [...datiGrafico].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-  }, [datiGrafico, sortConfig]);
-
-  // Funzione per ottenere la classe di stile per l'header della colonna
   const getSortClass = (key) => {
     if (sortConfig.key === key) {
-      return sortConfig.direction === 'asc' 
+      return sortConfig.direction === 'asc'
         ? 'after:content-["↑"] after:ml-1'
         : 'after:content-["↓"] after:ml-1';
     }
     return '';
   };
 
-  // Calcola i totali usando il budget del periodo
-  const totaleBudget = Object.values(budgetPeriodoCorrente).reduce((a, b) => a + b, 0);
-  const totaleTransazioni = sortedData.reduce((acc, item) => acc + item.importo, 0);
+  // --- Data Preparation for Chart and Table ---
+  const budgetCorrente = getBudgetPeriodo(tipoTransazione === 'entrate');
+  const transazioniCorrenti = tipoTransazione === 'entrate' ? entrateMensili : speseMensili;
+
+  // Combine budget categories and transaction categories for a full list
+  const tutteCategorie = [
+    ...new Set([
+        ...Object.keys(budgetCorrente),
+        ...Object.keys(transazioniCorrenti)
+    ])
+  ];
+
+  const datiTabella = tutteCategorie.map(categoria => ({
+    categoria,
+    budget: budgetCorrente[categoria] || 0,
+    importo: transazioniCorrenti[categoria] || 0,
+    differenza: (transazioniCorrenti[categoria] || 0) - (budgetCorrente[categoria] || 0)
+  }));
+
+  // --- Sorting Data (using datiTabella) ---
+  const sortedData = React.useMemo(() => {
+    if (!sortConfig.key) return datiTabella;
+    return [...datiTabella].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [datiTabella, sortConfig]);
+
+  // --- Totals Calculation ---
+  const totaleBudget = Object.values(budgetCorrente).reduce((a, b) => a + b, 0);
+  const totaleTransazioni = Object.values(transazioniCorrenti).reduce((a, b) => a + b, 0);
   const totaleDifferenza = totaleTransazioni - totaleBudget;
 
+  // --- Navigation Handler ---
   const handleBarClick = (data) => {
-    // Costruisce i parametri per i filtri
-    const params = new URLSearchParams();
-    
-    // Aggiunge la categoria
-    params.append('categoria', data.categoria);
-    
-    // Aggiunge il periodo
-    if (meseCorrente === 0) {
-      // Se è selezionato l'intero anno, passa solo l'anno
-      params.append('anno', annoCorrente.toString());
+    // Check if data and data.categoria exist before navigating
+    if (data && data.categoria) {
+        const params = new URLSearchParams();
+        params.append('categoria', data.categoria);
+        if (meseCorrente === 0) {
+          params.append('anno', annoCorrente.toString());
+        } else {
+          params.append('mese', (meseCorrente - 1).toString());
+          params.append('anno', annoCorrente.toString());
+        }
+        navigate(`/filtri?${params.toString()}`);
     } else {
-      // Se è selezionato un mese specifico, passa sia mese che anno
-      params.append('mese', (meseCorrente - 1).toString());
-      params.append('anno', annoCorrente.toString());
+        console.warn('Tentativo di navigazione senza dati validi dalla barra del grafico:', data);
     }
-
-    // Naviga alla pagina dei filtri con i parametri
-    navigate(`/filtri?${params.toString()}`);
   };
 
+  // --- Render Logic ---
   return (
     <div className="theme-container p-6">
       <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
-        Budget
+        Budget {mesi[meseCorrente]} {annoCorrente}
       </h1>
 
-      {/* Selettori periodo e tipo */}
-      <div className="flex justify-center mb-8 gap-4">
+      {/* Period Selectors */}
+       <div className="flex justify-center mb-8 gap-4">
         <select
-          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
           value={meseCorrente}
           onChange={(e) => setMeseCorrente(parseInt(e.target.value))}
+          disabled={isLoading} // Disable while loading
         >
           {mesi.map((mese, index) => (
             <option key={index} value={index}>{mese}</option>
           ))}
         </select>
         <select
-          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
           value={annoCorrente}
           onChange={(e) => setAnnoCorrente(parseInt(e.target.value))}
+          disabled={isLoading} // Disable while loading
         >
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-          <option value="2023">2023</option>
-          <option value="2022">2022</option>
-          <option value="2021">2021</option>
-          <option value="2020">2020</option>
-          <option value="2019">2019</option>
-          <option value="2018">2018</option>
-          <option value="2017">2017</option>
-          <option value="2016">2016</option>
-          <option value="2015">2015</option>
-          <option value="2014">2014</option>
+          {/* Dynamically generate year options */}
+          {Array.from({ length: 12 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
         </select>
         <select
-          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
           value={tipoTransazione}
           onChange={(e) => setTipoTransazione(e.target.value)}
+          disabled={isLoading} // Disable while loading
         >
           <option value="uscite">Uscite</option>
           <option value="entrate">Entrate</option>
         </select>
       </div>
 
-      {/* Totali */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="p-4 rounded-lg bg-blue-100 dark:bg-blue-900">
-          <h3 className="text-lg font-semibold mb-2">Budget Pianificato</h3>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-            {totaleBudget.toFixed(2)} €
-          </p>
+      {/* Loading / Error Indicator */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <p className="ml-3 text-gray-600 dark:text-gray-400">Caricamento dati...</p>
         </div>
-        <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900">
-          <h3 className="text-lg font-semibold mb-2">
-            {tipoTransazione === 'entrate' ? 'Entrate Effettive' : 'Spese Effettive'}
-          </h3>
-          <p className="text-2xl font-bold text-green-800 dark:text-green-200">
-            {totaleTransazioni.toFixed(2)} €
-          </p>
+      )}
+       {error && !isLoading && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded text-center">
+          <p className="font-bold">Si è verificato un errore:</p>
+          <p>{error}</p>
         </div>
-        <div className={`p-4 rounded-lg ${
-          tipoTransazione === 'entrate'
-            ? (totaleDifferenza > 0 
-                ? 'bg-green-100 dark:bg-green-900' 
-                : 'bg-red-100 dark:bg-red-900')
-            : (totaleDifferenza > 0 
-                ? 'bg-red-100 dark:bg-red-900' 
-                : 'bg-green-100 dark:bg-green-900')
-        }`}>
-          <h3 className="text-lg font-semibold mb-2">Differenza</h3>
-          <p className={`text-2xl font-bold ${
-            tipoTransazione === 'entrate'
-              ? (totaleDifferenza > 0 
-                  ? 'text-green-800 dark:text-green-200' 
-                  : 'text-red-800 dark:text-red-200')
-              : (totaleDifferenza > 0 
-                  ? 'text-red-800 dark:text-red-200' 
-                  : 'text-green-800 dark:text-green-200')
-          }`}>
-            {totaleDifferenza.toFixed(2)} €
-          </p>
-        </div>
-      </div>
+      )}
 
-      {/* Grafico con onClick */}
-      <div className="mb-8">
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={datiGrafico}>
-            <XAxis dataKey="categoria" angle={-45} textAnchor="end" height={100} />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="budget" fill="#3182ce" name="Budget" onClick={handleBarClick} />
-            <Bar 
-              dataKey="importo" 
-              fill={tipoTransazione === 'entrate' ? '#48bb78' : '#ef4444'} 
-              name={tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'} 
-              onClick={handleBarClick} 
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Tabella */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-700">
-              <th 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('categoria')}`}
-                onClick={() => handleSort('categoria')}
-              >
-                Categoria
-              </th>
-              <th 
-                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('budget')}`}
-                onClick={() => handleSort('budget')}
-              >
-                Budget
-              </th>
-              <th 
-                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('importo')}`}
-                onClick={() => handleSort('importo')}
-              >
-                {tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
-              </th>
-              <th 
-                className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('differenza')}`}
-                onClick={() => handleSort('differenza')}
-              >
-                Differenza
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-            {sortedData.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                  {item.categoria}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
-                  {item.budget.toFixed(2)} €
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
-                  {item.importo.toFixed(2)} €
-                </td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
-                  item.differenza > 0 
-                    ? (tipoTransazione === 'entrate' 
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400')
-                    : item.differenza < 0 
-                      ? (tipoTransazione === 'entrate'
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-green-600 dark:text-green-400')
-                      : 'text-gray-900 dark:text-gray-100'
-                }`}>
-                  {item.differenza.toFixed(2)} €
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-gray-50 dark:bg-gray-700">
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                Totale
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
-                {totaleBudget.toFixed(2)} €
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right text-gray-900 dark:text-gray-100">
-                {totaleTransazioni.toFixed(2)} €
-              </td>
-              <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                tipoTransazione === 'entrate'
-                  ? (totaleDifferenza > 0 
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400')
-                  : (totaleDifferenza > 0 
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-green-600 dark:text-green-400')
+      {/* Content Area: Totals, Chart, Table - Render only when not loading AND no error */}
+      {!isLoading && !error && (
+        <>
+          {/* Totals */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="p-4 rounded-lg bg-blue-100 dark:bg-blue-900">
+              <h3 className="text-lg font-semibold mb-2">Budget Pianificato</h3>
+              <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">
+                  {totaleBudget.toFixed(2)} €
+              </p>
+              </div>
+              <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900">
+              <h3 className="text-lg font-semibold mb-2">
+                  {tipoTransazione === 'entrate' ? 'Entrate Effettive' : 'Spese Effettive'}
+              </h3>
+              <p className="text-2xl font-bold text-green-800 dark:text-green-200">
+                  {totaleTransazioni.toFixed(2)} €
+              </p>
+              </div>
+              <div className={`p-4 rounded-lg ${
+              tipoTransazione === 'entrate'
+                  ? (totaleDifferenza >= 0
+                      ? 'bg-green-100 dark:bg-green-900'
+                      : 'bg-red-100 dark:bg-red-900')
+                  : (totaleDifferenza <= 0 // Spese: negative diff is good
+                      ? 'bg-green-100 dark:bg-green-900'
+                      : 'bg-red-100 dark:bg-red-900')
               }`}>
-                {totaleDifferenza.toFixed(2)} €
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+              <h3 className="text-lg font-semibold mb-2">Differenza</h3>
+              <p className={`text-2xl font-bold ${
+                  tipoTransazione === 'entrate'
+                  ? (totaleDifferenza >= 0
+                      ? 'text-green-800 dark:text-green-200'
+                      : 'text-red-800 dark:text-red-200')
+                  : (totaleDifferenza <= 0
+                      ? 'text-green-800 dark:text-green-200'
+                      : 'text-red-800 dark:text-red-200')
+              }`}>
+                  {totaleDifferenza.toFixed(2)} €
+              </p>
+              </div>
+          </div>
+
+          {/* Chart & Table Container */}
+          {tutteCategorie.length > 0 ? (
+            <>
+              {/* Chart */}
+              <div className="mb-8">
+                <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={sortedData}> {/* Use sortedData */}
+                    <XAxis dataKey="categoria" angle={-45} textAnchor="end" height={100} interval={0} />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
+                    <Legend />
+                    <Bar dataKey="budget" fill="#3182ce" name="Budget" onClick={handleBarClick} cursor="pointer" />
+                    <Bar
+                    dataKey="importo"
+                    fill={tipoTransazione === 'entrate' ? '#48bb78' : '#ef4444'}
+                    name={tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
+                    onClick={handleBarClick}
+                    cursor="pointer"
+                    />
+                </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto shadow-md rounded-lg">
+                <table className="min-w-full bg-white dark:bg-gray-800">
+                <caption className="caption-bottom p-4 text-sm text-gray-600 dark:text-gray-400">
+                    Clicca su una categoria nel grafico o sulle intestazioni della tabella per interagire.
+                </caption>
+                <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-700">
+                    <th
+                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('categoria')}`}
+                        onClick={() => handleSort('categoria')}
+                    >
+                        Categoria
+                    </th>
+                    <th
+                        className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('budget')}`}
+                        onClick={() => handleSort('budget')}
+                    >
+                        Budget
+                    </th>
+                    <th
+                        className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('importo')}`}
+                        onClick={() => handleSort('importo')}
+                    >
+                        {tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
+                    </th>
+                    <th
+                        className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('differenza')}`}
+                        onClick={() => handleSort('differenza')}
+                    >
+                        Differenza
+                    </th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                    {sortedData.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {item.categoria}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                        {item.budget.toFixed(2)} €
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100">
+                        {item.importo.toFixed(2)} €
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
+                            item.differenza > 0
+                                ? (tipoTransazione === 'entrate'
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-red-600 dark:text-red-400')
+                                : item.differenza < 0
+                                ? (tipoTransazione === 'entrate'
+                                    ? 'text-red-600 dark:text-red-400'
+                                    : 'text-green-600 dark:text-green-400')
+                                : 'text-gray-900 dark:text-gray-100'
+                        }`}>
+                        {item.differenza.toFixed(2)} €
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                 <tfoot>
+                    <tr className="bg-gray-50 dark:bg-gray-700 font-bold text-gray-700 dark:text-gray-200">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm uppercase tracking-wider">
+                        Totale
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        {totaleBudget.toFixed(2)} €
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        {totaleTransazioni.toFixed(2)} €
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                        tipoTransazione === 'entrate'
+                        ? (totaleDifferenza >= 0
+                            ? 'text-green-700 dark:text-green-300'
+                            : 'text-red-700 dark:text-red-300')
+                        : (totaleDifferenza <= 0
+                            ? 'text-green-700 dark:text-green-300'
+                            : 'text-red-700 dark:text-red-300')
+                    }`}>
+                        {totaleDifferenza.toFixed(2)} €
+                    </td>
+                    </tr>
+                </tfoot>
+                </table>
+              </div>
+            </>
+          ) : (
+             // Message when there's no data to display for the period
+             <div className="text-center py-10 px-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                 <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                     <path vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2H4a2 2 0 01-2-2zm12-8v4h4M9 17h.01" />
+                 </svg>
+                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Nessun dato disponibile</h3>
+                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                     Non ci sono transazioni o budget impostati per {mesi[meseCorrente]} {annoCorrente}.
+                 </p>
+             </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
