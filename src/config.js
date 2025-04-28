@@ -3,78 +3,81 @@ import axios from 'axios';
 // URL del backend su Render
 const BASE_URL = 'https://budget-app-ao5r.onrender.com';
 
-// Debug log per il token
+// Function to get the auth token
 const getAuthToken = () => {
   try {
     const token = localStorage.getItem('token');
-    console.log('Token recuperato:', token ? 'presente' : 'mancante');
-    if (token) return token;
-
-    console.log('Token mancante, reindirizzamento al login');
-    window.location.href = '/login';
+    if (token) {
+      return token;
+    }
+    if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+      console.log('Token mancante, reindirizzamento al login');
+      window.location.href = '/login';
+    }
     return null;
   } catch (error) {
     console.error('Errore nel recupero del token:', error);
-    window.location.href = '/login';
+    if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+       window.location.href = '/login';
+    }
     return null;
   }
 };
 
-// Configurazione di axios per includere il token in tutte le richieste
+// Axios Request Interceptor
 axios.interceptors.request.use(
   (config) => {
-    // Skip auth token check for login and register endpoints
-    if (config.url?.endsWith('/api/auth/login') || config.url?.endsWith('/api/auth/register')) {
+    const isAuthEndpoint = config.url?.endsWith('/api/auth/login') || config.url?.endsWith('/api/auth/register');
+    if (isAuthEndpoint) {
       return config;
     }
     try {
       const token = getAuthToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('Request headers:', config.headers);
-        console.log('Request URL:', config.url);
       }
-      // Non abilitiamo withCredentials quando usiamo il server locale
-      // config.withCredentials = true;
       return config;
     } catch (error) {
-      console.error('Errore nella configurazione della richiesta:', error);
-      return config;
+      console.error("Errore nell'aggiungere il token alla richiesta:", error);
+      return Promise.reject(error);
     }
   },
   (error) => {
-    console.error('Errore nell\'interceptor della richiesta:', error);
+    console.error("Errore nell'impostazione dell'interceptor della richiesta:", error);
     return Promise.reject(error);
   }
 );
 
-// Interceptor per gestire gli errori di autenticazione
+// Axios Response Interceptor
 axios.interceptors.response.use(
   (response) => {
-    console.log('Risposta ricevuta:', {
-      status: response.status,
-      url: response.config.url,
-      data: response.data
-    });
+    // Pass-through for successful responses
     return response;
   },
   (error) => {
-    console.error('Errore nella risposta:', {
+    // Error handler logic remains the same
+    console.error('Errore nella risposta Axios:', {
       status: error.response?.status,
       url: error.config?.url,
       message: error.message,
       response: error.response?.data
     });
-    
-    if (error.response?.status === 401) {
-      console.log('Errore di autenticazione, reindirizzamento al login');
+
+    const isAuthError = error.response?.status === 401 || error.response?.status === 403;
+    const isOnAuthPage = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
+
+    if (isAuthError && !isOnAuthPage) {
+      console.log(`Errore di autenticazione (${error.response.status}), reindirizzamento al login`);
       localStorage.removeItem('token');
       window.location.href = '/login';
+    } else if (isAuthError && isOnAuthPage) {
+      console.log(`Errore di autenticazione (${error.response.status}) sulla pagina di login/registrazione, non reindirizzo.`);
     }
+
     return Promise.reject(error);
   }
 );
 
-console.log('Configurazione attiva - BASE_URL:', BASE_URL);
+console.log('Configurazione Axios attiva - BASE_URL:', BASE_URL);
 
 export default BASE_URL;
