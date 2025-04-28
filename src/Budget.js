@@ -69,7 +69,13 @@ function Budget() {
         if (!token) throw new Error('Token non trovato');
 
         // --- 1. Fetch Budget Settings ---
-        // Prima prova a ottenere le impostazioni mensili
+        // Analisi del Problema con il Budget Mensile
+        
+        Dall'immagine che hai condiviso, posso vedere che il problema persiste: i valori del budget annuale non vengono visualizzati nei mesi singoli.
+        
+        Vedo che per il mese di Aprile 2024, il budget pianificato per Abbigliamento è ancora 0.00 € invece di 12313 € come impostato nel budget annuale.
+        
+        Il problema potrebbe essere nella logica di verifica delle impostazioni mensili. Proviamo con un approccio diverso:
         const monthlyResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
           params: { 
             anno: annoCorrente,
@@ -77,9 +83,9 @@ function Budget() {
           },
           headers: { 'Authorization': `Bearer ${token}` }
         });
-
+        
         console.log('Risposta impostazioni mensili:', monthlyResponse.data);
-
+        
         // Verifica se le impostazioni mensili sono vuote per la categoria specifica
         const hasMonthlyCategorySettings = (data, tipo) => {
           if (!data || !data[tipo]) return false;
