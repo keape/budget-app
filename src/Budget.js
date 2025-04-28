@@ -78,16 +78,23 @@ function Budget() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        console.log('Risposta impostazioni mensili:', monthlyResponse.data);
+
+        // Verifica se le impostazioni mensili sono vuote per la categoria specifica
+        const hasMonthlyCategorySettings = (data, tipo) => {
+          if (!data || !data[tipo]) return false;
+          
+          // Verifica se ci sono categorie con valori maggiori di zero
+          return Object.values(data[tipo]).some(value => value > 0);
+        };
+
+        const hasMonthlySpese = hasMonthlyCategorySettings(monthlyResponse.data, 'spese');
+        const hasMonthlyEntrate = hasMonthlyCategorySettings(monthlyResponse.data, 'entrate');
+
         // Se non ci sono impostazioni mensili e stiamo visualizzando un mese specifico,
         // prova a ottenere le impostazioni annuali
-        if (meseCorrente !== 0 && 
-            (!monthlyResponse.data || 
-             !monthlyResponse.data.spese || 
-             !monthlyResponse.data.entrate ||
-             (Object.keys(monthlyResponse.data.spese).length === 0 && 
-              Object.keys(monthlyResponse.data.entrate).length === 0))) {
-          
-          console.log('Nessuna impostazione mensile trovata, recupero impostazioni annuali');
+        if (meseCorrente !== 0 && !hasMonthlySpese && !hasMonthlyEntrate) {
+          console.log('Nessuna impostazione mensile trovata con valori > 0, recupero impostazioni annuali');
           
           const annualResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
             params: { 
@@ -96,20 +103,26 @@ function Budget() {
             },
             headers: { 'Authorization': `Bearer ${token}` }
           });
-  
+
           console.log('Impostazioni annuali ricevute:', annualResponse.data);
-  
-          if (annualResponse.data && 
-              (Object.keys(annualResponse.data.spese || {}).length > 0 || 
-               Object.keys(annualResponse.data.entrate || {}).length > 0)) {
-            console.log('Utilizzo impostazioni annuali');
+
+          // Verifica se ci sono impostazioni annuali
+          const hasAnnualSpese = hasMonthlyCategorySettings(annualResponse.data, 'spese');
+          const hasAnnualEntrate = hasMonthlyCategorySettings(annualResponse.data, 'entrate');
+
+          if (hasAnnualSpese || hasAnnualEntrate) {
+            console.log('Utilizzo impostazioni annuali perché contengono valori > 0');
             setBudgetSettings(annualResponse.data);
           } else {
-            console.log('Nessuna impostazione annuale trovata, utilizzo impostazioni mensili vuote');
+            console.log('Nessuna impostazione annuale trovata con valori > 0, utilizzo impostazioni mensili');
             setBudgetSettings(monthlyResponse.data || { spese: {}, entrate: {} });
           }
         } else {
-          console.log('Utilizzo impostazioni mensili');
+          if (meseCorrente !== 0) {
+            console.log('Utilizzo impostazioni mensili perché contengono valori > 0');
+          } else {
+            console.log('Utilizzo impostazioni annuali (vista anno intero)');
+          }
           setBudgetSettings(monthlyResponse.data || { spese: {}, entrate: {} });
         }
 
