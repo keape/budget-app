@@ -82,8 +82,12 @@ function Budget() {
         // prova a ottenere le impostazioni annuali
         if (meseCorrente !== 0 && 
             (!monthlyResponse.data || 
+             !monthlyResponse.data.spese || 
+             !monthlyResponse.data.entrate ||
              (Object.keys(monthlyResponse.data.spese).length === 0 && 
               Object.keys(monthlyResponse.data.entrate).length === 0))) {
+          
+          console.log('Nessuna impostazione mensile trovata, recupero impostazioni annuali');
           
           const annualResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
             params: { 
@@ -92,16 +96,21 @@ function Budget() {
             },
             headers: { 'Authorization': `Bearer ${token}` }
           });
-
+  
+          console.log('Impostazioni annuali ricevute:', annualResponse.data);
+  
           if (annualResponse.data && 
-              (Object.keys(annualResponse.data.spese).length > 0 || 
-               Object.keys(annualResponse.data.entrate).length > 0)) {
+              (Object.keys(annualResponse.data.spese || {}).length > 0 || 
+               Object.keys(annualResponse.data.entrate || {}).length > 0)) {
+            console.log('Utilizzo impostazioni annuali');
             setBudgetSettings(annualResponse.data);
           } else {
-            setBudgetSettings(monthlyResponse.data);
+            console.log('Nessuna impostazione annuale trovata, utilizzo impostazioni mensili vuote');
+            setBudgetSettings(monthlyResponse.data || { spese: {}, entrate: {} });
           }
         } else {
-          setBudgetSettings(monthlyResponse.data);
+          console.log('Utilizzo impostazioni mensili');
+          setBudgetSettings(monthlyResponse.data || { spese: {}, entrate: {} });
         }
 
         // --- 2. Fetch Transactions (Spese & Entrate) ---
