@@ -35,12 +35,35 @@ function Budget() {
   useEffect(() => {
     const fetchBudgetSettings = async () => {
       try {
+        // Prima recupera le impostazioni per il mese specifico
         const apiMonth = meseCorrente > 0 ? meseCorrente - 1 : 0;
         const response = await axios.get(
           `${BASE_URL}/api/budget-settings`, {
             params: { anno: annoCorrente, mese: apiMonth }
           }
         );
+        
+        // Se stiamo visualizzando un mese specifico (non l'intero anno)
+        // e non ci sono impostazioni specifiche per quel mese,
+        // recupera le impostazioni annuali (mese = 0)
+        if (meseCorrente > 0 && 
+            (Object.keys(response.data.spese).length === 0 && 
+             Object.keys(response.data.entrate).length === 0)) {
+          
+          const annualResponse = await axios.get(
+            `${BASE_URL}/api/budget-settings`, {
+              params: { anno: annoCorrente, mese: 0 }
+            }
+          );
+          
+          // Usa le impostazioni annuali se disponibili
+          if (Object.keys(annualResponse.data.spese).length > 0 || 
+              Object.keys(annualResponse.data.entrate).length > 0) {
+            setBudgetSettings(annualResponse.data);
+            return;
+          }
+        }
+        
         setBudgetSettings(response.data);
       } catch (error) {
         console.error('Errore nel caricamento delle impostazioni del budget:', error);
