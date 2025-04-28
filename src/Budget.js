@@ -68,15 +68,17 @@ function Budget() {
         if (!token) throw new Error('Token non trovato');
 
         // --- 1. Fetch Budget Settings ---
-        const budgetParams = { anno: annoCorrente };
-        if (meseCorrente !== 0) {
-          budgetParams.mese = meseCorrente - 1; // Adjust for 0-based index
-        }
+        const budgetParams = { 
+          anno: annoCorrente,
+          mese: meseCorrente === 0 ? undefined : meseCorrente - 1 // Modifica qui: gestione corretta del mese
+        };
+        
         console.log('Fetching budget settings with params:', budgetParams);
         const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
           params: budgetParams,
           headers: { 'Authorization': `Bearer ${token}` }
         });
+
         console.log('Budget settings received:', settingsResponse.data);
         const currentBudgetSettings = settingsResponse.data || { spese: {}, entrate: {} };
         setBudgetSettings(currentBudgetSettings);
