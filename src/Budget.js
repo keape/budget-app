@@ -37,51 +37,72 @@ function Budget() {
     return budgetSettings[tipo] || {};
   };
 
-  useEffect(() => {
-    const fetchBudgetSettings = async () => {
-      try {
-        const apiMonth = meseCorrente > 0 ? meseCorrente - 1 : 0;
-        const response = await axios.get(
-          `${BASE_URL}/api/budget-settings`, {
-            params: { anno: annoCorrente, mese: apiMonth }
-          }
-        );
-        setBudgetSettings(response.data);
-      } catch (error) {
-        console.error('Errore nel caricamento delle impostazioni del budget:', error);
-      }
-    };
-
-    fetchBudgetSettings();
-  }, [meseCorrente, annoCorrente]);
-
+  // Rimuovere il primo useEffect che fa il fetch delle impostazioni
+  // useEffect(() => {
+  //   const fetchBudgetSettings = async () => {
+  //     try {
+  //       const apiMonth = meseCorrente > 0 ? meseCorrente - 1 : 0;
+  //       const response = await axios.get(
+  //         `${BASE_URL}/api/budget-settings`, {
+  //           params: { anno: annoCorrente, mese: apiMonth }
+  //         }
+  //       );
+  //       setBudgetSettings(response.data);
+  //     } catch (error) {
+  //       console.error('Errore nel caricamento delle impostazioni del budget:', error);
+  //     }
+  //   };
+  //
+  //   fetchBudgetSettings();
+  // }, [meseCorrente, annoCorrente]);
+  
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
-      setSpeseMensili({}); // Clear old data
+      setSpeseMensili({});
       setEntrateMensili({});
-      setBudgetSettings({ spese: {}, entrate: {} }); // Clear old settings
+      setBudgetSettings({ spese: {}, entrate: {} });
 
       try {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Token non trovato');
 
         // --- 1. Fetch Budget Settings ---
-        const budgetParams = { 
-          anno: annoCorrente,
-          mese: meseCorrente === 0 ? undefined : meseCorrente - 1 // Modifica qui: gestione corretta del mese
-        };
-        
-        console.log('Fetching budget settings with params:', budgetParams);
-        const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
-          params: budgetParams,
+        // Prima prova a ottenere le impostazioni mensili
+        const monthlyResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+          params: { 
+            anno: annoCorrente,
+            mese: meseCorrente === 0 ? undefined : meseCorrente - 1
+          },
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        console.log('Budget settings received:', settingsResponse.data);
-        const currentBudgetSettings = settingsResponse.data || { spese: {}, entrate: {} };
-        setBudgetSettings(currentBudgetSettings);
+        // Se non ci sono impostazioni mensili e stiamo visualizzando un mese specifico,
+        // prova a ottenere le impostazioni annuali
+        if (meseCorrente !== 0 && 
+            (!monthlyResponse.data || 
+             (Object.keys(monthlyResponse.data.spese).length === 0 && 
+              Object.keys(monthlyResponse.data.entrate).length === 0))) {
+          
+          const annualResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+            params: { 
+              anno: annoCorrente,
+              mese: 0
+            },
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (annualResponse.data && 
+              (Object.keys(annualResponse.data.spese).length > 0 || 
+               Object.keys(annualResponse.data.entrate).length > 0)) {
+            setBudgetSettings(annualResponse.data);
+          } else {
+            setBudgetSettings(monthlyResponse.data);
+          }
+        } else {
+          setBudgetSettings(monthlyResponse.data);
+        }
 
         // --- 2. Fetch Transactions (Spese & Entrate) ---
         console.log('Fetching all transactions for the year...');
