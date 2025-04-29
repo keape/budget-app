@@ -9,52 +9,32 @@ import {
 function Budget() {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const [speseMensili, setSpeseMensili] = useState({}); // Use object for category mapping
-  const [entrateMensili, setEntrateMensili] = useState({}); // Separate state for income
+  const [speseMensili, setSpeseMensili] = useState({}); 
+  const [entrateMensili, setEntrateMensili] = useState({});
   const [meseCorrente, setMeseCorrente] = useState(
-    () => params.has('mese') ? parseInt(params.get('mese')) + 1 : new Date().getMonth() + 1
+    () => params.has('mese') ? parseInt(params.get('mese')) : new Date().getMonth()
   );
   const [annoCorrente, setAnnoCorrente] = useState(
     () => params.has('anno') ? parseInt(params.get('anno')) : new Date().getFullYear()
   );
   const [tipoTransazione, setTipoTransazione] = useState('uscite');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} }); // Holds fetched budget settings
+  const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const navigate = useNavigate();
 
   const mesi = [
-    "Intero anno",
     "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
   ];
 
-  // Helper to get budget for the selected period (month or year)
+  // Helper to get budget for the selected period
   const getBudgetPeriodo = (isEntrate = false) => {
     const tipo = isEntrate ? 'entrate' : 'spese';
     return budgetSettings[tipo] || {};
   };
-
-  // Rimuovere il primo useEffect che fa il fetch delle impostazioni
-  // useEffect(() => {
-  //   const fetchBudgetSettings = async () => {
-  //     try {
-  //       const apiMonth = meseCorrente > 0 ? meseCorrente - 1 : 0;
-  //       const response = await axios.get(
-  //         `${BASE_URL}/api/budget-settings`, {
-  //           params: { anno: annoCorrente, mese: apiMonth }
-  //         }
-  //       );
-  //       setBudgetSettings(response.data);
-  //     } catch (error) {
-  //       console.error('Errore nel caricamento delle impostazioni del budget:', error);
-  //     }
-  //   };
-  //
-  //   fetchBudgetSettings();
-  // }, [meseCorrente, annoCorrente]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -68,82 +48,47 @@ function Budget() {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Token non trovato');
 
-        // --- 1. Fetch Budget Settings ---
-        console.log('Recupero impostazioni mensili e annuali');
-        
-        // Recupera le impostazioni mensili
-        const monthlyResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+        // Fetch Budget Settings
+        const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
           params: { 
             anno: annoCorrente,
-            mese: meseCorrente === 0 ? undefined : meseCorrente - 1
+            mese: meseCorrente
           },
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        console.log('Risposta impostazioni mensili:', monthlyResponse.data);
-        
-        // Se stiamo visualizzando un mese specifico, recupera anche le impostazioni annuali
-        if (meseCorrente !== 0) {
-          console.log('Recupero anche impostazioni annuali per fallback');
-          
-          const annualResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
-            params: { 
-              anno: annoCorrente,
-              mese: 0
-            },
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          console.log('Risposta impostazioni annuali:', annualResponse.data);
-          
-          // Unisci le impostazioni mensili e annuali
-          const mergedSettings = {
-            spese: { ...annualResponse.data?.spese || {}, ...monthlyResponse.data?.spese || {} },
-            entrate: { ...annualResponse.data?.entrate || {}, ...monthlyResponse.data?.entrate || {} }
-          };
-          
-          console.log('Impostazioni unite:', mergedSettings);
-          setBudgetSettings(mergedSettings);
-        } else {
-          // Se stiamo visualizzando l'intero anno, usa solo le impostazioni annuali
-          console.log('Utilizzo impostazioni annuali (vista anno intero)');
-          setBudgetSettings(monthlyResponse.data || { spese: {}, entrate: {} });
-        }
+        console.log('Risposta impostazioni:', settingsResponse.data);
+        setBudgetSettings(settingsResponse.data || { spese: {}, entrate: {} });
 
-        // --- 2. Fetch Transactions (Spese & Entrate) ---
-        console.log('Fetching all transactions for the year...');
+        // Fetch Transactions
         const [speseResponse, entrateResponse] = await Promise.all([
           axios.get(`${BASE_URL}/api/spese`, {
-              params: { page: 1, limit: 1000000 }, // Fetch all
+              params: { page: 1, limit: 1000000 },
               headers: { 'Authorization': `Bearer ${token}` }
            }),
           axios.get(`${BASE_URL}/api/entrate`, {
-              params: { page: 1, limit: 1000000 }, // Fetch all
+              params: { page: 1, limit: 1000000 },
               headers: { 'Authorization': `Bearer ${token}` }
            })
         ]);
 
         const allSpese = speseResponse.data.spese || [];
         const allEntrate = entrateResponse.data.entrate || [];
-        console.log(`Fetched ${allSpese.length} expenses and ${allEntrate.length} incomes.`);
+        console.log(`Recuperate ${allSpese.length} spese e ${allEntrate.length} entrate.`);
 
-        // --- 3. Filter Transactions by Selected Period ---
-        const filterByPeriod = (t) => {
+        // Filter Transactions by Selected Month
+        const filterByMonth = (t) => {
           const data = new Date(t.data);
+          const transactionMonth = data.getMonth();
           const transactionYear = data.getFullYear();
-          if (meseCorrente === 0) { // "Intero anno" selected
-            return transactionYear === annoCorrente; // Filter by year only
-          } else { // Specific month selected
-            const transactionMonth = data.getMonth();
-            return transactionMonth === (meseCorrente - 1) && transactionYear === annoCorrente; // Filter by month and year
-          }
+          return transactionMonth === meseCorrente && transactionYear === annoCorrente;
         };
 
-        const speseFiltrate = allSpese.filter(filterByPeriod);
-        const entrateFiltrate = allEntrate.filter(filterByPeriod);
-        console.log(`Filtered to ${speseFiltrate.length} expenses and ${entrateFiltrate.length} incomes for the period.`);
+        const speseFiltrate = allSpese.filter(filterByMonth);
+        const entrateFiltrate = allEntrate.filter(filterByMonth);
+        console.log(`Filtrate a ${speseFiltrate.length} spese e ${entrateFiltrate.length} entrate per il mese.`);
 
-        // --- 4. Aggregate Filtered Transactions ---
+        // Aggregate Filtered Transactions
         const aggregateByCategory = (transactions) =>
             transactions.reduce((acc, t) => {
                 acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
@@ -152,31 +97,30 @@ function Budget() {
 
         setSpeseMensili(aggregateByCategory(speseFiltrate));
         setEntrateMensili(aggregateByCategory(entrateFiltrate));
-        console.log('Aggregation complete.');
+        console.log('Aggregazione completata.');
 
       } catch (error) {
         console.error('Errore durante il caricamento dei dati del budget:', error);
         if (error.response?.status === 401 || error.response?.status === 403) {
              localStorage.removeItem('token');
-             window.location.href = '/login'; // Redirect to login on auth error
+             window.location.href = '/login';
         }
-        // Determine which step failed based on what state is set
         if (Object.keys(budgetSettings.spese).length === 0 && Object.keys(budgetSettings.entrate).length === 0) {
             setError('Errore caricamento impostazioni budget.');
         } else {
             setError('Errore caricamento transazioni.');
         }
-        setSpeseMensili({}); // Clear data on error
+        setSpeseMensili({});
         setEntrateMensili({});
-        setBudgetSettings({ spese: {}, entrate: {} }); // Clear settings on error too
+        setBudgetSettings({ spese: {}, entrate: {} });
       } finally {
-        setIsLoading(false); // Stop loading after all steps (success or error)
-        console.log('Fetching process finished. Loading set to false.');
+        setIsLoading(false);
+        console.log('Processo di recupero dati terminato. Caricamento impostato a false.');
       }
     };
 
     fetchData();
-  }, [meseCorrente, annoCorrente]); // Re-run when period changes
+  }, [meseCorrente, annoCorrente]);
 
     // --- Sorting Logic (remains the same) ---
     const handleSort = (key) => {
