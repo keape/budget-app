@@ -7,7 +7,6 @@ function BudgetSettings() {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [isYearly, setIsYearly] = useState(false); // State for yearly mode
   const [budgetSettings, setBudgetSettings] = useState({ spese: {}, entrate: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -29,7 +28,6 @@ function BudgetSettings() {
     "Altra entrata", "Consulenze", "Interessi", "MBO", "Stipendio", "Ticket", "Welfare"
   ];
 
-  // Fetch data when year or yearly mode changes (or month if not yearly)
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -37,7 +35,7 @@ function BudgetSettings() {
       return;
     }
     fetchBudgetSettings();
-  }, [selectedYear, selectedMonth, isYearly]); // Add isYearly to dependency array
+  }, [selectedYear, selectedMonth]);
 
   const handleAuthError = (message) => {
       setError(message);
@@ -52,21 +50,19 @@ function BudgetSettings() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Token non trovato');
 
-      // Determine parameters based on isYearly state
-      const params = { anno: selectedYear };
-      if (!isYearly) {
-        params.mese = selectedMonth;
-      }
+      const params = { 
+        anno: selectedYear,
+        mese: selectedMonth
+      };
 
       console.log('Recupero impostazioni:', {
         url: `${BASE_URL}/api/budget-settings`,
         params: params,
-        mode: isYearly ? 'Yearly' : 'Monthly',
         token: 'presente'
       });
 
       const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
-        params: params, // Send params (with or without mese)
+        params: params,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -115,24 +111,18 @@ function BudgetSettings() {
         return;
       }
 
-      // Construct data payload based on isYearly state
       const dataToSend = {
         anno: selectedYear,
-        isYearly: isYearly,
+        mese: selectedMonth,
         settings: {
           spese: budgetSettings.spese || {},
           entrate: budgetSettings.entrate || {}
         }
       };
-      // Add mese only if not yearly
-      if (!isYearly) {
-        dataToSend.mese = selectedMonth;
-      }
 
       console.log('Invio dati:', {
         url: `${BASE_URL}/api/budget-settings`,
         data: dataToSend,
-        mode: isYearly ? 'Yearly' : 'Monthly',
         token: 'presente'
       });
 
@@ -149,8 +139,6 @@ function BudgetSettings() {
         spese: response.data.spese || {},
         entrate: response.data.entrate || {}
       });
-      // Optionally navigate away or stay
-      // navigate(`/budget?anno=${selectedYear}&mese=${selectedMonth}`); // Keep previous logic or remove
     } catch (error) {
       console.error('Dettagli errore salvataggio:', {
         message: error.message,
@@ -171,7 +159,7 @@ function BudgetSettings() {
   return (
     <div className="theme-container p-6">
       <h1 className="text-4xl font-bold text-center mb-4 text-indigo-700 dark:text-indigo-300">
-        Impostazioni Budget {isYearly ? `Annuale ${selectedYear}` : `${mesi[selectedMonth]} ${selectedYear}`}
+        Impostazioni Budget {mesi[selectedMonth]} {selectedYear}
       </h1>
 
       {error && (
@@ -180,44 +168,19 @@ function BudgetSettings() {
         </div>
       )}
 
-      {/* Selettori periodo & Yearly Toggle */}
+      {/* Selettori periodo */}
       <div className="flex justify-center items-center mb-8 gap-4 flex-wrap">
-         {/* Yearly Toggle Switch */}
-         <div className="flex items-center bg-gray-200 dark:bg-gray-700 rounded-lg p-2 shadow-md">
-            <label htmlFor="yearlyToggle" className="mr-2 cursor-pointer text-gray-700 dark:text-gray-300">Budget Mensile</label>
-            <button
-                id="yearlyToggle"
-                onClick={() => setIsYearly(!isYearly)}
-                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                isYearly ? 'bg-indigo-600' : 'bg-gray-400'
-                }`}
-            >
-                <span
-                className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                    isYearly ? 'translate-x-6' : 'translate-x-1'
-                }`}
-                />
-            </button>
-            <label htmlFor="yearlyToggle" className="ml-2 cursor-pointer text-gray-700 dark:text-gray-300">Budget Annuale</label>
-         </div>
-         
-         {/* Month Selector (conditionally rendered) */}
-         {!isYearly && (
-            <select
-            className="px-4 py-2 text-lg bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            disabled={isYearly}
-            >
-            {mesi.map((mese, index) => (
-                <option key={index} value={index}>{mese}</option>
-            ))}
-            </select>
-         )}
-
-        {/* Year Selector */}
         <select
-          className="px-4 py-2 text-lg bg-white dark:bg-gray-800 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+        >
+          {mesi.map((mese, index) => (
+            <option key={index} value={index}>{mese}</option>
+          ))}
+        </select>
+        <select
+          className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
           value={selectedYear}
           onChange={(e) => setSelectedYear(parseInt(e.target.value))}
         >
@@ -235,7 +198,7 @@ function BudgetSettings() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Sezione Spese */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-red-600 dark:text-red-400">Budget Spese {isYearly ? '(Annuale)' : ''}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-red-600 dark:text-red-400">Budget Spese</h2>
             <div className="space-y-4">
               {categorieSpese.map(categoria => (
                 <div key={categoria} className="flex items-center justify-between">
@@ -255,7 +218,7 @@ function BudgetSettings() {
 
           {/* Sezione Entrate */}
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
-            <h2 className="text-2xl font-bold mb-6 text-green-600 dark:text-green-400">Budget Entrate {isYearly ? '(Annuale)' : ''}</h2>
+            <h2 className="text-2xl font-bold mb-6 text-green-600 dark:text-green-400">Budget Entrate</h2>
             <div className="space-y-4">
               {categorieEntrate.map(categoria => (
                 <div key={categoria} className="flex items-center justify-between">
@@ -286,7 +249,7 @@ function BudgetSettings() {
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {isSaving ? 'Salvataggio in corso...' : `Salva impostazioni ${isYearly ? 'annuali' : 'mensili'}`}
+          {isSaving ? 'Salvataggio in corso...' : 'Salva impostazioni'}
         </button>
       </div>
     </div>
