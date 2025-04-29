@@ -49,16 +49,65 @@ function Budget() {
         if (!token) throw new Error('Token non trovato');
 
         // Fetch Budget Settings
-        const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
-          params: { 
-            anno: annoCorrente,
-            mese: meseCorrente === 0 ? null : meseCorrente - 1 // Invia null per "Intero anno", altrimenti aggiusta l'indice
-          },
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        console.log('Risposta impostazioni:', settingsResponse.data);
-        setBudgetSettings(settingsResponse.data || { spese: {}, entrate: {} });
+        if (meseCorrente === 0) {
+          // Per "Intero anno", recupera tutti i budget mensili e sommali
+          console.log('Recupero budget di tutti i mesi per l\'intero anno', annoCorrente);
+          
+          // Array per memorizzare le promesse di tutte le richieste mensili
+          const budgetPromises = [];
+          
+          // Crea una richiesta per ogni mese dell'anno
+          for (let mese = 0; mese < 12; mese++) {
+            budgetPromises.push(
+              axios.get(`${BASE_URL}/api/budget-settings`, {
+                params: { 
+                  anno: annoCorrente,
+                  mese: mese
+                },
+                headers: { 'Authorization': `Bearer ${token}` }
+              })
+            );
+          }
+          
+          // Esegui tutte le richieste in parallelo
+          const budgetResponses = await Promise.all(budgetPromises);
+          
+          // Inizializza oggetti per accumulare i budget
+          const budgetAnnuale = {
+            spese: {},
+            entrate: {}
+          };
+          
+          // Somma i budget di tutti i mesi
+          budgetResponses.forEach((response, index) => {
+            const budgetMensile = response.data || { spese: {}, entrate: {} };
+            
+            // Somma le spese
+            Object.entries(budgetMensile.spese || {}).forEach(([categoria, importo]) => {
+              budgetAnnuale.spese[categoria] = (budgetAnnuale.spese[categoria] || 0) + importo;
+            });
+            
+            // Somma le entrate
+            Object.entries(budgetMensile.entrate || {}).forEach(([categoria, importo]) => {
+              budgetAnnuale.entrate[categoria] = (budgetAnnuale.entrate[categoria] || 0) + importo;
+            });
+          });
+          
+          console.log('Budget annuale calcolato:', budgetAnnuale);
+          setBudgetSettings(budgetAnnuale);
+        } else {
+          // Per un mese specifico, recupera solo il budget di quel mese
+          const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+            params: { 
+              anno: annoCorrente,
+              mese: meseCorrente - 1
+            },
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          console.log('Risposta impostazioni mensili:', settingsResponse.data);
+          setBudgetSettings(settingsResponse.data || { spese: {}, entrate: {} });
+        }
 
         // Fetch Transactions
         const [speseResponse, entrateResponse] = await Promise.all([
