@@ -206,20 +206,28 @@ function Budget() {
       ...new Set([
           ...Object.keys(budgetCorrente),
           ...Object.keys(transazioniCorrenti)
-      ])
-    ];
+      ].map(cat => cat.trim())) // Aggiunto trim() per normalizzare i nomi
+    ].filter(Boolean); // Rimuove eventuali valori vuoti
 
     const datiTabella = tutteCategorie.map(categoria => {
-      console.log(`Categoria: ${categoria}`);
-      console.log(`Budget: ${budgetCorrente[categoria]}`);
-      console.log(`Importo: ${transazioniCorrenti[categoria]}`);
-      
-      return {
-        categoria,
-        budget: budgetCorrente[categoria] || 0,
-        importo: transazioniCorrenti[categoria] || 0,
-        differenza: (transazioniCorrenti[categoria] || 0) - (budgetCorrente[categoria] || 0)
-      };
+        const budget = budgetCorrente[categoria] || 0;
+        const importo = transazioniCorrenti[categoria] || 0;
+        
+        // Debug logging migliorato
+        console.log(`Processing categoria: "${categoria}"`, {
+            budget,
+            importo,
+            existsInBudget: budgetCorrente.hasOwnProperty(categoria),
+            existsInTrans: transazioniCorrenti.hasOwnProperty(categoria),
+            normalized: categoria.trim()
+        });
+        
+        return {
+            categoria,
+            budget,
+            importo,
+            differenza: importo - budget
+        };
     });
 
     // --- Sorting Data (using datiTabella) ---
