@@ -14,7 +14,6 @@ function InsertTransaction() {
   const [error, setError] = useState(null);
   const [categorieSpese, setCategorieSpese] = useState([]);
   const [categorieEntrate, setCategorieEntrate] = useState([]);
-  const [totaleSpeseMese, setTotaleSpeseMese] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -48,32 +47,35 @@ function InsertTransaction() {
     };
 
     // Carica il totale delle spese del mese corrente
-    const fetchTotaleSpese = async () => {
-      try {
-        const meseCorrente = new Date().getMonth();
-        const annoCorrente = new Date().getFullYear();
-        
-        const response = await axios.get(`${BASE_URL}/api/spese`, {
-          params: { page: 1, limit: 1000000 },
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.data && response.data.spese) {
-          const speseMese = response.data.spese.filter(spesa => {
-            const dataSpesa = new Date(spesa.data);
-            return dataSpesa.getMonth() === meseCorrente && dataSpesa.getFullYear() === annoCorrente;
-          });
-          
-          const totale = speseMese.reduce((acc, spesa) => acc + Math.abs(spesa.importo), 0);
-          setTotaleSpeseMese(totale);
-        }
-      } catch (error) {
-        console.error('Errore nel calcolo del totale spese:', error);
-      }
-    };
+    // const fetchTotaleSpese = async () => {
+    //   try {
+    //     const meseCorrente = new Date().getMonth();
+    //     const annoCorrente = new Date().getFullYear();
+    //     
+    //     const response = await axios.get(`${BASE_URL}/api/spese`, {
+    //       params: { page: 1, limit: 1000000 },
+    //       headers: { 'Authorization': `Bearer ${token}` }
+    //     });
+    //     
+    //     if (response.data && response.data.spese) {
+    //       const speseMese = response.data.spese.filter(spesa => {
+    //         const dataSpesa = new Date(spesa.data);
+    //         return dataSpesa.getMonth() === meseCorrente && dataSpesa.getFullYear() === annoCorrente;
+    //       });
+    //       
+    //       const totale = speseMese.reduce((acc, spesa) => acc + Math.abs(spesa.importo), 0);
+    //       setTotaleSpeseMese(totale);
+    //     }
+    //   } catch (error) {
+    //     console.error('Errore nel calcolo del totale spese:', error);
+    //   }
+    // };
+    // Rimuoviamo questa funzione
+    // const fetchTotaleSpese = async () => { ... };
 
     fetchCategorie();
-    fetchTotaleSpese();
+    // Rimuoviamo questa chiamata
+    // fetchTotaleSpese();
   }, [navigate, tipo]);
 
   const handleSubmit = async (e) => {
