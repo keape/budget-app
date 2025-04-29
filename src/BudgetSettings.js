@@ -13,7 +13,7 @@ function BudgetSettings() {
   const [error, setError] = useState(null);
 
   const mesi = [
-    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Intero anno", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
   ];
 
@@ -52,7 +52,7 @@ function BudgetSettings() {
 
       const params = { 
         anno: selectedYear,
-        mese: selectedMonth
+        mese: selectedMonth === 0 ? null : selectedMonth - 1 // Invia null per "Intero anno"
       };
 
       console.log('Recupero impostazioni:', {
@@ -113,7 +113,8 @@ function BudgetSettings() {
 
       const dataToSend = {
         anno: selectedYear,
-        mese: selectedMonth,
+        mese: selectedMonth === 0 ? null : selectedMonth - 1, // Invia null per "Intero anno"
+        isYearly: selectedMonth === 0, // Flag per indicare se è un'impostazione annuale
         settings: {
           spese: budgetSettings.spese || {},
           entrate: budgetSettings.entrate || {}
@@ -159,7 +160,7 @@ function BudgetSettings() {
   return (
     <div className="theme-container p-6">
       <h1 className="text-4xl font-bold text-center mb-4 text-indigo-700 dark:text-indigo-300">
-        Impostazioni Budget {mesi[selectedMonth]} {selectedYear}
+        Impostazioni Budget {selectedMonth === 0 ? 'Intero anno' : mesi[selectedMonth]} {selectedYear}
       </h1>
 
       {error && (
