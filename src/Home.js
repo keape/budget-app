@@ -30,7 +30,7 @@ function Home() {
 
     axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
-      importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Number(importo),
+      importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
       categoria,
       data: dataTransazione
     })
