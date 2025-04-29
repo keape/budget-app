@@ -111,11 +111,6 @@ function InsertTransaction() {
       setImporto('');
       setDescrizione('');
       
-      // Aggiorna il totale delle spese se è stata inserita una spesa
-      if (tipo === 'spesa') {
-        setTotaleSpeseMese(prev => prev + Math.abs(importoNumerico));
-      }
-      
       // Mostra conferma
       alert(`${tipo === 'spesa' ? 'Spesa' : 'Entrata'} inserita con successo!`);
       
