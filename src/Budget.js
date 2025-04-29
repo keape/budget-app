@@ -147,7 +147,7 @@ function Budget() {
         // Aggregate Filtered Transactions
         const aggregateByCategory = (transactions) =>
             transactions.reduce((acc, t) => {
-                acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
+                acc[t.categoria] = (acc[t.categoria] || 0) + t.importo;
                 return acc;
             }, {});
 
@@ -208,12 +208,18 @@ function Budget() {
       ])
     ];
 
-    const datiTabella = tutteCategorie.map(categoria => ({
-      categoria,
-      budget: budgetCorrente[categoria] || 0,
-      importo: transazioniCorrenti[categoria] || 0,
-      differenza: (transazioniCorrenti[categoria] || 0) - (budgetCorrente[categoria] || 0)
-    }));
+    const datiTabella = tutteCategorie.map(categoria => {
+      console.log(`Categoria: ${categoria}`);
+      console.log(`Budget: ${budgetCorrente[categoria]}`);
+      console.log(`Importo: ${transazioniCorrenti[categoria]}`);
+      
+      return {
+        categoria,
+        budget: budgetCorrente[categoria] || 0,
+        importo: transazioniCorrenti[categoria] || 0,
+        differenza: (transazioniCorrenti[categoria] || 0) - (budgetCorrente[categoria] || 0)
+      };
+    });
 
     // --- Sorting Data (using datiTabella) ---
     const sortedData = React.useMemo(() => {
