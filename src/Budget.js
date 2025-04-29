@@ -147,7 +147,8 @@ function Budget() {
         // Aggregate Filtered Transactions
         const aggregateByCategory = (transactions) =>
             transactions.reduce((acc, t) => {
-                acc[t.categoria] = (acc[t.categoria] || 0) + t.importo;
+                // Per le spese, usiamo il valore assoluto per visualizzarle correttamente nel grafico
+                acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
                 return acc;
             }, {});
 
