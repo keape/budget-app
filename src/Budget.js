@@ -26,7 +26,7 @@ function Budget() {
   const navigate = useNavigate();
 
   const mesi = [
-    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Intero anno", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
     "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
   ];
 
@@ -52,7 +52,7 @@ function Budget() {
         const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
           params: { 
             anno: annoCorrente,
-            mese: meseCorrente
+            mese: meseCorrente === 0 ? null : meseCorrente - 1 // Invia null per "Intero anno", altrimenti aggiusta l'indice
           },
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -76,17 +76,24 @@ function Budget() {
         const allEntrate = entrateResponse.data.entrate || [];
         console.log(`Recuperate ${allSpese.length} spese e ${allEntrate.length} entrate.`);
 
-        // Filter Transactions by Selected Month
-        const filterByMonth = (t) => {
+        // Filter Transactions by Selected Month or Year
+        const filterByPeriod = (t) => {
           const data = new Date(t.data);
           const transactionMonth = data.getMonth();
           const transactionYear = data.getFullYear();
-          return transactionMonth === meseCorrente && transactionYear === annoCorrente;
+          
+          // Se "Intero anno" è selezionato, filtra solo per anno
+          if (meseCorrente === 0) {
+            return transactionYear === annoCorrente;
+          }
+          
+          // Altrimenti filtra per mese e anno specifici
+          return transactionMonth === (meseCorrente - 1) && transactionYear === annoCorrente;
         };
 
-        const speseFiltrate = allSpese.filter(filterByMonth);
-        const entrateFiltrate = allEntrate.filter(filterByMonth);
-        console.log(`Filtrate a ${speseFiltrate.length} spese e ${entrateFiltrate.length} entrate per il mese.`);
+        const speseFiltrate = allSpese.filter(filterByPeriod);
+        const entrateFiltrate = allEntrate.filter(filterByPeriod);
+        console.log(`Filtrate a ${speseFiltrate.length} spese e ${entrateFiltrate.length} entrate per il periodo.`);
 
         // Aggregate Filtered Transactions
         const aggregateByCategory = (transactions) =>
@@ -196,7 +203,7 @@ function Budget() {
     return (
       <div className="theme-container p-6">
         <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
-          Budget {mesi[meseCorrente]} {annoCorrente}
+          Budget {meseCorrente === 0 ? 'Intero anno' : mesi[meseCorrente]} {annoCorrente}
         </h1>
 
         {/* Period Selectors */}
