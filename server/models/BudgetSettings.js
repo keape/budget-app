@@ -7,11 +7,9 @@ const budgetSettingsSchema = new mongoose.Schema({
   },
   mese: {
     type: Number, 
-    // Mese is no longer strictly required, can be null for yearly
     required: false, 
-    min: 0,
-    max: 11,
-    // Use null instead of undefined for querying yearly settings
+    min: 1,  // Cambiato da 0 a 1
+    max: 12, // Cambiato da 11 a 12
     default: undefined 
   },
   spese: {
