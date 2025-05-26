@@ -51,30 +51,79 @@ function BudgetSettings() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Token non trovato');
 
-      const params = { 
-        anno: selectedYear,
-        mese: selectedMonth === 0 ? null : selectedMonth - 1 // Invia null per "Intero anno"
-      };
-
-      console.log('Recupero impostazioni:', {
-        url: `${BASE_URL}/api/budget-settings`,
-        params: params,
-        token: 'presente'
-      });
-
-      const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
-        params: params,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      // Per "Intero anno", recupera tutti i budget mensili e sommali
+      if (selectedMonth === 0) {
+        console.log('Recupero budget di tutti i mesi per l\'intero anno', selectedYear);
+        
+        // Array per memorizzare le promesse di tutte le richieste mensili
+        const budgetPromises = [];
+        
+        // Crea una richiesta per ogni mese dell'anno
+        for (let mese = 0; mese < 12; mese++) {
+          budgetPromises.push(
+            axios.get(`${BASE_URL}/api/budget-settings`, {
+              params: { 
+                anno: selectedYear,
+                mese: mese
+              },
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+          );
         }
-      });
+        
+        // Esegui tutte le richieste in parallelo
+        const budgetResponses = await Promise.all(budgetPromises);
+        
+        // Inizializza oggetti per accumulare i budget
+        const budgetAnnuale = {
+          spese: {},
+          entrate: {}
+        };
+        
+        // Somma i budget di tutti i mesi
+        budgetResponses.forEach((response) => {
+          const budgetMensile = response.data || { spese: {}, entrate: {} };
+          
+          // Somma le spese
+          Object.entries(budgetMensile.spese || {}).forEach(([categoria, importo]) => {
+            budgetAnnuale.spese[categoria] = (budgetAnnuale.spese[categoria] || 0) + importo;
+          });
+          
+          // Somma le entrate
+          Object.entries(budgetMensile.entrate || {}).forEach(([categoria, importo]) => {
+            budgetAnnuale.entrate[categoria] = (budgetAnnuale.entrate[categoria] || 0) + importo;
+          });
+        });
+        
+        console.log('Budget annuale calcolato:', budgetAnnuale);
+        setBudgetSettings(budgetAnnuale);
+      } else {
+        // Per un mese specifico, recupera solo il budget di quel mese
+        const params = { 
+          anno: selectedYear,
+          mese: selectedMonth - 1 // Invia null per "Intero anno"
+        };
 
-      console.log('Risposta ricevuta:', response.data);
-      setBudgetSettings({
-        spese: response.data.spese || {},
-        entrate: response.data.entrate || {}
-      });
+        console.log('Recupero impostazioni:', {
+          url: `${BASE_URL}/api/budget-settings`,
+          params: params,
+          token: 'presente'
+        });
+
+        const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
+          params: params,
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Risposta ricevuta:', response.data);
+        setBudgetSettings({
+          spese: response.data.spese || {},
+          entrate: response.data.entrate || {}
+        });
+      }
     } catch (error) {
       console.error('Dettagli errore:', {
         message: error.message,
@@ -112,35 +161,59 @@ function BudgetSettings() {
         return;
       }
 
-      const dataToSend = {
-        anno: selectedYear,
-        mese: selectedMonth === 0 ? null : selectedMonth - 1, // Invia null per "Intero anno"
-        isYearly: selectedMonth === 0, // Flag per indicare se è un'impostazione annuale
-        settings: {
-          spese: budgetSettings.spese || {},
-          entrate: budgetSettings.entrate || {}
+      // Se è selezionato "Intero anno", salva le impostazioni per tutti i mesi
+      if (selectedMonth === 0) {
+        // Salva le stesse impostazioni per ogni mese
+        for (let mese = 0; mese < 12; mese++) {
+          const dataToSend = {
+            anno: selectedYear,
+            mese: mese,
+            settings: {
+              spese: budgetSettings.spese || {},
+              entrate: budgetSettings.entrate || {}
+            }
+          };
+
+          await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
         }
-      };
 
-      console.log('Invio dati:', {
-        url: `${BASE_URL}/api/budget-settings`,
-        data: dataToSend,
-        token: 'presente'
-      });
+        alert('Impostazioni salvate con successo per tutti i mesi!');
+      } else {
+        // Salva le impostazioni solo per il mese selezionato
+        const dataToSend = {
+          anno: selectedYear,
+          mese: selectedMonth - 1,
+          settings: {
+            spese: budgetSettings.spese || {},
+            entrate: budgetSettings.entrate || {}
+          }
+        };
 
-      const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+        console.log('Invio dati:', {
+          url: `${BASE_URL}/api/budget-settings`,
+          data: dataToSend,
+          token: 'presente'
+        });
 
-      console.log('Risposta salvataggio:', response.data);
-      alert('Impostazioni salvate con successo!');
-      setBudgetSettings({
-        spese: response.data.spese || {},
-        entrate: response.data.entrate || {}
-      });
+        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('Risposta salvataggio:', response.data);
+        alert('Impostazioni salvate con successo!');
+        setBudgetSettings({
+          spese: response.data.spese || {},
+          entrate: response.data.entrate || {}
+        });
+      }
     } catch (error) {
       console.error('Dettagli errore salvataggio:', {
         message: error.message,
