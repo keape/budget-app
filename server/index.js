@@ -28,6 +28,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// Aggiungi questi middleware per parsare JSON
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Security Headers Middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -392,15 +396,42 @@ app.get('/', (req, res) => {
 // POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    console.log('🔍 DEBUG: Inizio registrazione');
+    console.log('🔍 DEBUG: Dati ricevuti:', req.body);
+    
+    const { username, password, email } = req.body;
+    
+    // Validazione input
+    if (!username || !password) {
+      console.log('❌ DEBUG: Dati mancanti - username:', username, 'password:', !!password);
+      return res.status(400).json({ message: "Username e password sono richiesti" });
+    }
+    
+    console.log('🔍 DEBUG: Controllo utente esistente per username:', username);
     const existingUser = await User.findOne({ username });
-    if (existingUser) return res.status(400).json({ message: "Username già in uso" });
+    
+    if (existingUser) {
+      console.log('❌ DEBUG: Username già esistente:', username);
+      return res.status(400).json({ message: "Username già in uso" });
+    }
+    
+    console.log('🔍 DEBUG: Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ username, password: hashedPassword });
+    console.log('✅ DEBUG: Password hashata con successo');
+    
+    console.log('🔍 DEBUG: Creazione nuovo utente...');
+    const user = new User({ username, password: hashedPassword, email });
+    
+    console.log('🔍 DEBUG: Salvataggio utente nel database...');
     await user.save();
+    console.log('✅ DEBUG: Utente salvato con successo, ID:', user._id);
+    
     res.status(201).json({ message: "Utente registrato con successo" });
   } catch (error) {
     console.error('❌ Errore durante la registrazione:', error);
+    console.error('❌ Stack trace completo:', error.stack);
+    console.error('❌ Tipo errore:', error.name);
+    console.error('❌ Messaggio errore:', error.message);
     res.status(500).json({ message: "Errore durante la registrazione" });
   }
 });
