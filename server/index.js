@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const crypto = require('crypto');
 
 const app = express();
 
@@ -421,8 +422,101 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Start Server
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`🚀 Server in ascolto sulla porta ${PORT}`);
+// POST /api/auth/change-password
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Password attuale e nuova password sono richieste" });
+    }
+    
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utente non trovato" });
+    }
+    
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ message: "Password attuale non corretta" });
+    }
+    
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+    
+    res.json({ message: "Password cambiata con successo" });
+  } catch (error) {
+    console.error('❌ Errore durante il cambio password:', error);
+    res.status(500).json({ message: "Errore durante il cambio password" });
+  }
 });
+
+// POST /api/auth/forgot-password
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { username } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ message: "Username è richiesto" });
+    }
+    
+    const user = await User.findOne({ username });
+    if (!user) {
+      // Per sicurezza, non rivelare se l'utente esiste o meno
+      return res.json({ message: "Se l'utente esiste, riceverai le istruzioni per il reset" });
+    }
+    
+    // Genera token di reset
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 ora
+    await user.save();
+    
+    // In un'app reale, qui invieresti un'email con il link di reset
+    // Per ora, restituiamo il token (solo per sviluppo)
+    console.log(`Token di reset per ${username}: ${resetToken}`);
+    
+    res.json({ 
+      message: "Se l'utente esiste, riceverai le istruzioni per il reset",
+      // Rimuovi questa riga in produzione:
+      resetToken: resetToken 
+    });
+  } catch (error) {
+    console.error('❌ Errore durante il reset password:', error);
+    res.status(500).json({ message: "Errore durante il reset password" });
+  }
+});
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: "Token e nuova password sono richiesti" });
+    }
+    
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: "Token non valido o scaduto" });
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    
+    res.json({ message: "Password reimpostata con successo" });
+  } catch (error) {
+    console.error('❌ Errore durante il reset password:', error);
+    res.status(500).json({ message: "Errore durante il reset password" });
+  }
+});
+
+// ... existing code ...
