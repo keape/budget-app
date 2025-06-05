@@ -42,6 +42,16 @@ function Navbar() {
           >
             Inserisci transazione
           </Link>
+          <Link 
+            to="/change-password" 
+            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
+              location.pathname === '/change-password'
+                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+          >
+            Cambia Password
+          </Link>
         </nav>
         <button
           onClick={toggleDarkMode}
