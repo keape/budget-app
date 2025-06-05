@@ -432,7 +432,7 @@ app.post('/api/auth/register', async (req, res) => {
     console.error('❌ Stack trace completo:', error.stack);
     console.error('❌ Tipo errore:', error.name);
     console.error('❌ Messaggio errore:', error.message);
-    res.status(500).json({ message: "Errore durante la registrazione" });
+    res.status(500).json({ message: "Errore durante la registrazione", error: error.message });
   }
 });
 
