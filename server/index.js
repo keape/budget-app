@@ -49,39 +49,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('✅ Connessione a MongoDB riuscita'))
-.catch((err) => console.error('❌ Errore di connessione a MongoDB:', err));
-
-app.use(express.json());
-
-// Request Logging Middleware
-app.use((req, res, next) => {
-  console.log(`📝 ${req.method} ${req.path} - Origin: ${req.get('origin')}`);
-  next();
-});
-
-// Authentication Middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: "Token non fornito" });
-  }
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: "Token non valido" });
-    }
-    req.user = user; // Attach user info to the request
-    next();
+// Connessione a MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('✅ Connessione a MongoDB riuscita');
+  })
+  .catch((error) => {
+    console.error('❌ Errore di connessione a MongoDB:', error);
   });
-};
 
-// --- Budget Settings Routes --- 
+// Avvio del server
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server in esecuzione sulla porta ${PORT}`);
+});
 
 // GET Budget Settings (Handles Monthly and Yearly)
 app.get('/api/budget-settings', authenticateToken, async (req, res) => {
@@ -518,5 +499,3 @@ app.post('/api/auth/reset-password', async (req, res) => {
     res.status(500).json({ message: "Errore durante il reset password" });
   }
 });
-
-// ... existing code ...
