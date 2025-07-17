@@ -1,5 +1,6 @@
-node_modules
-.env
-credentials.json
-
-
+.DS_Store
+backup budget-app/
+node_modules/
+server/.env
+server/credentials.json
+server/node_modules/
