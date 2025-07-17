@@ -39,8 +39,14 @@ function Filtri() {
     const anno = searchParams.get('anno');
     const tipo = searchParams.get('tipo');
 
-    if (categoria) setFiltroCategoria(categoria);
-    if (tipo) setFiltroTipo(tipo);
+    if (categoria) {
+      setFiltroCategoria(categoria);
+      console.log('Filtri.js: Categoria da URL:', categoria);
+    }
+    if (tipo) {
+      setFiltroTipo(tipo);
+      console.log('Filtri.js: Tipo da URL:', tipo);
+    }
 
     // Imposta le date in base al mese e anno se presenti nell'URL
     if (anno) {
@@ -56,6 +62,8 @@ function Filtri() {
         setDataFine(ultimoGiornoAnno.toISOString().split('T')[0]);
       }
     }
+    console.log('Filtri.js: Mese da URL:', mese);
+    console.log('Filtri.js: Anno da URL:', anno);
   }, [searchParams]);
 
   const caricaTransazioni = async () => {
@@ -211,7 +219,7 @@ function Filtri() {
     try {
       const endpoint = editingTransaction.tipo === 'entrata' ? 'entrate' : 'spese';
       await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
-        importo: editingTransaction.importo,
+        importo: editingTransaction.tipo === 'uscita' ? -Math.abs(Number(editingTransaction.importo)) : Number(editingTransaction.importo),
         descrizione: editingTransaction.descrizione,
         categoria: editingTransaction.categoria,
         data: editingTransaction.data
