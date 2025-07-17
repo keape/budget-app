@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import BASE_URL from './config';
@@ -9,21 +9,59 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  // Verifica se l'utente è già autenticato
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Errore nel controllo del token:', error);
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    
     try {
+      // Removed { withCredentials: true } from the request
       const response = await axios.post(`${BASE_URL}/api/auth/login`, {
         username,
         password
       });
       
       if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        navigate('/');
+        try {
+          localStorage.setItem('token', response.data.token);
+          
+          // Verifica che il token sia stato effettivamente salvato
+          const savedToken = localStorage.getItem('token');
+          if (savedToken === response.data.token) {
+            navigate('/');
+          } else {
+            // Se il token non è stato salvato correttamente nel localStorage
+            console.warn('Token non salvato in localStorage, provo a procedere comunque...');
+            navigate('/');
+          }
+        } catch (storageError) {
+          console.error('Errore nel salvataggio del token:', storageError);
+          // Anche se c'è un errore nel salvare il token, proviamo a procedere
+          navigate('/');
+        }
+      } else {
+        setError('Token non ricevuto dal server');
       }
     } catch (error) {
-      setError('Credenziali non valide');
       console.error('Errore di login:', error);
+      if (error.response) {
+        setError(error.response.data.message || 'Credenziali non valide');
+      } else if (error.request) {
+        setError('Errore di connessione al server');
+      } else {
+        setError('Errore durante il login');
+      }
     }
   };
 
@@ -78,9 +116,12 @@ function Login() {
             </button>
           </div>
 
-          <div className="text-sm text-center">
-            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+          <div className="text-sm text-center space-y-2">
+            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500 block">
               Non hai un account? Registrati
+            </Link>
+            <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500 block">
+              Password dimenticata?
             </Link>
           </div>
         </form>
@@ -89,4 +130,4 @@ function Login() {
   );
 }
 
-export default Login; 
+export default Login;

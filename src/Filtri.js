@@ -17,10 +17,12 @@ function Filtri() {
   const [dataInizio, setDataInizio] = useState('');
   const [dataFine, setDataFine] = useState('');
   const { darkMode } = useTheme();
-  const [transazioneDaModificare, setTransazioneDaModificare] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const itemsPerPage = 50;
 
   const categorieEntrate = [
     "Stipendio",
@@ -29,6 +31,10 @@ function Filtri() {
     "Rimborsi",
     "Regalo",
     "MBO",
+    "Welfare",
+    "Consulenze",
+    "Interessi",
+    "Ticket",
     "Altro"
   ];
 
@@ -66,21 +72,45 @@ function Filtri() {
     console.log('Filtri.js: Anno da URL:', anno);
   }, [searchParams]);
 
-  const caricaTransazioni = async () => {
+  const caricaTransazioni = async (page = 1) => {
+    setIsLoading(true);
     try {
-      const [spese, entrate] = await Promise.all([
-        axios.get(`${BASE_URL}/api/spese`).then(res => res.data.map(spesa => ({ ...spesa, tipo: 'uscita' }))),
-        axios.get(`${BASE_URL}/api/entrate`).then(res => res.data.map(entrata => ({ ...entrata, tipo: 'entrata' })))
+      const [speseResponse, entrateResponse] = await Promise.all([
+        axios.get(`${BASE_URL}/api/spese`, {
+          params: {
+            page,
+            limit: itemsPerPage
+          }
+        }),
+        axios.get(`${BASE_URL}/api/entrate`, {
+          params: {
+            page,
+            limit: itemsPerPage
+          }
+        })
       ]);
+
+      // Estrai le spese e le entrate direttamente dalla risposta
+      const spese = (speseResponse.data.spese || []).map(spesa => ({ ...spesa, tipo: 'uscita' }));
+      const entrate = (entrateResponse.data.entrate || []).map(entrata => ({ ...entrata, tipo: 'entrata' }));
+      
+      // Calcola il totale delle pagine considerando sia spese che entrate
+      const totalSpese = speseResponse.data.totalItems || 0;
+      const totalEntrate = entrateResponse.data.totalItems || 0;
+      const totalItems = totalSpese + totalEntrate;
+      setTotalPages(Math.ceil(totalItems / itemsPerPage));
+
       setTransazioni([...spese, ...entrate]);
     } catch (error) {
       console.error('Errore nel caricamento delle transazioni:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    caricaTransazioni();
-  }, []);
+    caricaTransazioni(currentPage);
+  }, [currentPage, filtroTipo, filtroCategoria, dataInizio, dataFine]);
 
   const eliminaTransazione = async (id, tipo) => {
     if (window.confirm('Sei sicuro di voler eliminare questa transazione?')) {
@@ -127,31 +157,6 @@ function Filtri() {
 
   const colors = ['#60a5fa', '#818cf8', '#34d399', '#f472b6', '#fcd34d', '#f87171'];
 
-  const getCategoriaColor = (categoria) => {
-    const colori = {
-      'Abbigliamento': 'border-pink-400',
-      'Abbonamenti': 'border-purple-400',
-      'Acqua': 'border-blue-400',
-      'Alimentari': 'border-yellow-400',
-      'Altre spese': 'border-gray-400',
-      'Bar': 'border-rose-400',
-      'Cinema Mostre Cultura': 'border-indigo-400',
-      'Elettricità': 'border-amber-400',
-      'Giardinaggio/Agricoltura/Falegnameria': 'border-green-400',
-      'Manutenzione/Arredamento casa': 'border-orange-400',
-      'Mutuo': 'border-red-400',
-      'Regali': 'border-fuchsia-400',
-      'Ristorante': 'border-emerald-400',
-      'Salute': 'border-lime-400',
-      'Sport/Attrezzatura sportiva': 'border-cyan-400',
-      'Tecnologia': 'border-teal-400',
-      'Vacanza': 'border-sky-400',
-      'Vela': 'border-violet-400'
-    };
-  
-    return colori[categoria] || 'border-slate-300'; // default se la categoria non è mappata
-  };
-  
   function categoriaClasse(categoria) {
     switch (categoria) {
       case 'Abbigliamento': return 'border-pink-400';
@@ -175,30 +180,6 @@ function Filtri() {
       default: return 'border-slate-300';
     }
   }
-
-  // Funzione per aprire il modal di modifica
-  const apriModifica = (transazione) => {
-    setTransazioneDaModificare(transazione);
-    setIsModalOpen(true);
-  };
-
-  // Funzione per salvare le modifiche
-  const salvaModifiche = () => {
-    if (!transazioneDaModificare) return;
-
-    axios.put(`${BASE_URL}/api/spese/${transazioneDaModificare._id}`, {
-      descrizione: transazioneDaModificare.descrizione,
-      importo: Number(transazioneDaModificare.importo),
-      categoria: transazioneDaModificare.categoria,
-      data: transazioneDaModificare.data
-    })
-      .then(() => {
-        setIsModalOpen(false);
-        setTransazioneDaModificare(null);
-        caricaTransazioni(); // Ricarica le transazioni dopo la modifica
-      })
-      .catch(err => console.error("Errore nella modifica della transazione:", err));
-  };
 
   const handleEdit = (transaction) => {
     // Formatta la data per l'input type="date"
@@ -233,6 +214,45 @@ function Filtri() {
     }
   };
 
+  // Funzione per cambiare pagina
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo(0, 0);
+  };
+
+  // Componente per i controlli di paginazione
+  const PaginationControls = () => (
+    <div className="flex justify-center items-center space-x-4 mt-6 mb-8">
+      <button
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage === 1 || isLoading}
+        className={`px-4 py-2 rounded-lg ${
+          currentPage === 1 || isLoading
+            ? 'bg-gray-300 cursor-not-allowed'
+            : 'bg-indigo-600 hover:bg-indigo-700'
+        } text-white transition-colors duration-200`}
+      >
+        Precedente
+      </button>
+      
+      <span className="text-gray-700 dark:text-gray-300">
+        Pagina {currentPage} di {totalPages}
+      </span>
+      
+      <button
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={currentPage === totalPages || isLoading}
+        className={`px-4 py-2 rounded-lg ${
+          currentPage === totalPages || isLoading
+            ? 'bg-gray-300 cursor-not-allowed'
+            : 'bg-indigo-600 hover:bg-indigo-700'
+        } text-white transition-colors duration-200`}
+      >
+        Successiva
+      </button>
+    </div>
+  );
+
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
       <h1 className="text-4xl font-bold text-center mb-8 text-indigo-600 dark:text-indigo-300">
@@ -247,7 +267,7 @@ function Filtri() {
               Tipo di transazione
             </label>
             <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
               value={filtroTipo}
               onChange={e => setFiltroTipo(e.target.value)}
             >
@@ -263,7 +283,7 @@ function Filtri() {
               Filtra per categoria
             </label>
             <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
               value={filtroCategoria}
               onChange={e => setFiltroCategoria(e.target.value)}
             >
@@ -298,6 +318,9 @@ function Filtri() {
                 <option value="Regalo">Regalo</option>
                 <option value="MBO">MBO</option>
                 <option value="Welfare">Welfare</option>
+                <option value="Consulenze">Consulenze</option>
+                <option value="Interessi">Interessi</option>
+                <option value="Ticket">Ticket</option>
                 <option value="Altro">Altro</option>
               </>}
             </select>
@@ -310,13 +333,13 @@ function Filtri() {
             </label>
             <div className="flex gap-2">
               <input
-                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
                 type="date"
                 value={dataInizio}
                 onChange={e => setDataInizio(e.target.value)}
               />
               <input
-                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-white dark:text-white"
+                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
                 type="date"
                 value={dataFine}
                 onChange={e => setDataFine(e.target.value)}
@@ -342,7 +365,7 @@ function Filtri() {
       </div>
 
       {/* Grafici statistici */}
-      {transazioniFiltrate.length > 0 && (filtroTipo !== 'tutte' || filtroCategoria || dataInizio || dataFine) && (
+      {transazioniFiltrate.length > 0 && filtroTipo !== 'tutte' && (
         <>
           {/* Grafico a torta per distribuzione per categoria */}
           {!filtroCategoria && (
@@ -374,7 +397,19 @@ function Filtri() {
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend layout="vertical" align="right" verticalAlign="middle" />
+                  <Legend 
+                    layout="horizontal" 
+                    align="center" 
+                    verticalAlign="bottom"
+                    wrapperStyle={{
+                      paddingTop: "20px",
+                      width: "100%",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: "10px"
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -404,11 +439,7 @@ function Filtri() {
                       }),
                       importo
                     }))
-                    .sort((a, b) => {
-                      const dataA = new Date(a.data.split(' ')[1], ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'].indexOf(a.data.split(' ')[0]));
-                      const dataB = new Date(b.data.split(' ')[1], ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'].indexOf(b.data.split(' ')[0]));
-                      return dataA - dataB;
-                    })}
+                    .sort((a, b) => b.importo - a.importo)}
                 >
                   <XAxis 
                     dataKey="data" 
@@ -469,7 +500,11 @@ function Filtri() {
                     <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
                   )}
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {new Date(transazione.data).toLocaleDateString()}
+                    {new Date(transazione.data).toLocaleDateString('it-IT', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -573,6 +608,9 @@ function Filtri() {
                       <option value="Regalo">Regalo</option>
                       <option value="MBO">MBO</option>
                       <option value="Welfare">Welfare</option>
+                      <option value="Consulenze">Consulenze</option>
+                      <option value="Interessi">Interessi</option>
+                      <option value="Ticket">Ticket</option>
                       <option value="Altro">Altro</option>
                     </>
                   ) : (
@@ -617,6 +655,16 @@ function Filtri() {
             </div>
           </div>
         </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      ) : (
+        <>
+          <PaginationControls />
+        </>
       )}
     </div>
   );
