@@ -1,4 +1,5 @@
 .DS_Store
+.DS_Store
 backup budget-app/
 node_modules/
 server/.env
