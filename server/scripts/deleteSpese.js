@@ -2,7 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Spesa = require('../models/Spesa');
 
-const MONGO_URI = 'mongodb+srv://keape86:f55GawwEdx5S1BoZ@budgetapp.enqupoz.mongodb.net/test?retryWrites=true&w=majority&appName=budgetapp';
+const MONGO_URI = process.env.MONGO_URI;
 
 async function deleteSpese() {
   try {

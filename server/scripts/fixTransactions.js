@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
 
-const MONGO_URI = 'mongodb+srv://keape:Keape1234@cluster0.aqxvxvt.mongodb.net/budget-app?retryWrites=true&w=majority';
+const MONGO_URI = process.env.MONGO_URI;
 
 async function fixTransactions() {
   try {

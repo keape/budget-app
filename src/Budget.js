@@ -33,18 +33,21 @@ const getBudgetMensile = (mese) => {
 
   // Gestisce i casi speciali per mese
   switch (mese) {
-    case 1: // Febbraio
+    case 0: // Gennaio (mese - 1 = 0)
+      // No special case for January in original getBudgetMensile
+      break;
+    case 1: // Febbraio (mese - 1 = 1)
       budgetMese["Vela"] = 750.00;
       break;
-    case 5: // Giugno
+    case 4: // Maggio (mese - 1 = 4) - Originale Giugno (5)
       budgetMese["Vacanza"] = 750.00;
       break;
-    case 6: // Luglio
+    case 5: // Giugno (mese - 1 = 5) - Originale Luglio (6)
       budgetMese["Vacanza"] = 750.00;
       budgetMese["Abbigliamento"] = 0.00;
       budgetMese["Regali"] = 400.00;
       break;
-    case 11: // Dicembre
+    case 10: // Novembre (mese - 1 = 10) - Originale Dicembre (11)
       budgetMese["Altre spese"] = 150.00;
       break;
   }
@@ -200,14 +203,12 @@ function Budget() {
     params.append('categoria', data.categoria);
     
     // Aggiunge il periodo
-    if (meseCorrente === 0) {
-      // Se è selezionato l'intero anno, passa solo l'anno
-      params.append('anno', annoCorrente.toString());
-    } else {
-      // Se è selezionato un mese specifico, passa sia mese che anno
+    if (meseCorrente !== 0) { // Se non è "Intero anno" (meseCorrente === 0)
+      // Se è selezionato un mese specifico, passa sia mese che anno (0-indexed)
       params.append('mese', (meseCorrente - 1).toString());
-      params.append('anno', annoCorrente.toString());
     }
+    // Passa sempre l'anno
+    params.append('anno', annoCorrente.toString());
 
     // Naviga alla pagina dei filtri con i parametri
     navigate(`/filtri?${params.toString()}`);

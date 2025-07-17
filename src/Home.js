@@ -48,7 +48,7 @@ function Home() {
     const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
     axios.post(`${BASE_URL}/api/${endpoint}`, {
       descrizione,
-      importo: Number(importo),
+      importo: tipo === 'spesa' ? -Number(importo) : Number(importo),
       categoria
     })
       .then(() => {
