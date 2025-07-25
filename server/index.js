@@ -16,6 +16,7 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'https://budget-app-ao5r.onrender.com',
+    'https://budget-app-cd5o.onrender.com',
     'https://budget-app-keape.vercel.app',
     'https://budget-app-three-gules.vercel.app',
     'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev'
