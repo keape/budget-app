@@ -19,10 +19,7 @@ function Filtri() {
   const { darkMode } = useTheme();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const itemsPerPage = 50;
 
   const categorieEntrate = [
     "Stipendio",
@@ -72,20 +69,20 @@ function Filtri() {
     console.log('Filtri.js: Anno da URL:', anno);
   }, [searchParams]);
 
-  const caricaTransazioni = async (page = 1) => {
+  const caricaTransazioni = async () => {
     setIsLoading(true);
     try {
       const [speseResponse, entrateResponse] = await Promise.all([
         axios.get(`${BASE_URL}/api/spese`, {
           params: {
-            page,
-            limit: itemsPerPage
+            page: 1,
+            limit: 10000 // Carica tutte le transazioni
           }
         }),
         axios.get(`${BASE_URL}/api/entrate`, {
           params: {
-            page,
-            limit: itemsPerPage
+            page: 1,
+            limit: 10000 // Carica tutte le transazioni
           }
         })
       ]);
@@ -93,12 +90,6 @@ function Filtri() {
       // Estrai le spese e le entrate direttamente dalla risposta
       const spese = (speseResponse.data.spese || []).map(spesa => ({ ...spesa, tipo: 'uscita' }));
       const entrate = (entrateResponse.data.entrate || []).map(entrata => ({ ...entrata, tipo: 'entrata' }));
-      
-      // Calcola il totale delle pagine considerando sia spese che entrate
-      const totalSpese = speseResponse.data.totalItems || 0;
-      const totalEntrate = entrateResponse.data.totalItems || 0;
-      const totalItems = totalSpese + totalEntrate;
-      setTotalPages(Math.ceil(totalItems / itemsPerPage));
 
       setTransazioni([...spese, ...entrate]);
     } catch (error) {
@@ -109,8 +100,8 @@ function Filtri() {
   };
 
   useEffect(() => {
-    caricaTransazioni(currentPage);
-  }, [currentPage, filtroTipo, filtroCategoria, dataInizio, dataFine]);
+    caricaTransazioni();
+  }, [filtroTipo, filtroCategoria, dataInizio, dataFine]);
 
   const eliminaTransazione = async (id, tipo) => {
     if (window.confirm('Sei sicuro di voler eliminare questa transazione?')) {
@@ -214,44 +205,6 @@ function Filtri() {
     }
   };
 
-  // Funzione per cambiare pagina
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-    window.scrollTo(0, 0);
-  };
-
-  // Componente per i controlli di paginazione
-  const PaginationControls = () => (
-    <div className="flex justify-center items-center space-x-4 mt-6 mb-8">
-      <button
-        onClick={() => handlePageChange(currentPage - 1)}
-        disabled={currentPage === 1 || isLoading}
-        className={`px-4 py-2 rounded-lg ${
-          currentPage === 1 || isLoading
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-indigo-600 hover:bg-indigo-700'
-        } text-white transition-colors duration-200`}
-      >
-        Precedente
-      </button>
-      
-      <span className="text-gray-700 dark:text-gray-300">
-        Pagina {currentPage} di {totalPages}
-      </span>
-      
-      <button
-        onClick={() => handlePageChange(currentPage + 1)}
-        disabled={currentPage === totalPages || isLoading}
-        className={`px-4 py-2 rounded-lg ${
-          currentPage === totalPages || isLoading
-            ? 'bg-gray-300 cursor-not-allowed'
-            : 'bg-indigo-600 hover:bg-indigo-700'
-        } text-white transition-colors duration-200`}
-      >
-        Successiva
-      </button>
-    </div>
-  );
 
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
@@ -657,14 +610,10 @@ function Filtri() {
         </div>
       )}
 
-      {isLoading ? (
+      {isLoading && (
         <div className="flex justify-center items-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
         </div>
-      ) : (
-        <>
-          <PaginationControls />
-        </>
       )}
     </div>
   );
