@@ -12,7 +12,19 @@ router.get('/', authenticateToken, async (req, res) => {
     const userFilter = { userId: req.user.userId };
     const totalEntrate = await Entrata.countDocuments(userFilter);
     const entrate = await Entrata.find(userFilter).sort({ data: -1 }).skip(skip).limit(limit);
-    res.json({ entrate, currentPage: page, totalPages: Math.ceil(totalEntrate / limit), totalItems: totalEntrate });
+    
+    // TEMPORARY SECURITY CHECK - Force isolation even if query fails
+    const filteredEntrate = entrate.filter(entrata => 
+      entrata.userId && entrata.userId.toString() === req.user.userId.toString()
+    );
+    console.log('🔒 SECURITY FILTER entrate - dopo filtro security:', filteredEntrate.length, 'entrate');
+    
+    res.json({ 
+      entrate: filteredEntrate, 
+      currentPage: page, 
+      totalPages: Math.ceil(filteredEntrate.length / limit), 
+      totalItems: filteredEntrate.length 
+    });
   } catch (err) {
     console.error('❌ Errore nel recupero delle entrate:', err);
     res.status(500).json({ error: "Errore nel recupero delle entrate" });
