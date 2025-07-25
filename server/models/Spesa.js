@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const spesaSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   descrizione: {
     type: String,
     required: false
@@ -18,5 +23,8 @@ const spesaSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Index per performance nelle query per utente
+spesaSchema.index({ userId: 1, data: -1 });
 
 module.exports = mongoose.model('Spesa', spesaSchema);

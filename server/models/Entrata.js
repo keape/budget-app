@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const entrataSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   descrizione: {
     type: String,
     required: false
@@ -18,5 +23,8 @@ const entrataSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Index per performance nelle query per utente
+entrataSchema.index({ userId: 1, data: -1 });
 
 module.exports = mongoose.model('Entrata', entrataSchema); 

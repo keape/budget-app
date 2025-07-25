@@ -14,6 +14,7 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     const query = {
+      userId: req.user.userId,
       anno: parseInt(anno)
     };
 
@@ -97,6 +98,7 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
     const updateData = { 
+        userId: req.user.userId,
         anno: annoInt,
         mese: meseValue, 
         spese,
@@ -107,7 +109,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Find and update (or create if not found - upsert)
     const result = await BudgetSettings.findOneAndUpdate(
-      { anno: annoInt, mese: meseValue }, // Query condition
+      { userId: req.user.userId, anno: annoInt, mese: meseValue }, // Query condition
       updateData, // Data to set
       { new: true, upsert: true, setDefaultsOnInsert: true } // Options
     );
