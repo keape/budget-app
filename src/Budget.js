@@ -224,8 +224,14 @@ function Budget() {
     };
 
     // --- Data Preparation for Chart and Table ---
-    const budgetCorrente = getBudgetPeriodo(tipoTransazione === 'entrate');
-    const transazioniCorrenti = tipoTransazione === 'entrate' ? entrateMensili : speseMensili;
+    const budgetCorrente = tipoTransazione === 'tutte' 
+      ? { ...getBudgetPeriodo(false), ...getBudgetPeriodo(true) } // Combina spese ed entrate
+      : getBudgetPeriodo(tipoTransazione === 'entrate');
+    
+    // Gestione transazioni correnti per tutte le opzioni
+    const transazioniCorrenti = tipoTransazione === 'tutte' 
+      ? { ...speseMensili, ...entrateMensili } // Combina spese ed entrate
+      : tipoTransazione === 'entrate' ? entrateMensili : speseMensili;
 
     // Combine budget categories and transaction categories for a full list
     const tutteCategorie = [
@@ -237,23 +243,40 @@ function Budget() {
 
     const datiTabella = tutteCategorie.map(categoria => {
         const budget = budgetCorrente[categoria] || 0;
-        const importo = transazioniCorrenti[categoria] || 0;
         
-        // Debug logging migliorato
-        console.log(`Processing categoria: "${categoria}"`, {
-            budget,
-            importo,
-            existsInBudget: budgetCorrente.hasOwnProperty(categoria),
-            existsInTrans: transazioniCorrenti.hasOwnProperty(categoria),
-            normalized: categoria.trim()
-        });
-        
-        return {
-            categoria,
-            budget,
-            importo,
-            differenza: importo - budget
-        };
+        if (tipoTransazione === 'tutte') {
+            // Per "tutte le transazioni", mostriamo spese ed entrate separate
+            const importoSpese = speseMensili[categoria] || 0;
+            const importoEntrate = entrateMensili[categoria] || 0;
+            
+            return {
+                categoria,
+                budget,
+                importo: importoSpese + importoEntrate, // Totale per la tabella
+                importoSpese,
+                importoEntrate,
+                differenza: (importoSpese + importoEntrate) - budget
+            };
+        } else {
+            // Per singolo tipo, logica esistente
+            const importo = transazioniCorrenti[categoria] || 0;
+            
+            // Debug logging migliorato
+            console.log(`Processing categoria: "${categoria}"`, {
+                budget,
+                importo,
+                existsInBudget: budgetCorrente.hasOwnProperty(categoria),
+                existsInTrans: transazioniCorrenti.hasOwnProperty(categoria),
+                normalized: categoria.trim()
+            });
+            
+            return {
+                categoria,
+                budget,
+                importo,
+                differenza: importo - budget
+            };
+        }
     });
 
     // --- Sorting Data (using datiTabella) ---
@@ -337,6 +360,7 @@ function Budget() {
           >
             <option value="uscite">Uscite</option>
             <option value="entrate">Entrate</option>
+            <option value="tutte">Tutte le transazioni</option>
           </select>
         </div>
 
@@ -367,7 +391,8 @@ function Budget() {
                 </div>
                 <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900">
                 <h3 className="text-lg font-semibold mb-2">
-                    {tipoTransazione === 'entrate' ? 'Entrate Effettive' : 'Spese Effettive'}
+                    {tipoTransazione === 'entrate' ? 'Entrate Effettive' : 
+                     tipoTransazione === 'tutte' ? 'Transazioni Totali' : 'Spese Effettive'}
                 </h3>
                 <p className="text-2xl font-bold text-green-800 dark:text-green-200">
                     {totaleTransazioni.toFixed(2)} €
@@ -409,13 +434,32 @@ function Budget() {
                       <Tooltip formatter={(value) => `${value.toFixed(2)} €`} />
                       <Legend />
                       <Bar dataKey="budget" fill="#3182ce" name="Budget" onClick={handleBarClick} cursor="pointer" />
-                      <Bar
-                      dataKey="importo"
-                      fill={tipoTransazione === 'entrate' ? '#48bb78' : '#ef4444'}
-                      name={tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
-                      onClick={handleBarClick}
-                      cursor="pointer"
-                      />
+                      {tipoTransazione === 'tutte' ? (
+                        <>
+                          <Bar
+                            dataKey="importoSpese"
+                            fill="#ef4444"
+                            name="Spese"
+                            onClick={handleBarClick}
+                            cursor="pointer"
+                          />
+                          <Bar
+                            dataKey="importoEntrate"
+                            fill="#48bb78"
+                            name="Entrate"
+                            onClick={handleBarClick}
+                            cursor="pointer"
+                          />
+                        </>
+                      ) : (
+                        <Bar
+                          dataKey="importo"
+                          fill={tipoTransazione === 'entrate' ? '#48bb78' : '#ef4444'}
+                          name={tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
+                          onClick={handleBarClick}
+                          cursor="pointer"
+                        />
+                      )}
                   </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -444,7 +488,8 @@ function Budget() {
                           className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('importo')}`}
                           onClick={() => handleSort('importo')}
                       >
-                          {tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
+                          {tipoTransazione === 'entrate' ? 'Entrate' : 
+                           tipoTransazione === 'tutte' ? 'Transazioni' : 'Spese'}
                       </th>
                       <th
                           className={`px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer ${getSortClass('differenza')}`}
