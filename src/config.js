@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// URL del backend su Render
-const BASE_URL = 'https://budget-app-ao5r.onrender.com';
+// URL del backend - Vercel deployment
+const BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://budget-app-three-gules.vercel.app'  // Vercel URL
+  : 'http://localhost:5001';  // Local development
 
 // Function to get the auth token
 const getAuthToken = () => {
