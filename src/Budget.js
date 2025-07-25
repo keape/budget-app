@@ -143,6 +143,22 @@ function Budget() {
         const speseFiltrate = allSpese.filter(filterByPeriod);
         const entrateFiltrate = allEntrate.filter(filterByPeriod);
         console.log(`Filtrate a ${speseFiltrate.length} spese e ${entrateFiltrate.length} entrate per il periodo.`);
+        
+        // 🔍 DEBUG: Log dettagliato per febbraio
+        if (meseCorrente === 2) { // Febbraio
+          console.log('🔍 DEBUG FEBBRAIO - Tutte le entrate:', allEntrate.length);
+          console.log('🔍 DEBUG FEBBRAIO - Entrate febbraio filtrate:', entrateFiltrate.length);
+          console.log('🔍 DEBUG FEBBRAIO - Campione entrate non filtrate:', allEntrate.slice(0, 3).map(e => ({
+            categoria: e.categoria,
+            importo: e.importo,
+            data: e.data,
+            parsedMonth: new Date(e.data).getMonth(),
+            parsedYear: new Date(e.data).getFullYear()
+          })));
+          if (entrateFiltrate.length > 0) {
+            console.log('🔍 DEBUG FEBBRAIO - Campione entrate filtrate:', entrateFiltrate.slice(0, 3));
+          }
+        }
 
         // Aggregate Filtered Transactions
         const aggregateByCategory = (transactions) =>
@@ -152,8 +168,18 @@ function Budget() {
                 return acc;
             }, {});
 
-        setSpeseMensili(aggregateByCategory(speseFiltrate));
-        setEntrateMensili(aggregateByCategory(entrateFiltrate));
+        const speseAggregated = aggregateByCategory(speseFiltrate);
+        const entrateAggregated = aggregateByCategory(entrateFiltrate);
+        
+        setSpeseMensili(speseAggregated);
+        setEntrateMensili(entrateAggregated);
+        
+        // 🔍 DEBUG: Log aggregazione per febbraio
+        if (meseCorrente === 2) {
+          console.log('🔍 DEBUG FEBBRAIO - Spese aggregate:', speseAggregated);
+          console.log('🔍 DEBUG FEBBRAIO - Entrate aggregate:', entrateAggregated);
+        }
+        
         console.log('Aggregazione completata.');
 
       } catch (error) {
