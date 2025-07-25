@@ -16,7 +16,19 @@ router.get('/', authenticateToken, async (req, res) => {
     const totalSpese = await Spesa.countDocuments(userFilter);
     const spese = await Spesa.find(userFilter).sort({ data: -1 }).skip(skip).limit(limit);
     console.log('🔍 DEBUG GET - trovate', spese.length, 'spese per questo utente');
-    res.json({ spese, currentPage: page, totalPages: Math.ceil(totalSpese / limit), totalItems: totalSpese });
+    
+    // TEMPORARY SECURITY CHECK - Force isolation even if query fails
+    const filteredSpese = spese.filter(spesa => 
+      spesa.userId && spesa.userId.toString() === req.user.userId.toString()
+    );
+    console.log('🔒 SECURITY FILTER - dopo filtro security:', filteredSpese.length, 'spese');
+    
+    res.json({ 
+      spese: filteredSpese, 
+      currentPage: page, 
+      totalPages: Math.ceil(filteredSpese.length / limit), 
+      totalItems: filteredSpese.length 
+    });
   } catch (err) {
     console.error('❌ Errore nel recupero delle spese:', err);
     res.status(500).json({ error: "Errore nel recupero delle spese" });
