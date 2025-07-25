@@ -6,6 +6,15 @@ const router = express.Router();
 // GET /api/entrate (Paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 DEBUG ENTRATE - req.user:', req.user);
+    
+    // ⚠️  EMERGENCY HARD BLOCK - Solo keape può vedere dati
+    if (!req.user || !req.user.username || req.user.username !== 'keape') {
+      console.log('🚫 HARD BLOCK ENTRATE - Accesso negato per utente:', req.user?.username || 'UNDEFINED');
+      return res.json({ entrate: [], currentPage: 1, totalPages: 0, totalItems: 0 });
+    }
+    console.log('✅ HARD BLOCK ENTRATE - Accesso consentito per keape');
+    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;

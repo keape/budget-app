@@ -66,17 +66,27 @@ router.post('/login', async (req, res) => {
 
 // Middleware per l'autenticazione JWT
 const authenticateToken = (req, res, next) => {
+  console.log('🔐 AUTHENTICATETOKEN START - headers:', req.headers['authorization'] ? 'PRESENTE' : 'MANCANTE');
+  
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    console.log('❌ TOKEN MANCANTE');
     return res.status(401).json({ message: 'Token di accesso richiesto' });
   }
 
+  console.log('🔍 TOKEN PRESENTE, verifica in corso...');
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
+      console.log('❌ TOKEN NON VALIDO:', err.message);
       return res.status(403).json({ message: 'Token non valido' });
     }
+    
+    console.log('✅ TOKEN VALIDO - User data:', user);
+    console.log('🆔 USER ID ESTRATTO:', user.userId);
+    console.log('👤 USERNAME ESTRATTO:', user.username);
+    
     req.user = user;
     next();
   });
