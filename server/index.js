@@ -71,14 +71,15 @@ const { authenticateToken } = require('./routes/auth');
 // POST /api/fix-transactions
 app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
   try {
-    const spese = await Spesa.find();
-    console.log(`Trovate ${spese.length} spese da sistemare`);
+    const userFilter = { userId: req.user.userId };
+    const spese = await Spesa.find(userFilter);
+    console.log(`Trovate ${spese.length} spese da sistemare per utente ${req.user.userId}`);
     for (const spesa of spese) { 
       spesa.importo = -Math.abs(spesa.importo); 
       await spesa.save(); 
     }
-    const entrate = await Entrata.find();
-    console.log(`Trovate ${entrate.length} entrate da sistemare`);
+    const entrate = await Entrata.find(userFilter);
+    console.log(`Trovate ${entrate.length} entrate da sistemare per utente ${req.user.userId}`);
     for (const entrata of entrate) { 
       entrata.importo = Math.abs(entrata.importo); 
       await entrata.save(); 

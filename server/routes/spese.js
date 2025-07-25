@@ -6,11 +6,16 @@ const router = express.Router();
 // GET /api/spese (Paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log('🔍 DEBUG GET - req.user:', req.user);
+    console.log('🔍 DEBUG GET - userId per filtro:', req.user.userId);
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
-    const totalSpese = await Spesa.countDocuments();
-    const spese = await Spesa.find().sort({ data: -1 }).skip(skip).limit(limit);
+    const userFilter = { userId: req.user.userId };
+    console.log('🔍 DEBUG GET - filtro utilizzato:', userFilter);
+    const totalSpese = await Spesa.countDocuments(userFilter);
+    const spese = await Spesa.find(userFilter).sort({ data: -1 }).skip(skip).limit(limit);
+    console.log('🔍 DEBUG GET - trovate', spese.length, 'spese per questo utente');
     res.json({ spese, currentPage: page, totalPages: Math.ceil(totalSpese / limit), totalItems: totalSpese });
   } catch (err) {
     console.error('❌ Errore nel recupero delle spese:', err);
@@ -24,7 +29,10 @@ router.get('/totale-mese', authenticateToken, async (req, res) => {
     const oggi = new Date();
     const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
     const fineMese = new Date(oggi.getFullYear(), oggi.getMonth() + 1, 0);
-    const spese = await Spesa.find({ data: { $gte: inizioMese, $lte: fineMese } });
+    const spese = await Spesa.find({ 
+      userId: req.user.userId,
+      data: { $gte: inizioMese, $lte: fineMese } 
+    });
     const totale = spese.reduce((acc, spesa) => acc + spesa.importo, 0);
     res.json({ totale: totale.toFixed(2), mese: oggi.toLocaleString('it-IT', { month: 'long' }), anno: oggi.getFullYear() });
   } catch (err) {
@@ -36,13 +44,21 @@ router.get('/totale-mese', authenticateToken, async (req, res) => {
 // POST /api/spese
 router.post('/', authenticateToken, async (req, res) => {
   console.log('👉 Ricevuto nel body:', req.body);
+  console.log('🔍 DEBUG - req.user:', req.user);
+  console.log('🔍 DEBUG - userId da token:', req.user.userId);
   const { descrizione, importo, categoria, data } = req.body;
   if (!importo) return res.status(400).json({ error: "Importo mancante", message: "Inserisci un importo valido" });
   if (!categoria) return res.status(400).json({ error: "Categoria mancante", message: "Seleziona una categoria" });
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) return res.status(400).json({ error: "Importo non valido", message: "L'importo deve essere un numero valido" });
   try {
-    const nuovaSpesa = new Spesa({ descrizione: descrizione || '', importo: -Math.abs(importoNumerico), categoria, data: data ? new Date(data) : new Date() });
+    const nuovaSpesa = new Spesa({ 
+      userId: req.user.userId,
+      descrizione: descrizione || '', 
+      importo: -Math.abs(importoNumerico), 
+      categoria, 
+      data: data ? new Date(data) : new Date() 
+    });
     const spesaSalvata = await nuovaSpesa.save();
     res.status(201).json({ success: true, message: `Spesa di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`, data: spesaSalvata });
   } catch (err) {
@@ -55,7 +71,10 @@ router.post('/', authenticateToken, async (req, res) => {
 router.delete('/:id', authenticateToken, async (req, res) => {
   console.log('🗑️ Richiesta eliminazione spesa:', req.params.id);
   try {
-    const spesa = await Spesa.findByIdAndDelete(req.params.id);
+    const spesa = await Spesa.findOneAndDelete({ 
+      _id: req.params.id, 
+      userId: req.user.userId 
+    });
     if (!spesa) return res.status(404).json({ error: "Spesa non trovata" });
     console.log('✅ Spesa eliminata con successo:', req.params.id);
     res.json({ message: "Spesa eliminata con successo" });
@@ -71,7 +90,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
   const { descrizione, importo, categoria, data } = req.body;
   if (!importo || !categoria) return res.status(400).json({ error: "Dati mancanti" });
   try {
-    const spesa = await Spesa.findByIdAndUpdate(id, { descrizione, importo: Number(importo), categoria, data: data ? new Date(data) : undefined }, { new: true });
+    const spesa = await Spesa.findOneAndUpdate(
+      { _id: id, userId: req.user.userId },
+      { descrizione, importo: Number(importo), categoria, data: data ? new Date(data) : undefined },
+      { new: true }
+    );
     if (!spesa) return res.status(404).json({ error: "Spesa non trovata" });
     res.json(spesa);
   } catch (err) {

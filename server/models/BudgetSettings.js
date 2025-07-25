@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const budgetSettingsSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   anno: {
     type: Number,
     required: true
@@ -8,9 +13,9 @@ const budgetSettingsSchema = new mongoose.Schema({
   mese: {
     type: Number, 
     required: false, 
-    min: 1,  // Cambiato da 0 a 1
-    max: 12, // Cambiato da 11 a 12
-    default: undefined 
+    min: 0,  // Ripristinato a 0-11 per compatibilità JS
+    max: 11, // Ripristinato a 0-11 per compatibilità JS
+    default: null 
   },
   spese: {
     type: Map,
@@ -26,16 +31,9 @@ const budgetSettingsSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index to quickly find settings by year and month (including null month for yearly)
-// Allow multiple documents for the same year if month is specified,
-// but only one document per year where month is null.
-budgetSettingsSchema.index({ anno: 1, mese: 1 }, { 
-  unique: true, 
-  partialFilterExpression: { mese: { $type: 'number' } } // Unique constraint only for monthly settings
-});
-budgetSettingsSchema.index({ anno: 1, mese: null }, { 
-  unique: true, 
-  partialFilterExpression: { mese: null } // Unique constraint for yearly settings
+// Index con userId per user isolation e performance
+budgetSettingsSchema.index({ userId: 1, anno: 1, mese: 1 }, { 
+  unique: true
 });
 
 module.exports = mongoose.model('BudgetSettings', budgetSettingsSchema);
