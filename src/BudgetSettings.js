@@ -280,6 +280,55 @@ function BudgetSettings() {
     }
   };
 
+  const copiaDaMeseSuccessivo = async () => {
+    // Non fare nulla se è selezionato "Intero anno" o se è Dicembre (non c'è mese successivo nello stesso anno)
+    if (selectedMonth === 0 || selectedMonth === 12) {
+      alert('Non è possibile copiare i valori per questa selezione');
+      return;
+    }
+
+    setIsCopying(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Token non trovato');
+
+      // Calcola il mese successivo
+      const meseSuccessivo = selectedMonth + 1;
+      
+      // Recupera le impostazioni del mese successivo
+      const response = await axios.get(`${BASE_URL}/api/budget-settings`, {
+        params: { 
+          anno: selectedYear,
+          mese: meseSuccessivo - 1 // Indice 0-based per l'API
+        },
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      // Imposta i valori del mese successivo nel mese corrente
+      setBudgetSettings({
+        spese: response.data.spese || {},
+        entrate: response.data.entrate || {}
+      });
+
+      alert(`Valori copiati con successo da ${mesi[meseSuccessivo]} a ${mesi[selectedMonth]}!`);
+    } catch (error) {
+      console.error('Errore durante la copia dei valori:', error);
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleAuthError('Sessione scaduta o non valida. Effettua nuovamente il login.');
+      } else {
+        setError('Errore durante la copia dei valori. Riprova più tardi.');
+      }
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   return (
     <div className="theme-container p-6">
       <h1 className="text-4xl font-bold text-center mb-4 text-indigo-700 dark:text-indigo-300">
@@ -313,19 +362,34 @@ function BudgetSettings() {
           ))}
         </select>
         
-        {/* Nuovo bottone per copiare dal mese precedente */}
-        {selectedMonth > 0 && selectedMonth !== 1 && (
-          <button
-            onClick={copiaDaMesePrecedente}
-            disabled={isCopying || isLoading}
-            className={`w-full px-6 py-4 text-lg font-semibold text-white rounded-lg shadow-md transition-all duration-200 ${isCopying || isLoading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-purple-600 hover:bg-purple-700 hover:scale-105'
-            }`}
-          >
-            {isCopying ? 'Copia in corso...' : `Copia valori da ${mesi[selectedMonth-1]}`}
-          </button>
-        )}
+        {/* Bottoni per copiare dai mesi precedente/successivo */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {selectedMonth > 0 && selectedMonth !== 1 && (
+            <button
+              onClick={copiaDaMesePrecedente}
+              disabled={isCopying || isLoading}
+              className={`px-6 py-4 text-lg font-semibold text-white rounded-lg shadow-md transition-all duration-200 ${isCopying || isLoading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-purple-600 hover:bg-purple-700 hover:scale-105'
+              }`}
+            >
+              {isCopying ? 'Copia in corso...' : `Copia valori da ${mesi[selectedMonth-1]}`}
+            </button>
+          )}
+          
+          {selectedMonth > 0 && selectedMonth !== 12 && (
+            <button
+              onClick={copiaDaMeseSuccessivo}
+              disabled={isCopying || isLoading}
+              className={`px-6 py-4 text-lg font-semibold text-white rounded-lg shadow-md transition-all duration-200 ${isCopying || isLoading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+              }`}
+            >
+              {isCopying ? 'Copia in corso...' : `Copia valori da ${mesi[selectedMonth+1]}`}
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
