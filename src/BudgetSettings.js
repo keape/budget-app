@@ -3,6 +3,15 @@ import axios from 'axios';
 import BASE_URL from './config';
 import { useNavigate } from 'react-router-dom';
 
+// Crea un'istanza axios dedicata senza interceptor per evitare conflitti
+const budgetAxios = axios.create({
+  baseURL: BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 function BudgetSettings() {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -356,9 +365,8 @@ function BudgetSettings() {
           console.log(`💾 Salvataggio mese ${mese + 1}/12`);
           
           try {
-            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+            await budgetAxios.post('/api/budget-settings', dataToSend, {
               headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
               }
             });
@@ -415,10 +423,22 @@ function BudgetSettings() {
           throw new Error('Token di autenticazione non trovato. Effettua nuovamente il login.');
         }
         
-        console.log('🚀 Invio richiesta al backend con token manuale...');
-        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+        // Test di connessione prima del salvataggio
+        console.log('🔗 Test di connessione al backend...');
+        try {
+          await budgetAxios.get('/api/budget-settings', {
+            headers: { 'Authorization': `Bearer ${token}` },
+            params: { anno: selectedYear, mese: selectedMonth - 1 }
+          });
+          console.log('✅ Connessione al backend OK');
+        } catch (testError) {
+          console.error('❌ Test connessione fallito:', testError.message);
+          throw new Error(`Connessione al backend fallita: ${testError.message}`);
+        }
+
+        console.log('🚀 Invio richiesta di salvataggio al backend...');
+        const response = await budgetAxios.post('/api/budget-settings', dataToSend, {
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           }
         });
@@ -447,6 +467,18 @@ function BudgetSettings() {
       if (error.response?.status === 401 || error.response?.status === 403) {
          handleAuthError('Sessione scaduta o non valida durante il salvataggio. Effettua nuovamente il login.');
       } else {
+        // Log dettagliato per tutti i tipi di errore
+        console.error('🚨 Dettagli completi errore:', {
+          message: error.message,
+          code: error.code,
+          response: error.response,
+          request: error.request,
+          config: error.config,
+          isNetworkError: !error.response,
+          baseURL: BASE_URL,
+          fullURL: `${BASE_URL}/api/budget-settings`
+        });
+        
         // Mostra il messaggio di errore specifico dal backend se disponibile
         const backendMessage = error.response?.data?.message || error.message;
         setError(`Errore nel salvataggio: ${backendMessage}. Controlla la console per dettagli.`);
