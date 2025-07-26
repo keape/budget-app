@@ -345,6 +345,7 @@ function BudgetSettings() {
           const dataToSend = {
             anno: selectedYear,
             mese: mese,
+            isYearly: false, // Ogni mese è un'impostazione mensile
             settings: cleanBudgetSettings
           };
 
@@ -362,6 +363,7 @@ function BudgetSettings() {
         const dataToSend = {
           anno: selectedYear,
           mese: selectedMonth - 1,
+          isYearly: false, // È un'impostazione mensile
           settings: cleanBudgetSettings
         };
 
