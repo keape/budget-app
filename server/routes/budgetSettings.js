@@ -105,14 +105,50 @@ router.post('/', authenticateToken, async (req, res) => {
         entrate
     };
     
-    console.log('Salvando/Aggiornando le impostazioni con:', updateData);
+    console.log('📝 Salvando/Aggiornando le impostazioni:', {
+      userId: req.user.userId,
+      anno: annoInt,
+      mese: meseValue,
+      isYearly,
+      speseCount: spese.size,
+      entrateCount: entrate.size
+    });
 
-    // Find and update (or create if not found - upsert)
-    const result = await BudgetSettings.findOneAndUpdate(
-      { userId: req.user.userId, anno: annoInt, mese: meseValue }, // Query condition
-      updateData, // Data to set
-      { new: true, upsert: true, setDefaultsOnInsert: true } // Options
-    );
+    // Gestione più robusta per evitare errori di duplicazione
+    let result;
+    try {
+      // Prima prova a fare un update
+      console.log('🔍 Tentativo di update per documento esistente...');
+      result = await BudgetSettings.findOneAndUpdate(
+        { userId: req.user.userId, anno: annoInt, mese: meseValue }, // Query condition
+        updateData, // Data to set
+        { new: true } // Solo update, non upsert
+      );
+      
+      // Se il documento non esiste, crealo
+      if (!result) {
+        console.log('📄 Documento non trovato, creazione nuovo documento...');
+        result = await BudgetSettings.create(updateData);
+        console.log('✅ Nuovo documento creato con successo');
+      } else {
+        console.log('✅ Documento esistente aggiornato con successo');
+      }
+    } catch (createError) {
+      // Se la creazione fallisce per duplicazione, riprova con findOneAndUpdate
+      if (createError.code === 11000) {
+        console.log('Duplicato durante create, riprovo con update...');
+        result = await BudgetSettings.findOneAndUpdate(
+          { userId: req.user.userId, anno: annoInt, mese: meseValue },
+          updateData,
+          { new: true }
+        );
+        if (!result) {
+          throw new Error('Impossibile creare o aggiornare il documento dopo il conflitto di duplicazione');
+        }
+      } else {
+        throw createError;
+      }
+    }
 
     // Convert Map back to plain object for response
     const response = {
