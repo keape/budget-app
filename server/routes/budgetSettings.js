@@ -160,12 +160,25 @@ router.post('/', authenticateToken, async (req, res) => {
     res.json(response);
 
   } catch (error) {
-    console.error('Errore nel salvataggio delle impostazioni del budget:', error);
+    console.error('🚨 Errore nel salvataggio delle impostazioni del budget:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack,
+      requestData: { anno, mese, isYearly, userId: req.user.userId }
+    });
+    
     // Handle potential duplicate key error during upsert if needed
     if (error.code === 11000) {
          return res.status(409).json({ message: "Errore: impostazione duplicata rilevata." });
     }
-    res.status(500).json({ message: "Errore nel salvataggio delle impostazioni del budget" });
+    
+    // Invia il messaggio di errore specifico al frontend per debug
+    res.status(500).json({ 
+      message: "Errore nel salvataggio delle impostazioni del budget", 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
