@@ -318,11 +318,7 @@ function BudgetSettings() {
     setIsSaving(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        handleAuthError('Token non trovato per salvataggio. Effettua nuovamente il login.');
-        return;
-      }
+      // Il token viene gestito automaticamente dall'axios interceptor
 
       // Pulisce le categorie con valori vuoti o nulli prima del salvataggio
       const cleanBudgetSettings = {
@@ -351,7 +347,6 @@ function BudgetSettings() {
 
           await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           });
@@ -367,15 +362,16 @@ function BudgetSettings() {
           settings: cleanBudgetSettings
         };
 
-        console.log('Invio dati puliti:', {
-          url: `${BASE_URL}/api/budget-settings`,
+        console.log('🔄 Invio dati puliti:', {
+          baseUrl: BASE_URL,
+          fullUrl: `${BASE_URL}/api/budget-settings`,
           data: dataToSend,
-          token: 'presente'
+          cleanBudgetSettings: cleanBudgetSettings,
+          budgetSettingsOriginal: budgetSettings
         });
 
         const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -388,16 +384,24 @@ function BudgetSettings() {
         });
       }
     } catch (error) {
-      console.error('Dettagli errore salvataggio:', {
+      console.error('🚨 Dettagli errore salvataggio:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data
+        },
+        fullError: error
       });
 
       if (error.response?.status === 401 || error.response?.status === 403) {
          handleAuthError('Sessione scaduta o non valida durante il salvataggio. Effettua nuovamente il login.');
       } else {
-        setError('Errore nel salvataggio delle impostazioni. Riprova più tardi.');
+        // Mostra il messaggio di errore specifico dal backend se disponibile
+        const backendMessage = error.response?.data?.message || error.message;
+        setError(`Errore nel salvataggio: ${backendMessage}. Controlla la console per dettagli.`);
       }
     } finally {
       setIsSaving(false);
