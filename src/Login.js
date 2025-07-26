@@ -69,11 +69,20 @@ function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+          <h1 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white" id="login-title">
             Accedi al tuo account
-          </h2>
+          </h1>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        {error && (
+          <div 
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"
+            role="alert"
+            aria-live="polite"
+          >
+            <span className="block sm:inline">{error}</span>
+          </div>
+        )}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} aria-labelledby="login-title" noValidate>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="username" className="sr-only">Username</label>
@@ -81,12 +90,18 @@ function Login() {
                 id="username"
                 name="username"
                 type="text"
+                autoComplete="username"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm dark:bg-gray-700"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                aria-describedby="username-help"
+                aria-invalid={!!error}
               />
+              <div id="username-help" className="sr-only">
+                Inserisci il tuo nome utente
+              </div>
             </div>
             <div>
               <label htmlFor="password" className="sr-only">Password</label>
@@ -94,12 +109,18 @@ function Login() {
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm dark:bg-gray-700"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                aria-describedby="password-help"
+                aria-invalid={!!error}
               />
+              <div id="password-help" className="sr-only">
+                Inserisci la tua password
+              </div>
             </div>
           </div>
 
