@@ -7,7 +7,8 @@ import {
 } from 'recharts';
 import React from 'react';
 import { useTheme } from './ThemeContext';
-import BASE_URL from './config';\nimport LoadingSpinner from './components/LoadingSpinner';
+import BASE_URL from './config';
+import LoadingSpinner from './components/LoadingSpinner';
 
 function Filtri() {
   const [searchParams] = useSearchParams();
