@@ -8,12 +8,12 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 DEBUG ENTRATE - req.user:', req.user);
     
-    // ⚠️  EMERGENCY HARD BLOCK - Solo keape può vedere dati
-    if (!req.user || !req.user.username || req.user.username !== 'keape') {
-      console.log('🚫 HARD BLOCK ENTRATE - Accesso negato per utente:', req.user?.username || 'UNDEFINED');
-      return res.json({ entrate: [], currentPage: 1, totalPages: 0, totalItems: 0 });
+    // User isolation check
+    if (!req.user || !req.user.userId) {
+      console.log('🚫 Accesso negato - utente non autenticato');
+      return res.status(401).json({ error: 'Utente non autenticato' });
     }
-    console.log('✅ HARD BLOCK ENTRATE - Accesso consentito per keape');
+    console.log('✅ Utente autenticato:', req.user.username);
     
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
