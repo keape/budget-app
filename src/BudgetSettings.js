@@ -336,7 +336,9 @@ function BudgetSettings() {
 
       // Se è selezionato "Intero anno", salva le impostazioni per tutti i mesi
       if (selectedMonth === 0) {
-        // Salva le stesse impostazioni per ogni mese
+        console.log('💾 Salvataggio per intero anno - esecuzione sequenziale per evitare conflitti');
+        
+        // Salva le stesse impostazioni per ogni mese - SEQUENZIALMENTE per evitare race conditions
         for (let mese = 0; mese < 12; mese++) {
           const dataToSend = {
             anno: selectedYear,
@@ -345,11 +347,24 @@ function BudgetSettings() {
             settings: cleanBudgetSettings
           };
 
-          await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-            headers: {
-              'Content-Type': 'application/json'
+          console.log(`💾 Salvataggio mese ${mese + 1}/12`);
+          
+          try {
+            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            console.log(`✅ Mese ${mese + 1} salvato con successo`);
+            
+            // Piccolo delay per evitare race conditions nel database
+            if (mese < 11) { // Non fare delay dopo l'ultimo mese
+              await new Promise(resolve => setTimeout(resolve, 100));
             }
-          });
+          } catch (error) {
+            console.error(`❌ Errore nel salvataggio del mese ${mese + 1}:`, error);
+            throw error; // Interrompi il loop se c'è un errore
+          }
         }
 
         alert('Impostazioni salvate con successo per tutti i mesi!');
@@ -370,11 +385,31 @@ function BudgetSettings() {
           budgetSettingsOriginal: budgetSettings
         });
 
-        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-          headers: {
-            'Content-Type': 'application/json'
+        // Retry logic per gestire eventuali conflitti di concorrenza
+        let response;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            break; // Successo, esci dal loop
+          } catch (error) {
+            if (error.response?.status === 409 && retryCount < maxRetries) {
+              // Errore di duplicazione, ritenta dopo un breve delay
+              retryCount++;
+              console.log(`🔄 Tentativo ${retryCount}/${maxRetries} per conflitto di duplicazione`);
+              await new Promise(resolve => setTimeout(resolve, 200 * retryCount)); // Delay incrementale
+              continue;
+            } else {
+              throw error; // Re-throw se non è un errore di duplicazione o se abbiamo superato i retry
+            }
           }
-        });
+        }
 
         console.log('Risposta salvataggio:', response.data);
         alert('Impostazioni salvate con successo!');
