@@ -338,6 +338,12 @@ function BudgetSettings() {
       if (selectedMonth === 0) {
         console.log('💾 Salvataggio per intero anno - esecuzione sequenziale per evitare conflitti');
         
+        // Gestione manuale del token per tutto l'anno
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token di autenticazione non trovato. Effettua nuovamente il login.');
+        }
+        
         // Salva le stesse impostazioni per ogni mese - SEQUENZIALMENTE per evitare race conditions
         for (let mese = 0; mese < 12; mese++) {
           const dataToSend = {
@@ -352,7 +358,8 @@ function BudgetSettings() {
           try {
             await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
               headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
               }
             });
             console.log(`✅ Mese ${mese + 1} salvato con successo`);
@@ -402,11 +409,17 @@ function BudgetSettings() {
           budgetSettingsOriginal: budgetSettings
         });
 
-        // Tentativo singolo per ora (retry rimosso per debugging)
-        console.log('🚀 Invio richiesta al backend...');
+        // Gestione manuale dell'autenticazione per bypassare problemi con l'interceptor
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token di autenticazione non trovato. Effettua nuovamente il login.');
+        }
+        
+        console.log('🚀 Invio richiesta al backend con token manuale...');
         const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           }
         });
         console.log('✅ Risposta ricevuta dal backend:', response.status, response.data);
