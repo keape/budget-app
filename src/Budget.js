@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import BASE_URL from './config';\nimport LoadingSpinner from './components/LoadingSpinner';
+import BASE_URL from './config';
+import LoadingSpinner from './components/LoadingSpinner';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
