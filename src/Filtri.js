@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import React from 'react';
 import { useTheme } from './ThemeContext';
-import BASE_URL from './config';
+import BASE_URL from './config';\nimport LoadingSpinner from './components/LoadingSpinner';
 
 function Filtri() {
   const [searchParams] = useSearchParams();
@@ -611,9 +611,11 @@ function Filtri() {
       )}
 
       {isLoading && (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
+        <LoadingSpinner 
+          size="lg" 
+          text="Caricamento transazioni..." 
+          className="py-8"
+        />
       )}
     </div>
   );

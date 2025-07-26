@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import BASE_URL from './config';
+import BASE_URL from './config';\nimport LoadingSpinner from './components/LoadingSpinner';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -366,10 +366,11 @@ function Budget() {
 
         {/* Loading / Error Indicator */}
         {isLoading && (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            <p className="ml-3 text-gray-600 dark:text-gray-400">Caricamento dati...</p>
-          </div>
+          <LoadingSpinner 
+            size="lg" 
+            text="Caricamento dati budget..." 
+            className="py-8"
+          />
         )}
          {error && !isLoading && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded text-center">
