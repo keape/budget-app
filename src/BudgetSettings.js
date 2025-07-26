@@ -377,39 +377,39 @@ function BudgetSettings() {
           settings: cleanBudgetSettings
         };
 
-        console.log('🔄 Invio dati puliti:', {
+        // Validazione dati prima dell'invio
+        if (!dataToSend.anno || !dataToSend.settings) {
+          throw new Error('Dati mancanti: anno o settings non definiti');
+        }
+        
+        if (dataToSend.mese === undefined || dataToSend.mese === null) {
+          throw new Error('Mese non definito correttamente');
+        }
+        
+        console.log('🔄 Invio dati puliti e validati:', {
           baseUrl: BASE_URL,
           fullUrl: `${BASE_URL}/api/budget-settings`,
           data: dataToSend,
+          dataValidation: {
+            hasAnno: !!dataToSend.anno,
+            hasMese: dataToSend.mese !== undefined,
+            hasSettings: !!dataToSend.settings,
+            hasSpese: !!dataToSend.settings.spese,
+            hasEntrate: !!dataToSend.settings.entrate,
+            isYearly: dataToSend.isYearly
+          },
           cleanBudgetSettings: cleanBudgetSettings,
           budgetSettingsOriginal: budgetSettings
         });
 
-        // Retry logic per gestire eventuali conflitti di concorrenza
-        let response;
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (retryCount <= maxRetries) {
-          try {
-            response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-            break; // Successo, esci dal loop
-          } catch (error) {
-            if (error.response?.status === 409 && retryCount < maxRetries) {
-              // Errore di duplicazione, ritenta dopo un breve delay
-              retryCount++;
-              console.log(`🔄 Tentativo ${retryCount}/${maxRetries} per conflitto di duplicazione`);
-              await new Promise(resolve => setTimeout(resolve, 200 * retryCount)); // Delay incrementale
-              continue;
-            } else {
-              throw error; // Re-throw se non è un errore di duplicazione o se abbiamo superato i retry
-            }
+        // Tentativo singolo per ora (retry rimosso per debugging)
+        console.log('🚀 Invio richiesta al backend...');
+        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+          headers: {
+            'Content-Type': 'application/json'
           }
-        }
+        });
+        console.log('✅ Risposta ricevuta dal backend:', response.status, response.data);
 
         console.log('Risposta salvataggio:', response.data);
         alert('Impostazioni salvate con successo!');
