@@ -17,7 +17,7 @@ function Navbar() {
     setIsAccountMenuOpen(false);
   };
 
-  console.log('✅ Navbar renderizzata');
+  console.log('✅ Navbar renderizzata', { darkMode });
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow mb-6">
