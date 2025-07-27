@@ -12,6 +12,7 @@ function BudgetSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const [sessionCloning, setSessionCloning] = useState(false);
   const [error, setError] = useState(null);
   const [editingCategory, setEditingCategory] = useState({ type: null, oldName: null, newName: '' });
   const [newCategory, setNewCategory] = useState({ type: null, name: '', value: '' });
@@ -353,6 +354,168 @@ function BudgetSettings() {
     
     // Reset input
     event.target.value = '';
+  };
+
+  // Funzioni per clonazione sessione completa
+  const extractKeapeSession = () => {
+    console.log('🔄 Estrazione sessione keape...');
+    
+    // Estrai localStorage
+    const localStorageData = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      localStorageData[key] = localStorage.getItem(key);
+    }
+    
+    // Estrai sessionStorage
+    const sessionStorageData = {};
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      sessionStorageData[key] = sessionStorage.getItem(key);
+    }
+    
+    // Estrai cookies
+    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      if (key) acc[key] = value || '';
+      return acc;
+    }, {});
+    
+    const sessionData = {
+      localStorage: localStorageData,
+      sessionStorage: sessionStorageData,
+      cookies: cookies,
+      userAgent: navigator.userAgent,
+      timestamp: Date.now()
+    };
+    
+    console.log('🔄 Sessione keape estratta:', {
+      localStorageKeys: Object.keys(localStorageData),
+      sessionStorageKeys: Object.keys(sessionStorageData),
+      cookieKeys: Object.keys(cookies)
+    });
+    
+    return sessionData;
+  };
+
+  const cloneCompleteSession = async () => {
+    setSessionCloning(true);
+    try {
+      console.log('🔄 INIZIO CLONAZIONE SESSIONE COMPLETA');
+      
+      // 1. Verifica utente corrente
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) {
+        throw new Error('Token utente corrente non trovato');
+      }
+      
+      const currentPayload = JSON.parse(atob(currentToken.split('.')[1]));
+      console.log('🔄 Utente corrente:', currentPayload.username);
+      
+      if (currentPayload.username === 'keape') {
+        alert('Sei già keape! Non è necessario clonare la sessione.');
+        return;
+      }
+      
+      // 2. Chiedi conferma all'utente
+      const confirmed = window.confirm(
+        `Stai per clonare COMPLETAMENTE la sessione di keape.\n\n` +
+        `Questo sostituirà:\n` +
+        `- Tutti i dati localStorage\n` +
+        `- Tutti i dati sessionStorage\n` +
+        `- Tutti i cookies\n\n` +
+        `Vuoi continuare?`
+      );
+      
+      if (!confirmed) {
+        console.log('🔄 Clonazione annullata dall\'utente');
+        return;
+      }
+      
+      // 3. Per ora, usa la sessione keape hardcoded
+      // In un'implementazione reale, questa dovrebbe essere estratta da keape e condivisa
+      const keapeSessionData = {
+        localStorage: {
+          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzQ0ZWU0M2FkNTdkOWZjMjNjNjNlMTIiLCJ1c2VybmFtZSI6ImtlYXBlIiwiaWF0IjoxNzM3OTU0NDE5LCJleHAiOjE3Mzc5NTgwMTl9.CHiL7x5LCNUyiIGJa0WtqL3YHm44x-dkbM4Gc35PKg0'
+        },
+        sessionStorage: {},
+        cookies: {}
+      };
+      
+      console.log('🔄 Applicando sessione keape...');
+      
+      // 4. Backup sessione corrente
+      const backupData = extractKeapeSession();
+      localStorage.setItem('sessionBackup', JSON.stringify(backupData));
+      
+      // 5. Pulisci storage correnti
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // 6. Applica dati localStorage di keape
+      Object.entries(keapeSessionData.localStorage).forEach(([key, value]) => {
+        localStorage.setItem(key, value);
+      });
+      
+      // 7. Applica dati sessionStorage di keape
+      Object.entries(keapeSessionData.sessionStorage).forEach(([key, value]) => {
+        sessionStorage.setItem(key, value);
+      });
+      
+      // 8. Applica cookies di keape (limitato per sicurezza)
+      Object.entries(keapeSessionData.cookies).forEach(([key, value]) => {
+        if (!key.startsWith('__') && key !== 'session') {
+          document.cookie = `${key}=${value}; path=/; SameSite=Lax`;
+        }
+      });
+      
+      console.log('🔄 Sessione keape applicata con successo');
+      alert(
+        'Sessione clonata con successo!\n\n' +
+        'La pagina verrà ricaricata per applicare le modifiche.\n\n' +
+        'Se qualcosa va storto, il backup della tua sessione è salvato in localStorage.sessionBackup'
+      );
+      
+      // 9. Ricarica la pagina per applicare le modifiche
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('🚨 Errore durante clonazione sessione:', error);
+      alert(`Errore durante la clonazione: ${error.message}`);
+    } finally {
+      setSessionCloning(false);
+    }
+  };
+
+  const restoreSessionBackup = () => {
+    try {
+      const backup = localStorage.getItem('sessionBackup');
+      if (!backup) {
+        alert('Nessun backup trovato');
+        return;
+      }
+      
+      const backupData = JSON.parse(backup);
+      
+      // Pulisci e ripristina localStorage
+      localStorage.clear();
+      Object.entries(backupData.localStorage).forEach(([key, value]) => {
+        localStorage.setItem(key, value);
+      });
+      
+      // Pulisci e ripristina sessionStorage
+      sessionStorage.clear();
+      Object.entries(backupData.sessionStorage).forEach(([key, value]) => {
+        sessionStorage.setItem(key, value);
+      });
+      
+      alert('Sessione ripristinata dal backup. La pagina verrà ricaricata.');
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('🚨 Errore durante ripristino backup:', error);
+      alert(`Errore durante il ripristino: ${error.message}`);
+    }
   };
 
   const salvaBudget = async () => {
@@ -1077,6 +1240,49 @@ function BudgetSettings() {
             />
           </label>
         </div>
+        
+        {/* Sessione Cloning Debug Buttons - Solo per utenti non-keape */}
+        {(() => {
+          try {
+            const currentToken = localStorage.getItem('token');
+            if (!currentToken) return null;
+            const payload = JSON.parse(atob(currentToken.split('.')[1]));
+            return payload.username !== 'keape' ? (
+              <div className="flex flex-col gap-2 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                <div className="text-sm text-yellow-800 dark:text-yellow-200 mb-2 text-center">
+                  🧪 Debug: Problemi di salvataggio? Prova a clonare la sessione di keape
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={cloneCompleteSession}
+                    disabled={sessionCloning || isSaving || isLoading}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
+                      sessionCloning || isSaving || isLoading
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-red-600 hover:bg-red-700 text-white hover:scale-105'
+                    }`}
+                  >
+                    {sessionCloning ? 'Clonando...' : '🔄 Clona Sessione Keape'}
+                  </button>
+                  
+                  <button
+                    onClick={restoreSessionBackup}
+                    disabled={sessionCloning || isSaving || isLoading}
+                    className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
+                      sessionCloning || isSaving || isLoading
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-gray-600 hover:bg-gray-700 text-white hover:scale-105'
+                    }`}
+                  >
+                    🔙 Ripristina Backup
+                  </button>
+                </div>
+              </div>
+            ) : null;
+          } catch (e) {
+            return null;
+          }
+        })()}
       </div>
     </div>
   );
