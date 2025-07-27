@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 // Crea un'istanza axios dedicata senza interceptor per evitare conflitti
 const budgetAxios = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Aumentato a 30 secondi
   headers: {
     'Content-Type': 'application/json'
   }
@@ -425,24 +425,41 @@ function BudgetSettings() {
         
         // Test di connessione prima del salvataggio
         console.log('🔗 Test di connessione al backend...');
+        console.log(`📡 URL backend: ${budgetAxios.defaults.baseURL}`);
+        console.log(`⏱️ Timeout impostato: ${budgetAxios.defaults.timeout}ms`);
+        
+        const testStartTime = Date.now();
         try {
-          await budgetAxios.get('/api/budget-settings', {
+          console.log('🚀 Avvio test GET...');
+          const testResponse = await budgetAxios.get('/api/budget-settings', {
             headers: { 'Authorization': `Bearer ${token}` },
             params: { anno: selectedYear, mese: selectedMonth - 1 }
           });
-          console.log('✅ Connessione al backend OK');
+          const testDuration = Date.now() - testStartTime;
+          console.log(`✅ Connessione al backend OK in ${testDuration}ms`);
+          console.log('📊 Risposta test:', testResponse.status, testResponse.statusText);
         } catch (testError) {
-          console.error('❌ Test connessione fallito:', testError.message);
+          const testDuration = Date.now() - testStartTime;
+          console.error(`❌ Test connessione fallito dopo ${testDuration}ms:`, {
+            message: testError.message,
+            code: testError.code,
+            response: testError.response?.status,
+            timeout: testError.code === 'ECONNABORTED'
+          });
           throw new Error(`Connessione al backend fallita: ${testError.message}`);
         }
 
         console.log('🚀 Invio richiesta di salvataggio al backend...');
+        console.log('📤 Dati inviati:', dataToSend);
+        
+        const saveStartTime = Date.now();
         const response = await budgetAxios.post('/api/budget-settings', dataToSend, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        console.log('✅ Risposta ricevuta dal backend:', response.status, response.data);
+        const saveDuration = Date.now() - saveStartTime;
+        console.log(`✅ Risposta ricevuta dal backend in ${saveDuration}ms:`, response.status, response.data);
 
         console.log('Risposta salvataggio:', response.data);
         alert('Impostazioni salvate con successo!');
