@@ -61,7 +61,7 @@ app.use('/api/budget-settings', budgetSettingsRoutes);
 
 // Root test route
 app.get('/', (req, res) => {
-  res.send('✅ Backend Budget App attivo!');
+  res.send('✅ Backend Budget App attivo! v1.1');
 });
 
 // Additional utility routes
