@@ -426,6 +426,24 @@ function BudgetSettings() {
           throw new Error('Token non trovato. Effettua il login.');
         }
         
+        // Debug token per troubleshooting keape86
+        try {
+          const tokenParts = token.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            console.log('🔍 Debug token utente:', {
+              username: payload.username,
+              userId: payload.userId,
+              exp: payload.exp,
+              iat: payload.iat,
+              isExpired: Date.now() / 1000 > payload.exp,
+              timeToExpiry: payload.exp - (Date.now() / 1000)
+            });
+          }
+        } catch (tokenError) {
+          console.error('❌ Errore nel decodificare il token:', tokenError);
+        }
+        
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             console.log(`🔄 Tentativo ${attempt}/${maxRetries}...`);
@@ -445,7 +463,13 @@ function BudgetSettings() {
             
           } catch (error) {
             lastError = error;
-            console.warn(`⚠️ Tentativo ${attempt} fallito:`, error.message);
+            console.warn(`⚠️ Tentativo ${attempt} fallito:`, {
+              message: error.message,
+              status: error.response?.status,
+              statusText: error.response?.statusText,
+              data: error.response?.data,
+              isAuthError: error.response?.status === 401 || error.response?.status === 403
+            });
             
             if (attempt < maxRetries) {
               const delay = attempt * 2000; // 2s, 4s delay progressivo
