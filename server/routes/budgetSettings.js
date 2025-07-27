@@ -107,12 +107,30 @@ router.post('/', authenticateToken, async (req, res) => {
     
     console.log('📝 Salvando/Aggiornando le impostazioni:', {
       userId: req.user.userId,
+      username: req.user.username,
       anno: annoInt,
       mese: meseValue,
       isYearly,
       speseCount: spese.size,
       entrateCount: entrate.size
     });
+    
+    // Debug specifico per keape86
+    if (req.user.username === 'keape86') {
+      console.log('🧪 DEBUG KEAPE86: Inizio salvataggio specifico');
+      try {
+        // Test query per vedere se ci sono record esistenti
+        const existingRecords = await BudgetSettings.find({ userId: req.user.userId });
+        console.log('🧪 DEBUG KEAPE86: Record esistenti trovati:', existingRecords.length);
+        
+        // Test specifica query che useremo
+        const testQuery = { userId: req.user.userId, anno: annoInt, mese: meseValue };
+        const existingDoc = await BudgetSettings.findOne(testQuery);
+        console.log('🧪 DEBUG KEAPE86: Documento specifico trovato:', !!existingDoc);
+      } catch (debugError) {
+        console.error('🧪 DEBUG KEAPE86: Errore nella query test:', debugError);
+      }
+    }
 
     // Gestione più robusta per evitare errori di duplicazione
     let result;
