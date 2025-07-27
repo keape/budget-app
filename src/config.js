@@ -5,6 +5,10 @@ const BASE_URL = process.env.NODE_ENV === 'production'
   ? 'https://budget-app-three-gules.vercel.app'  // Vercel URL
   : 'http://localhost:5001';  // Local development
 
+// Test: Aggiungi logging per vedere se è un problema di URL
+console.log('🔧 Config BASE_URL:', BASE_URL);
+console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
+
 // Function to get the auth token
 const getAuthToken = () => {
   try {
