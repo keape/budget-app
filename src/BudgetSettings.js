@@ -89,8 +89,8 @@ function BudgetSettings() {
           iat: payload.iat,
           isExpired: Date.now() / 1000 > payload.exp,
           timeToExpiry: payload.exp - (Date.now() / 1000),
-          tokenLength: token.length,
-          tokenStart: token.substring(0, 50) + '...'
+          tokenLength: currentToken.length,
+          tokenStart: currentToken.substring(0, 50) + '...'
         });
       } catch (e) {
         console.error('❌ Errore decodifica token:', e);
@@ -499,15 +499,15 @@ function BudgetSettings() {
         let lastError;
         const maxRetries = 3;
         
-        // Gestione manuale token per bypassare problemi interceptor
-        const token = localStorage.getItem('token');
-        if (!token) {
+        // Usa il token già ottenuto sopra - non ridichiarare
+        const currentToken = localStorage.getItem('token'); // Token attuale (potrebbe essere keape)
+        if (!currentToken) {
           throw new Error('Token non trovato. Effettua il login.');
         }
         
         // Debug token per troubleshooting keape86
         try {
-          const tokenParts = token.split('.');
+          const tokenParts = currentToken.split('.');
           if (tokenParts.length === 3) {
             const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
             console.log('🔍 Debug token utente:', {
@@ -531,7 +531,7 @@ function BudgetSettings() {
             // Usa ESATTAMENTE lo stesso pattern del GET che funziona per keape86
             response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
               headers: {
-                'Authorization': `Bearer ${token}`,
+                'Authorization': `Bearer ${currentToken}`,
                 'Content-Type': 'application/json'
               }
               // Rimuovo timeout per essere identico al GET che funziona
