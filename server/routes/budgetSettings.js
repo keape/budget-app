@@ -118,20 +118,29 @@ router.post('/', authenticateToken, async (req, res) => {
       entrateCount: entrate.size
     });
     
-    // Debug specifico per keape86
-    if (req.user.username === 'keape86') {
-      console.log('🧪 DEBUG KEAPE86: Inizio salvataggio specifico');
+    // Debug per TUTTI gli utenti NON-keape
+    if (req.user.username !== 'keape') {
+      console.log(`🧪 DEBUG NON-KEAPE (${req.user.username}): Inizio salvataggio`);
       try {
         // Test query per vedere se ci sono record esistenti
         const existingRecords = await BudgetSettings.find({ userId: req.user.userId });
-        console.log('🧪 DEBUG KEAPE86: Record esistenti trovati:', existingRecords.length);
+        console.log(`🧪 DEBUG ${req.user.username}: Record esistenti trovati:`, existingRecords.length);
         
         // Test specifica query che useremo
         const testQuery = { userId: req.user.userId, anno: annoInt, mese: meseValue };
         const existingDoc = await BudgetSettings.findOne(testQuery);
-        console.log('🧪 DEBUG KEAPE86: Documento specifico trovato:', !!existingDoc);
+        console.log(`🧪 DEBUG ${req.user.username}: Documento specifico trovato:`, !!existingDoc);
+        
+        // Confronta con keape - trova il primo record di keape per confronto
+        const keapeUser = await BudgetSettings.findOne({}).populate('userId');
+        if (keapeUser) {
+          console.log(`🧪 DEBUG ${req.user.username}: Esempio record keape per confronto:`, {
+            userId: keapeUser.userId,
+            structureExample: Object.keys(keapeUser.toObject())
+          });
+        }
       } catch (debugError) {
-        console.error('🧪 DEBUG KEAPE86: Errore nella query test:', debugError);
+        console.error(`🧪 DEBUG ${req.user.username}: Errore nella query test:`, debugError);
       }
     }
 
