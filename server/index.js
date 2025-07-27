@@ -78,12 +78,10 @@ app.get('/', (req, res) => {
 });
 
 
-// Import authenticateToken for test endpoint
-const { authenticateToken } = require('./routes/auth');
-
 // Additional utility routes
 const Spesa = require('./models/Spesa');
 const Entrata = require('./models/Entrata');
+const { authenticateToken } = require('./routes/auth');
 
 // POST /api/fix-transactions
 app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
