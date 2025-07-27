@@ -59,6 +59,17 @@ app.use('/api/spese', speseRoutes);
 app.use('/api/entrate', entrateRoutes);
 app.use('/api/budget-settings', budgetSettingsRoutes);
 
+// Root test route
+app.get('/', (req, res) => {
+  res.send('✅ Backend Budget App attivo! v1.2 - Fixed imports');
+});
+
+
+// Additional utility routes
+const Spesa = require('./models/Spesa');
+const Entrata = require('./models/Entrata');
+const { authenticateToken } = require('./routes/auth');
+
 // TEST ENDPOINT - per verificare autenticazione per tutti gli utenti
 app.post('/api/test-auth', authenticateToken, (req, res) => {
   console.log('🧪 TEST AUTH - Utente:', req.user.username, 'ID:', req.user.userId);
@@ -71,17 +82,6 @@ app.post('/api/test-auth', authenticateToken, (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Root test route
-app.get('/', (req, res) => {
-  res.send('✅ Backend Budget App attivo! v1.2 - Fixed imports');
-});
-
-
-// Additional utility routes
-const Spesa = require('./models/Spesa');
-const Entrata = require('./models/Entrata');
-const { authenticateToken } = require('./routes/auth');
 
 // POST /api/fix-transactions
 app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
