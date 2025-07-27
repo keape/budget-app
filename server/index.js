@@ -64,6 +64,48 @@ app.get('/', (req, res) => {
   res.send('✅ Backend Budget App attivo! v1.2 - Fixed imports');
 });
 
+// EMERGENCY: Remove unique index directly
+app.post('/api/emergency-remove-index', async (req, res) => {
+  try {
+    console.log('🚨 EMERGENCY: Removing unique index from database');
+    const BudgetSettings = require('./models/BudgetSettings');
+    
+    // Get the collection directly
+    const collection = BudgetSettings.collection;
+    
+    // List existing indexes
+    const indexes = await collection.listIndexes().toArray();
+    console.log('📋 Current indexes:', indexes.map(idx => ({ name: idx.name, key: idx.key })));
+    
+    // Try to drop the problematic unique index
+    try {
+      await collection.dropIndex({ userId: 1, anno: 1, mese: 1 });
+      console.log('✅ Unique index dropped successfully');
+    } catch (dropError) {
+      console.log('⚠️ Index may not exist:', dropError.message);
+    }
+    
+    // List remaining indexes
+    const finalIndexes = await collection.listIndexes().toArray();
+    console.log('📋 Final indexes:', finalIndexes.map(idx => ({ name: idx.name, key: idx.key })));
+    
+    res.json({
+      success: true,
+      message: 'Index removal completed',
+      initialIndexes: indexes.length,
+      finalIndexes: finalIndexes.length,
+      removedIndexes: indexes.length - finalIndexes.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Emergency index removal failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 
 // Additional utility routes
 const Spesa = require('./models/Spesa');
