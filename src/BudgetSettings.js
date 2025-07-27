@@ -16,6 +16,7 @@ function BudgetSettings() {
   const [editingCategory, setEditingCategory] = useState({ type: null, oldName: null, newName: '' });
   const [newCategory, setNewCategory] = useState({ type: null, name: '', value: '' });
   const [showAddCategory, setShowAddCategory] = useState({ spese: false, entrate: false });
+  const [isFixing, setIsFixing] = useState(false);
 
   const mesi = [
     "Intero anno", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -355,6 +356,21 @@ function BudgetSettings() {
     event.target.value = '';
   };
 
+
+  const emergencyFix = async () => {
+    setIsFixing(true);
+    try {
+      console.log('🚨 Avvio fix di emergenza...');
+      const response = await axios.post(`${BASE_URL}/api/budget-settings/emergency-fix`);
+      console.log('✅ Fix completato:', response.data);
+      alert(`Fix completato! Duplicati rimossi: ${response.data.deletedDuplicates}`);
+    } catch (error) {
+      console.error('❌ Errore fix emergenza:', error);
+      alert('Errore durante il fix di emergenza');
+    } finally {
+      setIsFixing(false);
+    }
+  };
 
   const salvaBudget = async () => {
     console.log('🚀 SALVA BUDGET START');
@@ -919,6 +935,28 @@ function BudgetSettings() {
             />
           </label>
         </div>
+        
+        {/* Emergency Fix Button - Solo se ci sono errori 409 */}
+        {error && error.includes('409') && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="text-sm text-red-800 mb-2 text-center">
+              🚨 Errore duplicati database rilevato
+            </div>
+            <div className="flex justify-center">
+              <button
+                onClick={emergencyFix}
+                disabled={isFixing || isSaving || isLoading}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
+                  isFixing || isSaving || isLoading
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700 text-white hover:scale-105'
+                }`}
+              >
+                {isFixing ? 'Fixing...' : '🛠️ Fix Database Duplicates'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
