@@ -172,7 +172,35 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// EMERGENCY ENDPOINT - Remove duplicates and fix unique index issues
+// EMERGENCY ENDPOINT - Remove unique index from MongoDB
+router.post('/remove-unique-index', authenticateToken, async (req, res) => {
+  try {
+    console.log('🚨 REMOVING UNIQUE INDEX - User:', req.user.username);
+    
+    // Drop the unique index
+    try {
+      await BudgetSettings.collection.dropIndex({ userId: 1, anno: 1, mese: 1 });
+      console.log('✅ Unique index dropped successfully');
+    } catch (indexError) {
+      console.log('⚠️ Index may not exist or already dropped:', indexError.message);
+    }
+    
+    // List remaining indexes for verification
+    const indexes = await BudgetSettings.collection.listIndexes().toArray();
+    console.log('📋 Remaining indexes:', indexes.map(idx => ({ name: idx.name, key: idx.key })));
+    
+    res.json({
+      message: 'Unique index removal completed',
+      remainingIndexes: indexes.map(idx => ({ name: idx.name, key: idx.key }))
+    });
+    
+  } catch (error) {
+    console.error('❌ Index removal error:', error);
+    res.status(500).json({ message: 'Index removal failed', error: error.message });
+  }
+});
+
+// EMERGENCY ENDPOINT - Remove duplicates and fix unique index issues  
 router.post('/emergency-fix', authenticateToken, async (req, res) => {
   try {
     console.log('🚨 EMERGENCY FIX - User:', req.user.username);
