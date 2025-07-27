@@ -64,8 +64,8 @@ app.get('/', (req, res) => {
   res.send('✅ Backend Budget App attivo! v1.2 - Fixed imports');
 });
 
-// EMERGENCY: Remove unique index directly
-app.post('/api/emergency-remove-index', async (req, res) => {
+// EMERGENCY: Remove unique index directly - BOTH GET AND POST
+app.all('/api/emergency-remove-index', async (req, res) => {
   try {
     console.log('🚨 EMERGENCY: Removing unique index from database');
     const BudgetSettings = require('./models/BudgetSettings');
