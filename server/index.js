@@ -64,7 +64,66 @@ app.get('/', (req, res) => {
   res.send('✅ Backend Budget App attivo! v1.2 - Fixed imports');
 });
 
-// EMERGENCY: Remove unique index directly - BOTH GET AND POST
+// MIGRATION: Copy data from old to new collection
+app.all('/api/migrate-budget-data', async (req, res) => {
+  try {
+    console.log('🚀 MIGRATING: Copying data from old to new collection');
+    const mongoose = require('mongoose');
+    
+    const oldCollection = mongoose.connection.db.collection('budgetsettings');
+    const newCollection = mongoose.connection.db.collection('budgetsettings_new');
+    
+    // Get all documents from old collection
+    const oldDocs = await oldCollection.find({}).toArray();
+    console.log(`📋 Found ${oldDocs.length} documents in old collection`);
+    
+    let migratedCount = 0;
+    
+    for (const doc of oldDocs) {
+      try {
+        // Convert Maps to objects if needed
+        const newDoc = {
+          userId: doc.userId,
+          anno: doc.anno,
+          mese: doc.mese,
+          spese: doc.spese instanceof Map ? Object.fromEntries(doc.spese) : (doc.spese || {}),
+          entrate: doc.entrate instanceof Map ? Object.fromEntries(doc.entrate) : (doc.entrate || {}),
+          createdAt: doc.createdAt || new Date(),
+          updatedAt: new Date()
+        };
+        
+        // Insert into new collection (replace if exists)
+        await newCollection.replaceOne(
+          { userId: doc.userId, anno: doc.anno, mese: doc.mese },
+          newDoc,
+          { upsert: true }
+        );
+        
+        migratedCount++;
+      } catch (docError) {
+        console.error('❌ Error migrating document:', doc._id, docError.message);
+      }
+    }
+    
+    console.log(`✅ Migration completed: ${migratedCount}/${oldDocs.length} documents migrated`);
+    
+    res.json({
+      success: true,
+      message: 'Data migration completed',
+      totalDocuments: oldDocs.length,
+      migratedDocuments: migratedCount
+    });
+    
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// EMERGENCY: Remove unique index directly - BOTH GET AND POST  
 app.all('/api/emergency-remove-index', async (req, res) => {
   try {
     console.log('🚨 EMERGENCY: Removing unique index from database');
