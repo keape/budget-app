@@ -478,6 +478,19 @@ function BudgetSettings() {
         console.log('🚀 Invio richiesta di salvataggio al backend...');
         console.log('📤 Dati inviati:', dataToSend);
         
+        // Test GET prima di POST per keape86
+        console.log('🧪 Test GET budget-settings per keape86...');
+        try {
+          const getResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            params: { anno: dataToSend.anno, mese: dataToSend.mese },
+            timeout: 10000
+          });
+          console.log('✅ GET funziona:', getResponse.status);
+        } catch (getError) {
+          console.error('❌ GET fallito:', getError.message);
+        }
+        
         
         // Sistema di retry per gestire timeout e problemi di rete
         let response;
