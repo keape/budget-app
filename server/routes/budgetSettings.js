@@ -115,37 +115,19 @@ router.post('/', authenticateToken, async (req, res) => {
       entrate
     };
     
-    console.log('🔍 Verifico documento esistente con query:', query);
-    let result;
+    console.log('🔍 Cerco documento esistente...');
+    let result = await BudgetSettings.findOne(query);
     
-    // Prima elimina eventuali duplicati esistenti
-    const existingDocs = await BudgetSettings.find(query);
-    console.log('🔍 Documenti esistenti trovati:', existingDocs.length);
-    
-    if (existingDocs.length > 1) {
-      console.log('🧹 Pulizia duplicati - mantengo solo il più recente');
-      // Ordina per data di creazione e mantieni solo il più recente
-      existingDocs.sort((a, b) => b.createdAt - a.createdAt);
-      const toKeep = existingDocs[0];
-      const toDelete = existingDocs.slice(1);
-      
-      for (const doc of toDelete) {
-        await BudgetSettings.deleteOne({ _id: doc._id });
-        console.log('🧹 Eliminato duplicato:', doc._id);
-      }
+    if (result) {
+      console.log('📝 Aggiorno documento esistente');
+      result.spese = spese;
+      result.entrate = entrate;
+      await result.save();
+    } else {
+      console.log('📝 Creo nuovo documento');
+      result = new BudgetSettings(updateData);
+      await result.save();
     }
-    
-    // Ora usa findOneAndUpdate con upsert
-    console.log('📝 Usando findOneAndUpdate con upsert');
-    result = await BudgetSettings.findOneAndUpdate(
-      query,
-      updateData,
-      { 
-        new: true,
-        upsert: true,
-        runValidators: true
-      }
-    );
     
     console.log('✅ Operazione completata con successo per user:', req.user.username);
     

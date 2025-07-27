@@ -31,7 +31,6 @@ const budgetSettingsSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index con userId per user isolation e performance - RIMOSSO UNIQUE per evitare 409
-budgetSettingsSchema.index({ userId: 1, anno: 1, mese: 1 });
+// NO INDEX - Evita completamente i conflitti 409
 
 module.exports = mongoose.model('BudgetSettings', budgetSettingsSchema);
