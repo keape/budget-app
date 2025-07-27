@@ -115,18 +115,25 @@ router.post('/', authenticateToken, async (req, res) => {
       entrate
     };
     
-    let result;
-    
-    // Trova e aggiorna, oppure crea nuovo
+    console.log('🔍 Verifico documento esistente con query:', query);
     const existingDoc = await BudgetSettings.findOne(query);
+    console.log('🔍 Documento esistente trovato:', !!existingDoc);
     
     if (existingDoc) {
-      console.log('📝 Aggiornamento documento esistente');
-      result = await BudgetSettings.findOneAndUpdate(query, updateData, { new: true });
-    } else {
-      console.log('📝 Creazione nuovo documento');
-      result = await BudgetSettings.create(updateData);
+      console.log('🔍 ID documento esistente:', existingDoc._id);
     }
+    
+    // Usa upsert per evitare race conditions
+    console.log('📝 Usando findOneAndUpdate con upsert');
+    const result = await BudgetSettings.findOneAndUpdate(
+      query,
+      updateData,
+      { 
+        new: true,
+        upsert: true, // Crea se non esiste
+        runValidators: true
+      }
+    );
     
     console.log('✅ Operazione completata con successo per user:', req.user.username);
     
