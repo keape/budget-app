@@ -8,6 +8,7 @@ const { router: authRoutes } = require('./routes/auth');
 const speseRoutes = require('./routes/spese');
 const entrateRoutes = require('./routes/entrate');
 const budgetSettingsRoutes = require('./routes/budgetSettings');
+const categorieRoutes = require('./routes/categorie');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/spese', speseRoutes);
 app.use('/api/entrate', entrateRoutes);
 app.use('/api/budget-settings', budgetSettingsRoutes);
+app.use('/api/categorie', categorieRoutes);
 
 // Root test route
 app.get('/', (req, res) => {
