@@ -420,13 +420,12 @@ function BudgetSettings() {
           console.log(`💾 Salvataggio mese ${mese + 1}/12`);
           
           try {
-            // Usa axios con headers espliciti
+            // Usa ESATTAMENTE lo stesso pattern del GET che funziona
             await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              },
-              timeout: 20000
+              }
             });
             console.log(`✅ Mese ${mese + 1} salvato con successo`);
             
@@ -513,13 +512,13 @@ function BudgetSettings() {
             console.log(`🔄 Tentativo ${attempt}/${maxRetries} con fetch diretto...`);
             const saveStartTime = Date.now();
             
-            // Torna ad axios con headers espliciti per evitare problemi CORS con fetch
+            // Usa ESATTAMENTE lo stesso pattern del GET che funziona per keape86
             response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-              },
-              timeout: 20000
+              }
+              // Rimuovo timeout per essere identico al GET che funziona
             });
             
             const saveDuration = Date.now() - saveStartTime;
