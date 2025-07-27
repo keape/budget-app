@@ -89,8 +89,8 @@ function BudgetSettings() {
           iat: payload.iat,
           isExpired: Date.now() / 1000 > payload.exp,
           timeToExpiry: payload.exp - (Date.now() / 1000),
-          tokenLength: currentToken.length,
-          tokenStart: currentToken.substring(0, 50) + '...'
+          tokenLength: token.length,
+          tokenStart: token.substring(0, 50) + '...'
         });
       } catch (e) {
         console.error('❌ Errore decodifica token:', e);
