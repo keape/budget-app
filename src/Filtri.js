@@ -403,7 +403,7 @@ function Filtri() {
               </div>
               <div>
                 <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  Transazione{transazioniFiltrate.length !== 1 ? 'i' : ''} trovate
+                  Transazioni trovate
                 </p>
                 {(filtroCategoria || ricercaDescrizione || dataInizio || dataFine || filtroTipo !== 'tutte') && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
