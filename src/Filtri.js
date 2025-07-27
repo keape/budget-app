@@ -730,13 +730,13 @@ function Filtri() {
         </div>
       )}
 
-        {isLoading && (
-          <LoadingSpinner 
-            size="lg" 
-            text="Caricamento transazioni..." 
-            className="py-8"
-          />
-        )}
+      {isLoading && (
+        <LoadingSpinner 
+          size="lg" 
+          text="Caricamento transazioni..." 
+          className="py-8"
+        />
+      )}
       </div>
     </div>
   );
