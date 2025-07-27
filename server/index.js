@@ -70,6 +70,11 @@ app.all('/api/migrate-budget-data', async (req, res) => {
     console.log('🚀 MIGRATING: Copying data from old to new collection');
     const mongoose = require('mongoose');
     
+    // Ensure connection is ready
+    if (!mongoose.connection.db) {
+      throw new Error('Database connection not ready');
+    }
+    
     const oldCollection = mongoose.connection.db.collection('budgetsettings');
     const newCollection = mongoose.connection.db.collection('budgetsettings_new');
     
