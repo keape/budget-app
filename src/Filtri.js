@@ -17,6 +17,7 @@ function Filtri() {
   const [filtroTipo, setFiltroTipo] = useState('tutte'); // 'entrate', 'uscite', 'tutte'
   const [dataInizio, setDataInizio] = useState('');
   const [dataFine, setDataFine] = useState('');
+  const [ricercaDescrizione, setRicercaDescrizione] = useState('');
   const { darkMode } = useTheme();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -123,6 +124,13 @@ function Filtri() {
     
     // Se c'è una categoria selezionata, filtra per categoria
     if (filtroCategoria && t.categoria !== filtroCategoria) return false;
+
+    // Se c'è una ricerca testuale, filtra per descrizione (case-insensitive)
+    if (ricercaDescrizione) {
+      const descrizione = t.descrizione || '';
+      const ricerca = ricercaDescrizione.toLowerCase();
+      if (!descrizione.toLowerCase().includes(ricerca)) return false;
+    }
   
     // Se ci sono date impostate, filtra per date
     if (dataInizio || dataFine) {
@@ -213,8 +221,8 @@ function Filtri() {
         Filtra transazioni
       </h1>
 
-      <div className="max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Filtro Tipo */}
           <div>
             <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
@@ -287,23 +295,47 @@ function Filtri() {
             </label>
             <div className="flex gap-2">
               <input
-                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+                className="w-full px-3 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
                 type="date"
                 value={dataInizio}
                 onChange={e => setDataInizio(e.target.value)}
               />
               <input
-                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+                className="w-full px-3 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
                 type="date"
                 value={dataFine}
                 onChange={e => setDataFine(e.target.value)}
               />
             </div>
           </div>
+
+          {/* Ricerca Descrizione */}
+          <div>
+            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
+              Ricerca descrizione
+            </label>
+            <input
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+              type="text"
+              placeholder="Cerca nella descrizione..."
+              value={ricercaDescrizione}
+              onChange={e => setRicercaDescrizione(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* Pulsante Pulisci Filtri */}
-        <div className="flex justify-center mb-8">
+        {/* Risultati e Pulsante Pulisci Filtri */}
+        <div className="flex flex-col items-center mb-8 space-y-4">
+          {/* Contatore risultati */}
+          <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+            {transazioniFiltrate.length} transazione{transazioniFiltrate.length !== 1 ? 'i' : ''} trovata{transazioniFiltrate.length !== 1 ? 'e' : ''}
+            {ricercaDescrizione && (
+              <span className="text-blue-600 dark:text-blue-400 ml-2">
+                con descrizione contenente "{ricercaDescrizione}"
+              </span>
+            )}
+          </div>
+          
           <button
             className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105"
             onClick={() => {
@@ -311,6 +343,7 @@ function Filtri() {
               setFiltroTipo('tutte');
               setDataInizio('');
               setDataFine('');
+              setRicercaDescrizione('');
             }}
           >
             Pulisci filtri
