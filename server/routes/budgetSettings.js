@@ -1,7 +1,12 @@
 const express = require('express');
-const BudgetSettings = require('../models/BudgetSettings');
+const mongoose = require('mongoose');
 const { authenticateToken } = require('./auth');
 const router = express.Router();
+
+// NEW APPROACH: Use direct MongoDB collection without any indexes or constraints
+const getBudgetCollection = () => {
+  return mongoose.connection.db.collection('budgetsettings_new');
+};
 
 // GET Budget Settings - SEMPLIFICATO
 router.get('/', authenticateToken, async (req, res) => {
@@ -20,7 +25,8 @@ router.get('/', authenticateToken, async (req, res) => {
     };
 
     console.log('🔍 Query GET:', query);
-    const settings = await BudgetSettings.findOne(query);
+    const collection = getBudgetCollection();
+    const settings = await collection.findOne(query);
     
     if (!settings) {
       console.log('🔍 Nessuna impostazione trovata, restituisco oggetto vuoto');
@@ -28,8 +34,8 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     const result = {
-      spese: Object.fromEntries(settings.spese),
-      entrate: Object.fromEntries(settings.entrate)
+      spese: settings.spese || {},
+      entrate: settings.entrate || {}
     };
 
     console.log('✅ GET risultato inviato per', req.user.username);
@@ -115,26 +121,30 @@ router.post('/', authenticateToken, async (req, res) => {
       entrate
     };
     
-    console.log('🔍 Cerco documento esistente...');
-    let result = await BudgetSettings.findOne(query);
+    console.log('🔍 Usando nuova collezione senza indici...');
+    const collection = getBudgetCollection();
     
-    if (result) {
-      console.log('📝 Aggiorno documento esistente');
-      result.spese = spese;
-      result.entrate = entrate;
-      await result.save();
-    } else {
-      console.log('📝 Creo nuovo documento');
-      result = new BudgetSettings(updateData);
-      await result.save();
-    }
+    // Convert Maps to plain objects for MongoDB
+    const dataToSave = {
+      userId: req.user.userId,
+      anno: parseInt(anno),
+      mese: meseValue,
+      spese: Object.fromEntries(spese),
+      entrate: Object.fromEntries(entrate),
+      updatedAt: new Date()
+    };
+    
+    console.log('📝 Salvando direttamente in collezione nuova...');
+    await collection.replaceOne(query, dataToSave, { upsert: true });
+    
+    const result = dataToSave;
     
     console.log('✅ Operazione completata con successo per user:', req.user.username);
     
     // Risposta
     const response = {
-      spese: Object.fromEntries(result.spese),
-      entrate: Object.fromEntries(result.entrate)
+      spese: result.spese || {},
+      entrate: result.entrate || {}
     };
     
     res.json(response);
