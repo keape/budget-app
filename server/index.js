@@ -128,6 +128,50 @@ app.all('/api/migrate-budget-data', async (req, res) => {
   }
 });
 
+// DEBUG: View migrated data
+app.all('/api/debug-budget-data', async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    
+    if (!mongoose.connection.db) {
+      throw new Error('Database connection not ready');
+    }
+    
+    const newCollection = mongoose.connection.db.collection('budgetsettings_new');
+    
+    // Get all documents from new collection
+    const docs = await newCollection.find({}).toArray();
+    
+    // Group by user for easier reading
+    const userGroups = {};
+    docs.forEach(doc => {
+      const userId = doc.userId ? doc.userId.toString() : 'unknown';
+      if (!userGroups[userId]) userGroups[userId] = [];
+      userGroups[userId].push({
+        anno: doc.anno,
+        mese: doc.mese,
+        spese: doc.spese,
+        entrate: doc.entrate,
+        speseCount: Object.keys(doc.spese || {}).length,
+        entrateCount: Object.keys(doc.entrate || {}).length
+      });
+    });
+    
+    res.json({
+      success: true,
+      totalDocuments: docs.length,
+      userGroups: userGroups
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // EMERGENCY: Remove unique index directly - BOTH GET AND POST  
 app.all('/api/emergency-remove-index', async (req, res) => {
   try {
