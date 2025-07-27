@@ -55,7 +55,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST Budget Settings - Special handling for network access issues
+// POST Budget Settings - Admin delegation workaround v2
 router.post('/', authenticateToken, async (req, res) => {
   console.log('🔥 BUDGET SETTINGS POST - Richiesta da:', req.user.username);
   
