@@ -25,11 +25,21 @@ function Login() {
     e.preventDefault();
     setError('');
     
+    console.log('🔐 LOGIN START per username:', username);
+    console.log('🔐 LOGIN URL backend:', BASE_URL);
+    
     try {
+      console.log('🔐 LOGIN invio richiesta...');
       // Removed { withCredentials: true } from the request
       const response = await axios.post(`${BASE_URL}/api/auth/login`, {
         username,
         password
+      });
+      
+      console.log('🔐 LOGIN risposta ricevuta:', {
+        status: response.status,
+        hasToken: !!response.data.token,
+        tokenLength: response.data.token?.length
       });
       
       if (response.data.token) {
@@ -54,7 +64,16 @@ function Login() {
         setError('Token non ricevuto dal server');
       }
     } catch (error) {
-      console.error('Errore di login:', error);
+      console.error('🔐 LOGIN ERROR:', {
+        message: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+        hasResponse: !!error.response,
+        hasRequest: !!error.request,
+        isNetworkError: !error.response,
+        url: error.config?.url
+      });
+      
       if (error.response) {
         setError(error.response.data.message || 'Credenziali non valide');
       } else if (error.request) {
