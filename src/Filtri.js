@@ -737,7 +737,6 @@ function Filtri() {
           className="py-8"
         />
       )}
-      </div>
     </div>
   );
 }
