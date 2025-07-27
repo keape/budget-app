@@ -352,7 +352,10 @@ function BudgetSettings() {
           console.log(`💾 Salvataggio mese ${mese + 1}/12`);
           
           try {
-            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend);
+            // Retry anche per ogni mese dell'anno
+            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+              timeout: 15000
+            });
             console.log(`✅ Mese ${mese + 1} salvato con successo`);
             
             // Piccolo delay per evitare race conditions nel database
@@ -403,10 +406,39 @@ function BudgetSettings() {
         console.log('🚀 Invio richiesta di salvataggio al backend...');
         console.log('📤 Dati inviati:', dataToSend);
         
-        const saveStartTime = Date.now();
-        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend);
-        const saveDuration = Date.now() - saveStartTime;
-        console.log(`✅ Risposta ricevuta dal backend in ${saveDuration}ms:`, response.status, response.data);
+        // Sistema di retry per gestire timeout e problemi di rete
+        let response;
+        let lastError;
+        const maxRetries = 3;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`🔄 Tentativo ${attempt}/${maxRetries}...`);
+            const saveStartTime = Date.now();
+            
+            response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
+              timeout: 15000 // Timeout di 15 secondi per singola richiesta
+            });
+            
+            const saveDuration = Date.now() - saveStartTime;
+            console.log(`✅ Risposta ricevuta al tentativo ${attempt} in ${saveDuration}ms:`, response.status, response.data);
+            break; // Successo, esci dal loop
+            
+          } catch (error) {
+            lastError = error;
+            console.warn(`⚠️ Tentativo ${attempt} fallito:`, error.message);
+            
+            if (attempt < maxRetries) {
+              const delay = attempt * 2000; // 2s, 4s delay progressivo
+              console.log(`⏳ Attendo ${delay}ms prima del prossimo tentativo...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          }
+        }
+        
+        if (!response) {
+          throw lastError || new Error('Tutti i tentativi di salvataggio sono falliti');
+        }
 
         console.log('Risposta salvataggio:', response.data);
         alert('Impostazioni salvate con successo!');
