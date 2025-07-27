@@ -420,19 +420,14 @@ function BudgetSettings() {
           console.log(`💾 Salvataggio mese ${mese + 1}/12`);
           
           try {
-            // Usa fetch per bypassare interceptor
-            const fetchResponse = await fetch(`${BASE_URL}/api/budget-settings`, {
-              method: 'POST',
+            // Usa axios con headers espliciti
+            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(dataToSend)
+              timeout: 20000
             });
-            
-            if (!fetchResponse.ok) {
-              throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
-            }
             console.log(`✅ Mese ${mese + 1} salvato con successo`);
             
             // Piccolo delay per evitare race conditions nel database
@@ -517,22 +512,14 @@ function BudgetSettings() {
             console.log(`🔄 Tentativo ${attempt}/${maxRetries} con fetch diretto...`);
             const saveStartTime = Date.now();
             
-            // Usa fetch diretto per bypassare completamente axios e interceptor
-            const fetchResponse = await fetch(`${BASE_URL}/api/budget-settings`, {
-              method: 'POST',
+            // Torna ad axios con headers espliciti per evitare problemi CORS con fetch
+            response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
               headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(dataToSend)
+              timeout: 20000
             });
-            
-            if (!fetchResponse.ok) {
-              throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
-            }
-            
-            const responseData = await fetchResponse.json();
-            response = { status: fetchResponse.status, data: responseData };
             
             const saveDuration = Date.now() - saveStartTime;
             console.log(`✅ Risposta ricevuta al tentativo ${attempt} in ${saveDuration}ms:`, response.status, response.data);
