@@ -3,15 +3,6 @@ import axios from 'axios';
 import BASE_URL from './config';
 import { useNavigate } from 'react-router-dom';
 
-// Crea un'istanza axios dedicata senza interceptor per evitare conflitti
-const budgetAxios = axios.create({
-  baseURL: BASE_URL,
-  timeout: 30000, // Aumentato a 30 secondi
-  withCredentials: true, // Abilita CORS credentials
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
 
 function BudgetSettings() {
   const navigate = useNavigate();
@@ -348,11 +339,6 @@ function BudgetSettings() {
       if (selectedMonth === 0) {
         console.log('💾 Salvataggio per intero anno - esecuzione sequenziale per evitare conflitti');
         
-        // Gestione manuale del token per tutto l'anno
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Token di autenticazione non trovato. Effettua nuovamente il login.');
-        }
         
         // Salva le stesse impostazioni per ogni mese - SEQUENZIALMENTE per evitare race conditions
         for (let mese = 0; mese < 12; mese++) {
@@ -366,11 +352,7 @@ function BudgetSettings() {
           console.log(`💾 Salvataggio mese ${mese + 1}/12`);
           
           try {
-            await budgetAxios.post('/api/budget-settings', dataToSend, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
+            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend);
             console.log(`✅ Mese ${mese + 1} salvato con successo`);
             
             // Piccolo delay per evitare race conditions nel database
@@ -418,47 +400,11 @@ function BudgetSettings() {
           budgetSettingsOriginal: budgetSettings
         });
 
-        // Gestione manuale dell'autenticazione per bypassare problemi con l'interceptor
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Token di autenticazione non trovato. Effettua nuovamente il login.');
-        }
-        
-        // Test di connessione prima del salvataggio
-        console.log('🔗 Test di connessione al backend...');
-        console.log(`📡 URL backend: ${budgetAxios.defaults.baseURL}`);
-        console.log(`⏱️ Timeout impostato: ${budgetAxios.defaults.timeout}ms`);
-        
-        const testStartTime = Date.now();
-        try {
-          console.log('🚀 Avvio test GET...');
-          const testResponse = await budgetAxios.get('/api/budget-settings', {
-            headers: { 'Authorization': `Bearer ${token}` },
-            params: { anno: selectedYear, mese: selectedMonth - 1 }
-          });
-          const testDuration = Date.now() - testStartTime;
-          console.log(`✅ Connessione al backend OK in ${testDuration}ms`);
-          console.log('📊 Risposta test:', testResponse.status, testResponse.statusText);
-        } catch (testError) {
-          const testDuration = Date.now() - testStartTime;
-          console.error(`❌ Test connessione fallito dopo ${testDuration}ms:`, {
-            message: testError.message,
-            code: testError.code,
-            response: testError.response?.status,
-            timeout: testError.code === 'ECONNABORTED'
-          });
-          throw new Error(`Connessione al backend fallita: ${testError.message}`);
-        }
-
         console.log('🚀 Invio richiesta di salvataggio al backend...');
         console.log('📤 Dati inviati:', dataToSend);
         
         const saveStartTime = Date.now();
-        const response = await budgetAxios.post('/api/budget-settings', dataToSend, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend);
         const saveDuration = Date.now() - saveStartTime;
         console.log(`✅ Risposta ricevuta dal backend in ${saveDuration}ms:`, response.status, response.data);
 
