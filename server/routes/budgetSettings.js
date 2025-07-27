@@ -57,6 +57,9 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // POST Budget Settings (Handles Monthly and Yearly)
 router.post('/', authenticateToken, async (req, res) => {
+  console.log('🔥 BUDGET SETTINGS POST - Inizio endpoint per utente:', req.user?.username || 'UNKNOWN');
+  console.log('🔥 BUDGET SETTINGS POST - Request body keys:', Object.keys(req.body || {}));
+  
   try {
     const { anno, mese, isYearly, settings } = req.body; // Add isYearly flag
     console.log('Ricevuta richiesta POST budget settings:', { anno, mese, isYearly, settings });
