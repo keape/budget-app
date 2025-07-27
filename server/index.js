@@ -59,6 +59,19 @@ app.use('/api/spese', speseRoutes);
 app.use('/api/entrate', entrateRoutes);
 app.use('/api/budget-settings', budgetSettingsRoutes);
 
+// TEST ENDPOINT - per verificare autenticazione per tutti gli utenti
+app.post('/api/test-auth', authenticateToken, (req, res) => {
+  console.log('🧪 TEST AUTH - Utente:', req.user.username, 'ID:', req.user.userId);
+  res.json({
+    message: 'Autenticazione riuscita',
+    user: {
+      username: req.user.username,
+      userId: req.user.userId
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Root test route
 app.get('/', (req, res) => {
   res.send('✅ Backend Budget App attivo! v1.1');

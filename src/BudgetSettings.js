@@ -12,7 +12,6 @@ function BudgetSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
-  const [sessionCloning, setSessionCloning] = useState(false);
   const [error, setError] = useState(null);
   const [editingCategory, setEditingCategory] = useState({ type: null, oldName: null, newName: '' });
   const [newCategory, setNewCategory] = useState({ type: null, name: '', value: '' });
@@ -356,199 +355,31 @@ function BudgetSettings() {
     event.target.value = '';
   };
 
-  // Funzioni per clonazione sessione completa
-  const extractKeapeSession = () => {
-    console.log('🔄 Estrazione sessione keape...');
-    
-    // Estrai localStorage
-    const localStorageData = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      localStorageData[key] = localStorage.getItem(key);
-    }
-    
-    // Estrai sessionStorage
-    const sessionStorageData = {};
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      sessionStorageData[key] = sessionStorage.getItem(key);
-    }
-    
-    // Estrai cookies
-    const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      if (key) acc[key] = value || '';
-      return acc;
-    }, {});
-    
-    const sessionData = {
-      localStorage: localStorageData,
-      sessionStorage: sessionStorageData,
-      cookies: cookies,
-      userAgent: navigator.userAgent,
-      timestamp: Date.now()
-    };
-    
-    console.log('🔄 Sessione keape estratta:', {
-      localStorageKeys: Object.keys(localStorageData),
-      sessionStorageKeys: Object.keys(sessionStorageData),
-      cookieKeys: Object.keys(cookies)
-    });
-    
-    return sessionData;
-  };
-
-  const cloneCompleteSession = async () => {
-    setSessionCloning(true);
-    try {
-      console.log('🔄 INIZIO CLONAZIONE SESSIONE COMPLETA');
-      
-      // 1. Verifica utente corrente
-      const currentToken = localStorage.getItem('token');
-      if (!currentToken) {
-        throw new Error('Token utente corrente non trovato');
-      }
-      
-      const currentPayload = JSON.parse(atob(currentToken.split('.')[1]));
-      console.log('🔄 Utente corrente:', currentPayload.username);
-      
-      if (currentPayload.username === 'keape') {
-        alert('Sei già keape! Non è necessario clonare la sessione.');
-        return;
-      }
-      
-      // 2. Chiedi conferma all'utente
-      const confirmed = window.confirm(
-        `Stai per clonare COMPLETAMENTE la sessione di keape.\n\n` +
-        `Questo sostituirà:\n` +
-        `- Tutti i dati localStorage\n` +
-        `- Tutti i dati sessionStorage\n` +
-        `- Tutti i cookies\n\n` +
-        `Vuoi continuare?`
-      );
-      
-      if (!confirmed) {
-        console.log('🔄 Clonazione annullata dall\'utente');
-        return;
-      }
-      
-      // 3. Per ora, usa la sessione keape hardcoded
-      // In un'implementazione reale, questa dovrebbe essere estratta da keape e condivisa
-      const keapeSessionData = {
-        localStorage: {
-          token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzQ0ZWU0M2FkNTdkOWZjMjNjNjNlMTIiLCJ1c2VybmFtZSI6ImtlYXBlIiwiaWF0IjoxNzM3OTU0NDE5LCJleHAiOjE3Mzc5NTgwMTl9.CHiL7x5LCNUyiIGJa0WtqL3YHm44x-dkbM4Gc35PKg0'
-        },
-        sessionStorage: {},
-        cookies: {}
-      };
-      
-      console.log('🔄 Applicando sessione keape...');
-      
-      // 4. Backup sessione corrente
-      const backupData = extractKeapeSession();
-      localStorage.setItem('sessionBackup', JSON.stringify(backupData));
-      
-      // 5. Pulisci storage correnti
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // 6. Applica dati localStorage di keape
-      Object.entries(keapeSessionData.localStorage).forEach(([key, value]) => {
-        localStorage.setItem(key, value);
-      });
-      
-      // 7. Applica dati sessionStorage di keape
-      Object.entries(keapeSessionData.sessionStorage).forEach(([key, value]) => {
-        sessionStorage.setItem(key, value);
-      });
-      
-      // 8. Applica cookies di keape (limitato per sicurezza)
-      Object.entries(keapeSessionData.cookies).forEach(([key, value]) => {
-        if (!key.startsWith('__') && key !== 'session') {
-          document.cookie = `${key}=${value}; path=/; SameSite=Lax`;
-        }
-      });
-      
-      console.log('🔄 Sessione keape applicata con successo');
-      alert(
-        'Sessione clonata con successo!\n\n' +
-        'La pagina verrà ricaricata per applicare le modifiche.\n\n' +
-        'Se qualcosa va storto, il backup della tua sessione è salvato in localStorage.sessionBackup'
-      );
-      
-      // 9. Ricarica la pagina per applicare le modifiche
-      window.location.reload();
-      
-    } catch (error) {
-      console.error('🚨 Errore durante clonazione sessione:', error);
-      alert(`Errore durante la clonazione: ${error.message}`);
-    } finally {
-      setSessionCloning(false);
-    }
-  };
-
-  const restoreSessionBackup = () => {
-    try {
-      const backup = localStorage.getItem('sessionBackup');
-      if (!backup) {
-        alert('Nessun backup trovato');
-        return;
-      }
-      
-      const backupData = JSON.parse(backup);
-      
-      // Pulisci e ripristina localStorage
-      localStorage.clear();
-      Object.entries(backupData.localStorage).forEach(([key, value]) => {
-        localStorage.setItem(key, value);
-      });
-      
-      // Pulisci e ripristina sessionStorage
-      sessionStorage.clear();
-      Object.entries(backupData.sessionStorage).forEach(([key, value]) => {
-        sessionStorage.setItem(key, value);
-      });
-      
-      alert('Sessione ripristinata dal backup. La pagina verrà ricaricata.');
-      window.location.reload();
-      
-    } catch (error) {
-      console.error('🚨 Errore durante ripristino backup:', error);
-      alert(`Errore durante il ripristino: ${error.message}`);
-    }
-  };
 
   const salvaBudget = async () => {
-    console.log('🚀 Inizio salvaBudget');
+    console.log('🚀 SALVA BUDGET START');
     
-    // Test immediato del token PRIMA di tutto
-    const testToken = localStorage.getItem('token');
-    console.log('🔍 Token presente:', !!testToken);
-    if (testToken) {
-      try {
-        const tokenParts = testToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
-          console.log('🔍 Token valido per utente:', {
-            username: payload.username,
-            userId: payload.userId,
-            exp: payload.exp,
-            isExpired: Date.now() / 1000 > payload.exp,
-            timeToExpiry: payload.exp - (Date.now() / 1000)
-          });
-        }
-      } catch (e) {
-        console.error('❌ Token malformato:', e);
-      }
+    // Verifica token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Token non trovato. Effettua il login.');
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('🔍 User:', payload.username, 'ID:', payload.userId);
+    } catch (e) {
+      setError('Token non valido. Effettua il login.');
+      return;
     }
     
     setIsSaving(true);
     setError(null);
+    
     try {
-      // Il token viene gestito automaticamente dall'axios interceptor
-
-      // Pulisce le categorie con valori vuoti o nulli prima del salvataggio
-      const cleanBudgetSettings = {
+      // Pulisci i dati
+      const cleanSettings = {
         spese: Object.fromEntries(
           Object.entries(budgetSettings.spese || {})
             .filter(([_, value]) => value !== null && value !== undefined && value !== '' && !isNaN(value))
@@ -561,217 +392,65 @@ function BudgetSettings() {
         )
       };
 
-      // Se è selezionato "Intero anno", salva le impostazioni per tutti i mesi
+      console.log('📤 Dati puliti:', cleanSettings);
+
       if (selectedMonth === 0) {
-        console.log('💾 Salvataggio per intero anno - esecuzione sequenziale per evitare conflitti');
+        // Salva per tutti i mesi
+        console.log('💾 Salvataggio per intero anno');
         
-        // Gestione manuale token per l'intero anno
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Token non trovato. Effettua il login.');
-        }
-        
-        // Salva le stesse impostazioni per ogni mese - SEQUENZIALMENTE per evitare race conditions
         for (let mese = 0; mese < 12; mese++) {
           const dataToSend = {
             anno: selectedYear,
             mese: mese,
-            isYearly: false, // Ogni mese è un'impostazione mensile
-            settings: cleanBudgetSettings
+            isYearly: false,
+            settings: cleanSettings
           };
 
-          console.log(`💾 Salvataggio mese ${mese + 1}/12`);
+          console.log(`💾 Salvando mese ${mese + 1}/12`);
           
-          try {
-            // Usa ESATTAMENTE lo stesso pattern del GET che funziona
-            await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            console.log(`✅ Mese ${mese + 1} salvato con successo`);
-            
-            // Piccolo delay per evitare race conditions nel database
-            if (mese < 11) { // Non fare delay dopo l'ultimo mese
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-          } catch (error) {
-            console.error(`❌ Errore nel salvataggio del mese ${mese + 1}:`, error);
-            throw error; // Interrompi il loop se c'è un errore
+          const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend);
+          console.log(`✅ Mese ${mese + 1} salvato`);
+          
+          // Delay per evitare race conditions
+          if (mese < 11) {
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
 
+        console.log('✅ Tutti i mesi salvati');
         alert('Impostazioni salvate con successo per tutti i mesi!');
-      } else {
-        // Determina se inviare come admin (keape) o utente normale
-        const token = localStorage.getItem('token');
-        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
-        const isKeape = tokenPayload.username === 'keape';
         
-        // Salva le impostazioni solo per il mese selezionato
+      } else {
+        // Salva per mese specifico
         const dataToSend = {
           anno: selectedYear,
           mese: selectedMonth - 1,
-          isYearly: false, // È un'impostazione mensile
-          settings: cleanBudgetSettings
+          isYearly: false,
+          settings: cleanSettings
         };
-        
-        // Se NON è keape, aggiungi targetUserId per admin delegation
-        if (!isKeape) {
-          console.log('🔄 NON-KEAPE: Usando keape come proxy admin');
-          // Sostituisci il token con quello di keape (admin)
-          localStorage.setItem('tempToken', token); // Backup
-          localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQyMTJiNTkwODE3OTFmZjMxYjA5ZmYiLCJ1c2VybmFtZSI6ImtlYXBlIiwiaWF0IjoxNzUzNjExNDcwLCJleHAiOjE3NTM2OTc4NzB9.3UTxp-qwXSLRRmyrusgkSxiXpxtilEz7aJJgF8Q3B1Q');
-          // Aggiungi target user per delegazione
-          dataToSend.targetUserId = tokenPayload.userId;
-          dataToSend.targetUsername = tokenPayload.username;
-        }
 
-        // Validazione dati prima dell'invio
-        if (!dataToSend.anno || !dataToSend.settings) {
-          throw new Error('Dati mancanti: anno o settings non definiti');
-        }
+        console.log('📤 Invio dati per mese specifico:', dataToSend);
         
-        if (dataToSend.mese === undefined || dataToSend.mese === null) {
-          throw new Error('Mese non definito correttamente');
-        }
+        const response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend);
         
-        console.log('🔄 Invio dati puliti e validati:', {
-          baseUrl: BASE_URL,
-          fullUrl: `${BASE_URL}/api/budget-settings`,
-          data: dataToSend,
-          dataValidation: {
-            hasAnno: !!dataToSend.anno,
-            hasMese: dataToSend.mese !== undefined,
-            hasSettings: !!dataToSend.settings,
-            hasSpese: !!dataToSend.settings.spese,
-            hasEntrate: !!dataToSend.settings.entrate,
-            isYearly: dataToSend.isYearly
-          },
-          cleanBudgetSettings: cleanBudgetSettings,
-          budgetSettingsOriginal: budgetSettings
-        });
-
-        console.log('🚀 Invio richiesta di salvataggio al backend...');
-        console.log('📤 Dati inviati:', dataToSend);
-        
-        
-        // Sistema di retry per gestire timeout e problemi di rete
-        let response;
-        let lastError;
-        const maxRetries = 3;
-        
-        // Usa il token già ottenuto sopra - non ridichiarare
-        const currentToken = localStorage.getItem('token'); // Token attuale (potrebbe essere keape)
-        if (!currentToken) {
-          throw new Error('Token non trovato. Effettua il login.');
-        }
-        
-        // Debug token per troubleshooting keape86
-        try {
-          const tokenParts = currentToken.split('.');
-          if (tokenParts.length === 3) {
-            const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
-            console.log('🔍 Debug token utente:', {
-              username: payload.username,
-              userId: payload.userId,
-              exp: payload.exp,
-              iat: payload.iat,
-              isExpired: Date.now() / 1000 > payload.exp,
-              timeToExpiry: payload.exp - (Date.now() / 1000)
-            });
-          }
-        } catch (tokenError) {
-          console.error('❌ Errore nel decodificare il token:', tokenError);
-        }
-        
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            console.log(`🔄 Tentativo ${attempt}/${maxRetries} con fetch diretto...`);
-            const saveStartTime = Date.now();
-            
-            // Usa ESATTAMENTE lo stesso pattern del GET che funziona per keape86
-            response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-              headers: {
-                'Authorization': `Bearer ${currentToken}`,
-                'Content-Type': 'application/json'
-              }
-              // Rimuovo timeout per essere identico al GET che funziona
-            });
-            
-            const saveDuration = Date.now() - saveStartTime;
-            console.log(`✅ Risposta ricevuta al tentativo ${attempt} in ${saveDuration}ms:`, response.status, response.data);
-            break; // Successo, esci dal loop
-            
-          } catch (error) {
-            lastError = error;
-            console.warn(`⚠️ Tentativo ${attempt} fallito:`, {
-              message: error.message,
-              status: error.response?.status,
-              statusText: error.response?.statusText,
-              data: error.response?.data,
-              isAuthError: error.response?.status === 401 || error.response?.status === 403
-            });
-            
-            if (attempt < maxRetries) {
-              const delay = attempt * 2000; // 2s, 4s delay progressivo
-              console.log(`⏳ Attendo ${delay}ms prima del prossimo tentativo...`);
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-          }
-        }
-        
-        if (!response) {
-          throw lastError || new Error('Tutti i tentativi di salvataggio sono falliti');
-        }
-
-        console.log('Risposta salvataggio:', response.data);
+        console.log('✅ Risposta ricevuta:', response.data);
         alert('Impostazioni salvate con successo!');
+        
         setBudgetSettings({
           spese: response.data.spese || {},
           entrate: response.data.entrate || {}
         });
-        
-        // Ripristina token originale se era delegation
-        const tempToken = localStorage.getItem('tempToken');
-        if (tempToken) {
-          localStorage.setItem('token', tempToken);
-          localStorage.removeItem('tempToken');
-          console.log('🔄 Token originale ripristinato');
-        }
       }
     } catch (error) {
-      console.error('🚨 Dettagli errore salvataggio:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data
-        },
-        fullError: error
-      });
+      console.error('❌ ERRORE SALVATAGGIO:', error.message);
+      console.error('❌ Status:', error.response?.status);
+      console.error('❌ Data:', error.response?.data);
 
       if (error.response?.status === 401 || error.response?.status === 403) {
-         handleAuthError('Sessione scaduta o non valida durante il salvataggio. Effettua nuovamente il login.');
+        handleAuthError('Sessione scaduta. Effettua nuovamente il login.');
       } else {
-        // Log dettagliato per tutti i tipi di errore
-        console.error('🚨 Dettagli completi errore:', {
-          message: error.message,
-          code: error.code,
-          response: error.response,
-          request: error.request,
-          config: error.config,
-          isNetworkError: !error.response,
-          baseURL: BASE_URL,
-          fullURL: `${BASE_URL}/api/budget-settings`
-        });
-        
-        // Mostra il messaggio di errore specifico dal backend se disponibile
-        const backendMessage = error.response?.data?.message || error.message;
-        setError(`Errore nel salvataggio: ${backendMessage}. Controlla la console per dettagli.`);
+        const errorMessage = error.response?.data?.message || error.message;
+        setError(`Errore nel salvataggio: ${errorMessage}`);
       }
     } finally {
       setIsSaving(false);
@@ -1240,49 +919,6 @@ function BudgetSettings() {
             />
           </label>
         </div>
-        
-        {/* Sessione Cloning Debug Buttons - Solo per utenti non-keape */}
-        {(() => {
-          try {
-            const currentToken = localStorage.getItem('token');
-            if (!currentToken) return null;
-            const payload = JSON.parse(atob(currentToken.split('.')[1]));
-            return payload.username !== 'keape' ? (
-              <div className="flex flex-col gap-2 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                <div className="text-sm text-yellow-800 dark:text-yellow-200 mb-2 text-center">
-                  🧪 Debug: Problemi di salvataggio? Prova a clonare la sessione di keape
-                </div>
-                <div className="flex gap-2 justify-center">
-                  <button
-                    onClick={cloneCompleteSession}
-                    disabled={sessionCloning || isSaving || isLoading}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
-                      sessionCloning || isSaving || isLoading
-                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        : 'bg-red-600 hover:bg-red-700 text-white hover:scale-105'
-                    }`}
-                  >
-                    {sessionCloning ? 'Clonando...' : '🔄 Clona Sessione Keape'}
-                  </button>
-                  
-                  <button
-                    onClick={restoreSessionBackup}
-                    disabled={sessionCloning || isSaving || isLoading}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
-                      sessionCloning || isSaving || isLoading
-                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        : 'bg-gray-600 hover:bg-gray-700 text-white hover:scale-105'
-                    }`}
-                  >
-                    🔙 Ripristina Backup
-                  </button>
-                </div>
-              </div>
-            ) : null;
-          } catch (e) {
-            return null;
-          }
-        })()}
       </div>
     </div>
   );
