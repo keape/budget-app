@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 const budgetAxios = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // Aumentato a 30 secondi
+  withCredentials: true, // Abilita CORS credentials
   headers: {
     'Content-Type': 'application/json'
   }
