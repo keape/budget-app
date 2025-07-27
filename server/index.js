@@ -74,7 +74,7 @@ app.post('/api/test-auth', authenticateToken, (req, res) => {
 
 // Root test route
 app.get('/', (req, res) => {
-  res.send('✅ Backend Budget App attivo! v1.1');
+  res.send('✅ Backend Budget App attivo! v1.2 - Fixed imports');
 });
 
 
