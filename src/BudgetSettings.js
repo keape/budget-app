@@ -43,7 +43,24 @@ function BudgetSettings() {
   };
 
   useEffect(() => {
+    console.log('🔍 useEffect HOOK - TEST TOKEN');
     const token = localStorage.getItem('token');
+    console.log('Token in useEffect:', !!token);
+    
+    if (token) {
+      try {
+        const parts = token.split('.');
+        const payload = JSON.parse(atob(parts[1]));
+        console.log('🔍 useEffect - Token utente:', {
+          username: payload.username,
+          userId: payload.userId,
+          isExpired: Date.now() / 1000 > payload.exp
+        });
+      } catch (e) {
+        console.error('❌ useEffect - Errore token:', e);
+      }
+    }
+    
     if (!token) {
       handleAuthError('Token non trovato. Effettua nuovamente il login.');
       return;
@@ -58,10 +75,33 @@ function BudgetSettings() {
   };
 
   const fetchBudgetSettings = async () => {
+    console.log('🔍 TEST TOKEN AL CARICAMENTO PAGINA BUDGET SETTINGS');
+    const token = localStorage.getItem('token');
+    console.log('Token presente:', !!token);
+    if (token) {
+      try {
+        const parts = token.split('.');
+        const payload = JSON.parse(atob(parts[1]));
+        console.log('🔍 Payload token utente corrente:', {
+          username: payload.username,
+          userId: payload.userId,
+          exp: payload.exp,
+          iat: payload.iat,
+          isExpired: Date.now() / 1000 > payload.exp,
+          timeToExpiry: payload.exp - (Date.now() / 1000),
+          tokenLength: token.length,
+          tokenStart: token.substring(0, 50) + '...'
+        });
+      } catch (e) {
+        console.error('❌ Errore decodifica token:', e);
+      }
+    } else {
+      console.error('❌ NESSUN TOKEN TROVATO');
+    }
+    
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('token');
       if (!token) throw new Error('Token non trovato');
 
       // Per "Intero anno", recupera tutti i budget mensili e sommali
