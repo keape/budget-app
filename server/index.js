@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 
 // Import routes
-const { router: authRoutes, authenticateToken } = require('./routes/auth');
+const { router: authRoutes } = require('./routes/auth');
 const speseRoutes = require('./routes/spese');
 const entrateRoutes = require('./routes/entrate');
 const budgetSettingsRoutes = require('./routes/budgetSettings');
@@ -64,16 +64,6 @@ app.get('/', (req, res) => {
   res.send('✅ Backend Budget App attivo! v1.1');
 });
 
-// Test endpoint per debug CORS/timeout
-app.post('/api/test-save', authenticateToken, (req, res) => {
-  console.log('🧪 TEST SAVE endpoint chiamato da:', req.user.username);
-  res.json({ 
-    success: true, 
-    message: 'Test endpoint funziona!',
-    user: req.user.username,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Additional utility routes
 const Spesa = require('./models/Spesa');
