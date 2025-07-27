@@ -372,6 +372,22 @@ function BudgetSettings() {
     }
   };
 
+  const removeUniqueIndex = async () => {
+    setIsFixing(true);
+    try {
+      console.log('🚨 Rimozione indice unique...');
+      const response = await axios.post(`${BASE_URL}/api/budget-settings/remove-unique-index`);
+      console.log('✅ Indice rimosso:', response.data);
+      alert(`Indice unique rimosso! ${response.data.message}`);
+      setError(null); // Clear error after fix
+    } catch (error) {
+      console.error('❌ Errore rimozione indice:', error);
+      alert('Errore durante la rimozione indice');
+    } finally {
+      setIsFixing(false);
+    }
+  };
+
   const salvaBudget = async () => {
     console.log('🚀 SALVA BUDGET START');
     
@@ -942,9 +958,21 @@ function BudgetSettings() {
             <div className="text-sm text-red-800 mb-2 text-center">
               🚨 Errore duplicati database rilevato
             </div>
-            <div className="flex justify-center">
+            <div className="flex gap-2 justify-center flex-wrap">
               <button
                 onClick={emergencyFix}
+                disabled={isFixing || isSaving || isLoading}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
+                  isFixing || isSaving || isLoading
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-orange-600 hover:bg-orange-700 text-white hover:scale-105'
+                }`}
+              >
+                {isFixing ? 'Fixing...' : '🛠️ Fix Duplicates'}
+              </button>
+              
+              <button
+                onClick={removeUniqueIndex}
                 disabled={isFixing || isSaving || isLoading}
                 className={`px-4 py-2 text-sm font-semibold rounded-lg shadow transition-all duration-200 ${
                   isFixing || isSaving || isLoading
@@ -952,7 +980,7 @@ function BudgetSettings() {
                     : 'bg-red-600 hover:bg-red-700 text-white hover:scale-105'
                 }`}
               >
-                {isFixing ? 'Fixing...' : '🛠️ Fix Database Duplicates'}
+                {isFixing ? 'Removing...' : '🗑️ Remove Unique Index'}
               </button>
             </div>
           </div>
