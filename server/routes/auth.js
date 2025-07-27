@@ -52,11 +52,45 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log('🔍 LOGIN tentativo per username:', username);
+    
     const user = await User.findOne({ username });
-    if (!user) return res.status(401).json({ message: "Credenziali non valide" });
+    if (!user) {
+      console.log('❌ LOGIN: Utente non trovato:', username);
+      return res.status(401).json({ message: "Credenziali non valide" });
+    }
+    
+    console.log('🔍 LOGIN: Utente trovato, verifica password...');
+    console.log('🔍 LOGIN: User data:', {
+      id: user._id,
+      username: user.username,
+      idType: typeof user._id,
+      idString: user._id.toString(),
+      usernameLength: user.username.length,
+      usernameChars: user.username.split('').map(c => c.charCodeAt(0))
+    });
+    
     const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ message: "Credenziali non valide" });
-    const token = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    if (!validPassword) {
+      console.log('❌ LOGIN: Password non valida per:', username);
+      return res.status(401).json({ message: "Credenziali non valide" });
+    }
+    
+    console.log('✅ LOGIN: Password valida, generazione token...');
+    const tokenPayload = { userId: user._id, username: user.username };
+    console.log('🔍 LOGIN: Token payload:', tokenPayload);
+    
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '24h' });
+    console.log('✅ LOGIN: Token generato, lunghezza:', token.length);
+    
+    // Test immediato del token
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('✅ LOGIN: Token verificato subito:', decoded);
+    } catch (verifyError) {
+      console.error('❌ LOGIN: Token appena generato non valido!', verifyError);
+    }
+    
     res.json({ token });
   } catch (error) {
     console.error('❌ Errore durante il login:', error);
