@@ -55,19 +55,19 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST Budget Settings (Handles Monthly and Yearly) - TEMPORARY DEBUG BYPASS
-router.post('/', (req, res, next) => {
-  console.log('🔥 BYPASS AUTH TEST - Richiesta ricevuta da:', req.headers.origin);
+// POST Budget Settings - Special handling for network access issues
+router.post('/', authenticateToken, async (req, res) => {
+  console.log('🔥 BUDGET SETTINGS POST - Richiesta da:', req.user.username);
   
-  // Per debug, bypassa auth temporaneamente per vedere se la richiesta arriva
-  if (req.headers.authorization && req.headers.authorization.includes('keape87')) {
-    req.user = { userId: '6883f135251aa5cd03909c36', username: 'keape87' };
-    return next();
+  // WORKAROUND: Se keape fa richiesta con targetUserId, salva per quell'utente
+  let targetUserId = req.user.userId;
+  let targetUsername = req.user.username;
+  
+  if (req.user.username === 'keape' && req.body.targetUserId) {
+    console.log('🔄 KEAPE ADMIN: Salvando per utente target:', req.body.targetUserId);
+    targetUserId = req.body.targetUserId;
+    targetUsername = req.body.targetUsername || 'delegated-user';
   }
-  
-  // Altrimenti usa auth normale
-  return authenticateToken(req, res, next);
-}, async (req, res) => {
   console.log('🔥 BUDGET SETTINGS POST - Inizio endpoint per utente:', req.user?.username || 'UNKNOWN');
   console.log('🔥 BUDGET SETTINGS POST - Request body keys:', Object.keys(req.body || {}));
   
@@ -112,7 +112,7 @@ router.post('/', (req, res, next) => {
     });
 
     const updateData = { 
-        userId: req.user.userId,
+        userId: targetUserId, // Usa targetUserId invece di req.user.userId
         anno: annoInt,
         mese: meseValue, 
         spese,
@@ -161,7 +161,7 @@ router.post('/', (req, res, next) => {
       // Prima prova a fare un update
       console.log('🔍 Tentativo di update per documento esistente...');
       result = await BudgetSettings.findOneAndUpdate(
-        { userId: req.user.userId, anno: annoInt, mese: meseValue }, // Query condition
+        { userId: targetUserId, anno: annoInt, mese: meseValue }, // Query condition
         updateData, // Data to set
         { new: true } // Solo update, non upsert
       );
@@ -179,7 +179,7 @@ router.post('/', (req, res, next) => {
       if (createError.code === 11000) {
         console.log('Duplicato durante create, riprovo con update...');
         result = await BudgetSettings.findOneAndUpdate(
-          { userId: req.user.userId, anno: annoInt, mese: meseValue },
+          { userId: targetUserId, anno: annoInt, mese: meseValue },
           updateData,
           { new: true }
         );
