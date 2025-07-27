@@ -116,21 +116,33 @@ router.post('/', authenticateToken, async (req, res) => {
     };
     
     console.log('🔍 Verifico documento esistente con query:', query);
-    const existingDoc = await BudgetSettings.findOne(query);
-    console.log('🔍 Documento esistente trovato:', !!existingDoc);
+    let result;
     
-    if (existingDoc) {
-      console.log('🔍 ID documento esistente:', existingDoc._id);
+    // Prima elimina eventuali duplicati esistenti
+    const existingDocs = await BudgetSettings.find(query);
+    console.log('🔍 Documenti esistenti trovati:', existingDocs.length);
+    
+    if (existingDocs.length > 1) {
+      console.log('🧹 Pulizia duplicati - mantengo solo il più recente');
+      // Ordina per data di creazione e mantieni solo il più recente
+      existingDocs.sort((a, b) => b.createdAt - a.createdAt);
+      const toKeep = existingDocs[0];
+      const toDelete = existingDocs.slice(1);
+      
+      for (const doc of toDelete) {
+        await BudgetSettings.deleteOne({ _id: doc._id });
+        console.log('🧹 Eliminato duplicato:', doc._id);
+      }
     }
     
-    // Usa upsert per evitare race conditions
+    // Ora usa findOneAndUpdate con upsert
     console.log('📝 Usando findOneAndUpdate con upsert');
-    const result = await BudgetSettings.findOneAndUpdate(
+    result = await BudgetSettings.findOneAndUpdate(
       query,
       updateData,
       { 
         new: true,
-        upsert: true, // Crea se non esiste
+        upsert: true,
         runValidators: true
       }
     );
