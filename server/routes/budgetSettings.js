@@ -143,9 +143,8 @@ router.post('/', authenticateToken, async (req, res) => {
     console.error('❌ POST Error for user', req.user?.username || 'UNKNOWN', ':', error);
     console.error('❌ Error stack:', error.stack);
     
-    if (error.code === 11000) {
-      return res.status(409).json({ message: "Errore: impostazione duplicata rilevata." });
-    }
+    // RIMOSSO: Check per errore 11000 che causava 409
+    // Ora tutti gli errori vengono gestiti come 500 generici
     
     res.status(500).json({ 
       message: "Errore nel salvataggio delle impostazioni del budget",
