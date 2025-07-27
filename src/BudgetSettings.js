@@ -339,6 +339,11 @@ function BudgetSettings() {
       if (selectedMonth === 0) {
         console.log('💾 Salvataggio per intero anno - esecuzione sequenziale per evitare conflitti');
         
+        // Gestione manuale token per l'intero anno
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token non trovato. Effettua il login.');
+        }
         
         // Salva le stesse impostazioni per ogni mese - SEQUENZIALMENTE per evitare race conditions
         for (let mese = 0; mese < 12; mese++) {
@@ -354,7 +359,11 @@ function BudgetSettings() {
           try {
             // Retry anche per ogni mese dell'anno
             await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-              timeout: 15000
+              timeout: 15000,
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             });
             console.log(`✅ Mese ${mese + 1} salvato con successo`);
             
@@ -411,13 +420,23 @@ function BudgetSettings() {
         let lastError;
         const maxRetries = 3;
         
+        // Gestione manuale token per bypassare problemi interceptor
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('Token non trovato. Effettua il login.');
+        }
+        
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             console.log(`🔄 Tentativo ${attempt}/${maxRetries}...`);
             const saveStartTime = Date.now();
             
             response = await axios.post(`${BASE_URL}/api/budget-settings`, dataToSend, {
-              timeout: 15000 // Timeout di 15 secondi per singola richiesta
+              timeout: 15000, // Timeout di 15 secondi per singola richiesta
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             });
             
             const saveDuration = Date.now() - saveStartTime;
