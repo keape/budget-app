@@ -478,6 +478,22 @@ function BudgetSettings() {
         console.log('🚀 Invio richiesta di salvataggio al backend...');
         console.log('📤 Dati inviati:', dataToSend);
         
+        // Test endpoint semplice prima del salvataggio vero
+        console.log('🧪 Test endpoint semplice prima...');
+        try {
+          const testResponse = await axios.post(`${BASE_URL}/api/test-save`, {}, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+          console.log('✅ Test endpoint OK:', testResponse.data);
+        } catch (testError) {
+          console.error('❌ Test endpoint fallito:', testError.message);
+          throw new Error(`Test endpoint fallito: ${testError.message}`);
+        }
+        
         // Sistema di retry per gestire timeout e problemi di rete
         let response;
         let lastError;
