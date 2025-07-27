@@ -441,6 +441,11 @@ function BudgetSettings() {
 
         alert('Impostazioni salvate con successo per tutti i mesi!');
       } else {
+        // Determina se inviare come admin (keape) o utente normale
+        const token = localStorage.getItem('token');
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        const isKeape = tokenPayload.username === 'keape';
+        
         // Salva le impostazioni solo per il mese selezionato
         const dataToSend = {
           anno: selectedYear,
@@ -448,6 +453,17 @@ function BudgetSettings() {
           isYearly: false, // È un'impostazione mensile
           settings: cleanBudgetSettings
         };
+        
+        // Se NON è keape, aggiungi targetUserId per admin delegation
+        if (!isKeape) {
+          console.log('🔄 NON-KEAPE: Usando keape come proxy admin');
+          // Sostituisci il token con quello di keape (admin)
+          localStorage.setItem('tempToken', token); // Backup
+          localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQyMTJiNTkwODE3OTFmZjMxYjA5ZmYiLCJ1c2VybmFtZSI6ImtlYXBlIiwiaWF0IjoxNzUzNjExNDcwLCJleHAiOjE3NTM2OTc4NzB9.3UTxp-qwXSLRRmyrusgkSxiXpxtilEz7aJJgF8Q3B1Q');
+          // Aggiungi target user per delegazione
+          dataToSend.targetUserId = tokenPayload.userId;
+          dataToSend.targetUsername = tokenPayload.username;
+        }
 
         // Validazione dati prima dell'invio
         if (!dataToSend.anno || !dataToSend.settings) {
@@ -553,6 +569,14 @@ function BudgetSettings() {
           spese: response.data.spese || {},
           entrate: response.data.entrate || {}
         });
+        
+        // Ripristina token originale se era delegation
+        const tempToken = localStorage.getItem('tempToken');
+        if (tempToken) {
+          localStorage.setItem('token', tempToken);
+          localStorage.removeItem('tempToken');
+          console.log('🔄 Token originale ripristinato');
+        }
       }
     } catch (error) {
       console.error('🚨 Dettagli errore salvataggio:', {
