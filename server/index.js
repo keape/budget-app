@@ -73,28 +73,24 @@ app.all('/api/emergency-remove-index', async (req, res) => {
     // Get the collection directly
     const collection = BudgetSettings.collection;
     
-    // List existing indexes
-    const indexes = await collection.listIndexes().toArray();
-    console.log('📋 Current indexes:', indexes.map(idx => ({ name: idx.name, key: idx.key })));
-    
-    // Try to drop the problematic unique index
+    // Try to drop the problematic unique index directly
     try {
       await collection.dropIndex({ userId: 1, anno: 1, mese: 1 });
       console.log('✅ Unique index dropped successfully');
     } catch (dropError) {
-      console.log('⚠️ Index may not exist:', dropError.message);
+      console.log('⚠️ Index drop attempt:', dropError.message);
+      // Try alternative index names
+      try {
+        await collection.dropIndex('userId_1_anno_1_mese_1');
+        console.log('✅ Named index dropped successfully');
+      } catch (dropError2) {
+        console.log('⚠️ Named index drop attempt:', dropError2.message);
+      }
     }
-    
-    // List remaining indexes
-    const finalIndexes = await collection.listIndexes().toArray();
-    console.log('📋 Final indexes:', finalIndexes.map(idx => ({ name: idx.name, key: idx.key })));
     
     res.json({
       success: true,
-      message: 'Index removal completed',
-      initialIndexes: indexes.length,
-      finalIndexes: finalIndexes.length,
-      removedIndexes: indexes.length - finalIndexes.length
+      message: 'Index removal attempts completed - check logs for results'
     });
     
   } catch (error) {
