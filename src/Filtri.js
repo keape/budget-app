@@ -217,137 +217,223 @@ function Filtri() {
 
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
-      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-600 dark:text-indigo-300">
-        Filtra transazioni
-      </h1>
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-300">
+            Filtra Transazioni
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Trova e analizza le tue transazioni con filtri avanzati
+          </p>
+        </div>
 
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {/* Filtro Tipo */}
-          <div>
-            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
-              Tipo di transazione
-            </label>
-            <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-              value={filtroTipo}
-              onChange={e => setFiltroTipo(e.target.value)}
-            >
-              <option value="tutte">Tutte le transazioni</option>
-              <option value="entrata">Solo entrate</option>
-              <option value="uscita">Solo uscite</option>
-            </select>
-          </div>
-
-          {/* Filtro Categoria */}
-          <div>
-            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
-              Filtra per categoria
-            </label>
-            <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-              value={filtroCategoria}
-              onChange={e => setFiltroCategoria(e.target.value)}
-            >
-              <option value="">Tutte le categorie</option>
-              {/* Categorie per le spese */}
-              {filtroTipo !== 'entrata' && <>
-                <option value="Abbigliamento">Abbigliamento</option>
-                <option value="Abbonamenti">Abbonamenti</option>
-                <option value="Acqua">Acqua</option>
-                <option value="Alimentari">Alimentari</option>
-                <option value="Altre spese">Altre spese</option>
-                <option value="Bar">Bar</option>
-                <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
-                <option value="Elettricità">Elettricità</option>
-                <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
-                <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
-                <option value="Mutuo">Mutuo</option>
-                <option value="Regali">Regali</option>
-                <option value="Ristorante">Ristorante</option>
-                <option value="Salute">Salute</option>
-                <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
-                <option value="Tecnologia">Tecnologia</option>
-                <option value="Vacanza">Vacanza</option>
-                <option value="Vela">Vela</option>
-              </>}
-              {/* Categorie per le entrate */}
-              {filtroTipo !== 'uscita' && <>
-                <option value="Stipendio">Stipendio</option>
-                <option value="Investimenti">Investimenti</option>
-                <option value="Vendite">Vendite</option>
-                <option value="Rimborsi">Rimborsi</option>
-                <option value="Regalo">Regalo</option>
-                <option value="MBO">MBO</option>
-                <option value="Welfare">Welfare</option>
-                <option value="Consulenze">Consulenze</option>
-                <option value="Interessi">Interessi</option>
-                <option value="Ticket">Ticket</option>
-                <option value="Altro">Altro</option>
-              </>}
-            </select>
-          </div>
-
-          {/* Filtro Date */}
-          <div>
-            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
-              Intervallo date: Da...A
-            </label>
-            <div className="flex gap-2">
-              <input
-                className="w-full px-3 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-                type="date"
-                value={dataInizio}
-                onChange={e => setDataInizio(e.target.value)}
-              />
-              <input
-                className="w-full px-3 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-                type="date"
-                value={dataFine}
-                onChange={e => setDataFine(e.target.value)}
-              />
+        {/* Filtri Principali */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+            </svg>
+            Filtri Principali
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Filtro Tipo */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Tipo di Transazione
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    filtroTipo === 'tutte' 
+                      ? 'bg-indigo-600 text-white shadow-lg transform scale-105' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                  onClick={() => setFiltroTipo('tutte')}
+                >
+                  Tutte
+                </button>
+                <button
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    filtroTipo === 'entrata' 
+                      ? 'bg-green-600 text-white shadow-lg transform scale-105' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-gray-600'
+                  }`}
+                  onClick={() => setFiltroTipo('entrata')}
+                >
+                  Entrate
+                </button>
+                <button
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    filtroTipo === 'uscita' 
+                      ? 'bg-red-600 text-white shadow-lg transform scale-105' 
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-gray-600'
+                  }`}
+                  onClick={() => setFiltroTipo('uscita')}
+                >
+                  Uscite
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Ricerca Descrizione */}
-          <div>
-            <label className="block font-bold mb-2 text-orange-700 dark:text-orange-300">
-              Ricerca descrizione
-            </label>
-            <input
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-              type="text"
-              placeholder="Cerca nella descrizione..."
-              value={ricercaDescrizione}
-              onChange={e => setRicercaDescrizione(e.target.value)}
-            />
+            {/* Filtro Categoria */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Categoria
+              </label>
+              <select
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
+                value={filtroCategoria}
+                onChange={e => setFiltroCategoria(e.target.value)}
+              >
+                <option value="">Tutte le categorie</option>
+                {/* Categorie per le spese */}
+                {filtroTipo !== 'entrata' && <>
+                  <option value="Abbigliamento">Abbigliamento</option>
+                  <option value="Abbonamenti">Abbonamenti</option>
+                  <option value="Acqua">Acqua</option>
+                  <option value="Alimentari">Alimentari</option>
+                  <option value="Altre spese">Altre spese</option>
+                  <option value="Bar">Bar</option>
+                  <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
+                  <option value="Elettricità">Elettricità</option>
+                  <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
+                  <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
+                  <option value="Mutuo">Mutuo</option>
+                  <option value="Regali">Regali</option>
+                  <option value="Ristorante">Ristorante</option>
+                  <option value="Salute">Salute</option>
+                  <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
+                  <option value="Tecnologia">Tecnologia</option>
+                  <option value="Vacanza">Vacanza</option>
+                  <option value="Vela">Vela</option>
+                </>}
+                {/* Categorie per le entrate */}
+                {filtroTipo !== 'uscita' && <>
+                  <option value="Stipendio">Stipendio</option>
+                  <option value="Investimenti">Investimenti</option>
+                  <option value="Vendite">Vendite</option>
+                  <option value="Rimborsi">Rimborsi</option>
+                  <option value="Regalo">Regalo</option>
+                  <option value="MBO">MBO</option>
+                  <option value="Welfare">Welfare</option>
+                  <option value="Consulenze">Consulenze</option>
+                  <option value="Interessi">Interessi</option>
+                  <option value="Ticket">Ticket</option>
+                  <option value="Altro">Altro</option>
+                </>}
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Risultati e Pulsante Pulisci Filtri */}
-        <div className="flex flex-col items-center mb-8 space-y-4">
-          {/* Contatore risultati */}
-          <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-            {transazioniFiltrate.length} transazione{transazioniFiltrate.length !== 1 ? 'i' : ''} trovata{transazioniFiltrate.length !== 1 ? 'e' : ''}
-            {ricercaDescrizione && (
-              <span className="text-blue-600 dark:text-blue-400 ml-2">
-                con descrizione contenente "{ricercaDescrizione}"
-              </span>
-            )}
-          </div>
+        {/* Filtri Avanzati */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+            </svg>
+            Filtri Avanzati
+          </h2>
           
-          <button
-            className="px-8 py-4 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105"
-            onClick={() => {
-              setFiltroCategoria('');
-              setFiltroTipo('tutte');
-              setDataInizio('');
-              setDataFine('');
-              setRicercaDescrizione('');
-            }}
-          >
-            Pulisci filtri
-          </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Filtro Date */}
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Intervallo Date
+              </label>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data inizio</label>
+                  <input
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
+                    type="date"
+                    value={dataInizio}
+                    onChange={e => setDataInizio(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data fine</label>
+                  <input
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
+                    type="date"
+                    value={dataFine}
+                    onChange={e => setDataFine(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Ricerca Descrizione */}
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Ricerca nel Testo
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
+                  type="text"
+                  placeholder="Cerca nelle descrizioni..."
+                  value={ricercaDescrizione}
+                  onChange={e => setRicercaDescrizione(e.target.value)}
+                />
+              </div>
+              {ricercaDescrizione && (
+                <p className="text-sm text-purple-600 dark:text-purple-400">
+                  Cercando: "{ricercaDescrizione}"
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Barra Risultati */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            {/* Contatore risultati */}
+            <div className="flex items-center space-x-3">
+              <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                {transazioniFiltrate.length}
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                  {transazioniFiltrate.length} transazione{transazioniFiltrate.length !== 1 ? 'i' : ''} trovata{transazioniFiltrate.length !== 1 ? 'e' : ''}
+                </p>
+                {(filtroCategoria || ricercaDescrizione || dataInizio || dataFine || filtroTipo !== 'tutte') && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Filtri attivi: 
+                    {filtroTipo !== 'tutte' && <span className="inline-block bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-2 py-1 rounded mr-1 text-xs">{filtroTipo}</span>}
+                    {filtroCategoria && <span className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded mr-1 text-xs">{filtroCategoria}</span>}
+                    {ricercaDescrizione && <span className="inline-block bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded mr-1 text-xs">testo: {ricercaDescrizione}</span>}
+                    {(dataInizio || dataFine) && <span className="inline-block bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded mr-1 text-xs">periodo</span>}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {/* Pulsante reset */}
+            <button
+              className="px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 flex items-center space-x-2"
+              onClick={() => {
+                setFiltroCategoria('');
+                setFiltroTipo('tutte');
+                setDataInizio('');
+                setDataFine('');
+                setRicercaDescrizione('');
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Reset Filtri</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -644,13 +730,14 @@ function Filtri() {
         </div>
       )}
 
-      {isLoading && (
-        <LoadingSpinner 
-          size="lg" 
-          text="Caricamento transazioni..." 
-          className="py-8"
-        />
-      )}
+        {isLoading && (
+          <LoadingSpinner 
+            size="lg" 
+            text="Caricamento transazioni..." 
+            className="py-8"
+          />
+        )}
+      </div>
     </div>
   );
 }
