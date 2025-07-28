@@ -355,8 +355,8 @@ function Home() {
 
       <form onSubmit={aggiungiTransazione} className="space-y-6">
         {/* Tipo Transazione */}
-        <div className="mb-6">
-          <div className="flex rounded-md shadow-sm">
+        <div className="mb-6 flex justify-center">
+          <div className="flex rounded-md shadow-sm max-w-md w-full">
             <button
               type="button"
               className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-l-lg focus:outline-none ${
@@ -382,61 +382,236 @@ function Home() {
           </div>
         </div>
 
-        <div className="w-full max-w-md">
-          <input
-            className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-            type="number"
-            step="0.01"
-            placeholder="Importo"
-            value={importo}
-            onChange={e => setImporto(e.target.value)}
-            required
-          />
-        </div>
+        {/* Form centrato */}
+        <div className="flex flex-col items-center space-y-6">
+          <div className="w-full max-w-md">
+            <input
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+              type="number"
+              step="0.01"
+              placeholder="Importo"
+              value={importo}
+              onChange={e => setImporto(e.target.value)}
+              required
+            />
+          </div>
 
-        <div className="w-full max-w-md">
-          <select
-            className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-            value={categoria}
-            onChange={e => setCategoria(e.target.value)}
-            required
+          <div className="w-full max-w-md">
+            <select
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+              value={categoria}
+              onChange={e => setCategoria(e.target.value)}
+              required
+            >
+              <option value="">Seleziona categoria</option>
+              {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full max-w-md">
+            <input
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+              type="text"
+              placeholder="Descrizione (facoltativa)"
+              value={descrizione}
+              onChange={e => setDescrizione(e.target.value)}
+            />
+          </div>
+
+          {modalitaTransazione === 'una_tantum' ? (
+            <div className="w-full max-w-md">
+              <input
+                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+                type="date"
+                placeholder="Data (facoltativa)"
+                value={data}
+                onChange={e => setData(e.target.value)}
+              />
+            </div>
+          ) : (
+            /* Configurazione Periodica */
+            <div className="w-full max-w-2xl space-y-6 bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border-2 border-green-300 dark:border-green-600">
+              <h3 className="text-xl font-semibold text-green-800 dark:text-green-200 text-center mb-4">
+                ⚙️ Configurazione Periodicità
+              </h3>
+              
+              {/* Tipo Ripetizione */}
+              <div className="w-full">
+                <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                  Tipo di ripetizione
+                </label>
+                <select
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                  value={tipoRipetizione}
+                  onChange={e => setTipoRipetizione(e.target.value)}
+                >
+                  {tipiRipetizioneOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Configurazioni specifiche per tipo */}
+              {['mensile', 'bimestrale', 'trimestrale', 'semestrale'].includes(tipoRipetizione) && (
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    Giorno del mese
+                  </label>
+                  <div className="flex space-x-4">
+                    <input
+                      type="number"
+                      min="1"
+                      max="31"
+                      className="flex-1 px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                      value={configurazione.giorno}
+                      onChange={e => setConfigurazione({...configurazione, giorno: parseInt(e.target.value)})}
+                    />
+                    <select
+                      className="flex-1 px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                      value={configurazione.gestione_giorno_mancante}
+                      onChange={e => setConfigurazione({...configurazione, gestione_giorno_mancante: e.target.value})}
+                    >
+                      <option value="ultimo_disponibile">Ultimo giorno disponibile</option>
+                      <option value="primo_disponibile">Primo giorno del mese successivo</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {tipoRipetizione === 'settimanale' && (
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    Giorno della settimana
+                  </label>
+                  <select
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                    value={configurazione.giorno_settimana}
+                    onChange={e => setConfigurazione({...configurazione, giorno_settimana: parseInt(e.target.value)})}
+                  >
+                    <option value={1}>Lunedì</option>
+                    <option value={2}>Martedì</option>
+                    <option value={3}>Mercoledì</option>
+                    <option value={4}>Giovedì</option>
+                    <option value={5}>Venerdì</option>
+                    <option value={6}>Sabato</option>
+                    <option value={0}>Domenica</option>
+                  </select>
+                </div>
+              )}
+
+              {tipoRipetizione === 'personalizzata' && (
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    Ogni quanti giorni
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                    value={configurazione.ogni_n_giorni}
+                    onChange={e => setConfigurazione({...configurazione, ogni_n_giorni: parseInt(e.target.value)})}
+                  />
+                </div>
+              )}
+
+              {tipoRipetizione === 'annuale' && (
+                <div className="w-full">
+                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    Mese
+                  </label>
+                  <select
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                    value={configurazione.mese}
+                    onChange={e => setConfigurazione({...configurazione, mese: parseInt(e.target.value)})}
+                  >
+                    <option value={1}>Gennaio</option>
+                    <option value={2}>Febbraio</option>
+                    <option value={3}>Marzo</option>
+                    <option value={4}>Aprile</option>
+                    <option value={5}>Maggio</option>
+                    <option value={6}>Giugno</option>
+                    <option value={7}>Luglio</option>
+                    <option value={8}>Agosto</option>
+                    <option value={9}>Settembre</option>
+                    <option value={10}>Ottobre</option>
+                    <option value={11}>Novembre</option>
+                    <option value={12}>Dicembre</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Date di inizio e fine */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    Data inizio
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                    value={dataInizio}
+                    onChange={e => setDataInizio(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <input
+                      type="checkbox"
+                      id="infinito"
+                      checked={infinito}
+                      onChange={e => setInfinito(e.target.checked)}
+                      className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                    />
+                    <label htmlFor="infinito" className="text-sm font-medium text-green-700 dark:text-green-300">
+                      Senza fine
+                    </label>
+                  </div>
+                  {!infinito && (
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
+                      value={dataFine}
+                      onChange={e => setDataFine(e.target.value)}
+                      min={dataInizio}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Anteprima date */}
+              {anteprimaDate.length > 0 && (
+                <div className="w-full bg-white dark:bg-gray-800 p-4 rounded-lg border border-green-200 dark:border-green-700">
+                  <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                    📅 Anteprima prossime date:
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {anteprimaDate.slice(0, 6).map((data, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs rounded-full"
+                      >
+                        {data.toLocaleDateString('it-IT')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={`px-8 py-4 text-lg font-semibold text-white rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105 ${
+              isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
-            <option value="">Seleziona categoria</option>
-            {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
+            {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? 'Crea Abbonamento' : 'Aggiungi'}
+          </button>
         </div>
-
-        <div className="w-full max-w-md">
-          <input
-            className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-            type="text"
-            placeholder="Descrizione (facoltativa)"
-            value={descrizione}
-            onChange={e => setDescrizione(e.target.value)}
-          />
-        </div>
-
-        <div className="w-full max-w-md">
-          <input
-            className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-            type="date"
-            placeholder="Data (facoltativa)"
-            value={data}
-            onChange={e => setData(e.target.value)}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={`px-8 py-4 text-lg font-semibold text-white rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105 ${
-            isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          {isLoading ? 'Inserimento in corso...' : 'Aggiungi'}
-        </button>
       </form>
     </div>
   );
