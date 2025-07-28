@@ -18,6 +18,8 @@ function Filtri() {
   const [dataInizio, setDataInizio] = useState('');
   const [dataFine, setDataFine] = useState('');
   const [ricercaDescrizione, setRicercaDescrizione] = useState('');
+  const [categorieSpese, setCategorieSpese] = useState([]);
+  const [categorieEntrate, setCategorieEntrate] = useState([]);
   const { darkMode } = useTheme();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
@@ -53,6 +55,29 @@ function Filtri() {
       }
     }
   }, [searchParams]);
+
+  // Carica le categorie dinamicamente
+  useEffect(() => {
+    const fetchCategorie = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${BASE_URL}/api/categorie`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.data && response.data.categorie) {
+          setCategorieSpese(response.data.categorie.spese || []);
+          setCategorieEntrate(response.data.categorie.entrate || []);
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento delle categorie:', error);
+      }
+    };
+
+    fetchCategorie();
+  }, []);
 
   const caricaTransazioni = async () => {
     setIsLoading(true);
@@ -268,40 +293,17 @@ function Filtri() {
               >
                 <option value="">Tutte le categorie</option>
                 {/* Categorie per le spese */}
-                {filtroTipo !== 'entrata' && <>
-                  <option value="Abbigliamento">Abbigliamento</option>
-                  <option value="Abbonamenti">Abbonamenti</option>
-                  <option value="Acqua">Acqua</option>
-                  <option value="Alimentari">Alimentari</option>
-                  <option value="Altre spese">Altre spese</option>
-                  <option value="Bar">Bar</option>
-                  <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
-                  <option value="Elettricità">Elettricità</option>
-                  <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
-                  <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
-                  <option value="Mutuo">Mutuo</option>
-                  <option value="Regali">Regali</option>
-                  <option value="Ristorante">Ristorante</option>
-                  <option value="Salute">Salute</option>
-                  <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
-                  <option value="Tecnologia">Tecnologia</option>
-                  <option value="Vacanza">Vacanza</option>
-                  <option value="Vela">Vela</option>
-                </>}
+                {filtroTipo !== 'entrata' && categorieSpese.map(categoria => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
                 {/* Categorie per le entrate */}
-                {filtroTipo !== 'uscita' && <>
-                  <option value="Stipendio">Stipendio</option>
-                  <option value="Investimenti">Investimenti</option>
-                  <option value="Vendite">Vendite</option>
-                  <option value="Rimborsi">Rimborsi</option>
-                  <option value="Regalo">Regalo</option>
-                  <option value="MBO">MBO</option>
-                  <option value="Welfare">Welfare</option>
-                  <option value="Consulenze">Consulenze</option>
-                  <option value="Interessi">Interessi</option>
-                  <option value="Ticket">Ticket</option>
-                  <option value="Altro">Altro</option>
-                </>}
+                {filtroTipo !== 'uscita' && categorieEntrate.map(categoria => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -651,42 +653,18 @@ function Filtri() {
                   })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
-                  {editingTransaction.tipo === 'entrata' ? (
-                    <>
-                      <option value="Stipendio">Stipendio</option>
-                      <option value="Investimenti">Investimenti</option>
-                      <option value="Vendite">Vendite</option>
-                      <option value="Rimborsi">Rimborsi</option>
-                      <option value="Regalo">Regalo</option>
-                      <option value="MBO">MBO</option>
-                      <option value="Welfare">Welfare</option>
-                      <option value="Consulenze">Consulenze</option>
-                      <option value="Interessi">Interessi</option>
-                      <option value="Ticket">Ticket</option>
-                      <option value="Altro">Altro</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Abbigliamento">Abbigliamento</option>
-                      <option value="Abbonamenti">Abbonamenti</option>
-                      <option value="Acqua">Acqua</option>
-                      <option value="Alimentari">Alimentari</option>
-                      <option value="Altre spese">Altre spese</option>
-                      <option value="Bar">Bar</option>
-                      <option value="Cinema Mostre Cultura">Cinema Mostre Cultura</option>
-                      <option value="Elettricità">Elettricità</option>
-                      <option value="Giardinaggio/Agricoltura/Falegnameria">Giardinaggio/Agricoltura/Falegnameria</option>
-                      <option value="Manutenzione/Arredamento casa">Manutenzione/Arredamento casa</option>
-                      <option value="Mutuo">Mutuo</option>
-                      <option value="Regali">Regali</option>
-                      <option value="Ristorante">Ristorante</option>
-                      <option value="Salute">Salute</option>
-                      <option value="Sport/Attrezzatura sportiva">Sport/Attrezzatura sportiva</option>
-                      <option value="Tecnologia">Tecnologia</option>
-                      <option value="Vacanza">Vacanza</option>
-                      <option value="Vela">Vela</option>
-                    </>
-                  )}
+                  {editingTransaction.tipo === 'entrata' 
+                    ? categorieEntrate.map(categoria => (
+                        <option key={categoria} value={categoria}>
+                          {categoria}
+                        </option>
+                      ))
+                    : categorieSpese.map(categoria => (
+                        <option key={categoria} value={categoria}>
+                          {categoria}
+                        </option>
+                      ))
+                  }
                 </select>
               </div>
             </div>
