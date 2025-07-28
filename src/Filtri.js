@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend, LabelList
+  BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend
 } from 'recharts';
 import React from 'react';
 import { useTheme } from './ThemeContext';
@@ -23,19 +23,6 @@ function Filtri() {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const categorieEntrate = [
-    "Stipendio",
-    "Investimenti",
-    "Vendite",
-    "Rimborsi",
-    "Regalo",
-    "MBO",
-    "Welfare",
-    "Consulenze",
-    "Interessi",
-    "Ticket",
-    "Altro"
-  ];
 
   // Legge i parametri dall'URL all'avvio
   useEffect(() => {
@@ -46,11 +33,9 @@ function Filtri() {
 
     if (categoria) {
       setFiltroCategoria(categoria);
-      console.log('Filtri.js: Categoria da URL:', categoria);
     }
     if (tipo) {
       setFiltroTipo(tipo);
-      console.log('Filtri.js: Tipo da URL:', tipo);
     }
 
     // Imposta le date in base al mese e anno se presenti nell'URL
@@ -67,8 +52,6 @@ function Filtri() {
         setDataFine(ultimoGiornoAnno.toISOString().split('T')[0]);
       }
     }
-    console.log('Filtri.js: Mese da URL:', mese);
-    console.log('Filtri.js: Anno da URL:', anno);
   }, [searchParams]);
 
   const caricaTransazioni = async () => {
@@ -150,10 +133,6 @@ function Filtri() {
     return true;
   });
 
-  // Aggiungi log per debug
-  console.log('Filtro tipo:', filtroTipo);
-  console.log('Transazioni filtrate:', transazioniFiltrate.length);
-  console.log('Dettaglio transazioni filtrate:', transazioniFiltrate);
 
   const colors = ['#60a5fa', '#818cf8', '#34d399', '#f472b6', '#fcd34d', '#f87171'];
 
