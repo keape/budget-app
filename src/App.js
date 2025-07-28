@@ -12,11 +12,13 @@ import ResetPassword from './ResetPassword';
 import Navbar from './navbar';
 import ProtectedRoute from './ProtectedRoute';
 import { ThemeProvider } from './ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
   return (
     <ThemeProvider>
-      <Router>
+      <NotificationProvider>
+        <Router>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -71,7 +73,8 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
-      </Router>
+        </Router>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }
