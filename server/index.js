@@ -9,6 +9,7 @@ const speseRoutes = require('./routes/spese');
 const entrateRoutes = require('./routes/entrate');
 const budgetSettingsRoutes = require('./routes/budgetSettings');
 const categorieRoutes = require('./routes/categorie');
+const transazioniPeriodicheRoutes = require('./routes/transazioniPeriodiche');
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use('/api/spese', speseRoutes);
 app.use('/api/entrate', entrateRoutes);
 app.use('/api/budget-settings', budgetSettingsRoutes);
 app.use('/api/categorie', categorieRoutes);
+app.use('/api/transazioni-periodiche', transazioniPeriodicheRoutes);
 
 // Root test route
 app.get('/', (req, res) => {
