@@ -254,7 +254,7 @@ function Home() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        alert('Abbonamento creato con successo!');
+        alert('Ricorrenza creata con successo!');
         
         // Reset form
         setDescrizione('');
@@ -271,7 +271,7 @@ function Home() {
       
     } catch (err) {
       console.error(`Errore nell'inserimento:`, err);
-      setError(`Impossibile inserire la ${modalitaTransazione === 'una_tantum' ? 'transazione' : 'abbonamento'}. Riprova più tardi.`);
+      setError(`Impossibile inserire la ${modalitaTransazione === 'una_tantum' ? 'transazione' : 'ricorrenza'}. Riprova più tardi.`);
     } finally {
       setIsLoading(false);
     }
@@ -609,7 +609,7 @@ function Home() {
               isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? 'Crea Abbonamento' : 'Aggiungi'}
+            {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? 'Crea ricorrenza periodica' : 'Aggiungi'}
           </button>
         </div>
       </form>
