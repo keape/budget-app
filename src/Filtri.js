@@ -218,6 +218,51 @@ function Filtri() {
     }
   };
 
+  const downloadCSV = () => {
+    if (transazioniFiltrate.length === 0) {
+      alert('Nessuna transazione da esportare');
+      return;
+    }
+
+    // Intestazioni del CSV
+    const headers = ['Data', 'Tipo', 'Categoria', 'Descrizione', 'Importo'];
+    
+    // Dati delle transazioni
+    const csvData = transazioniFiltrate.map(transazione => {
+      const data = new Date(transazione.data).toLocaleDateString('it-IT');
+      const tipo = transazione.tipo === 'entrata' ? 'Entrata' : 'Uscita';
+      const categoria = transazione.categoria || '';
+      const descrizione = (transazione.descrizione || '').replace(/,/g, ';'); // Sostituisce virgole con punto e virgola
+      const importo = Number(transazione.importo).toFixed(2);
+      
+      return [data, tipo, categoria, descrizione, importo];
+    });
+
+    // Combina intestazioni e dati
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    // Crea e scarica il file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    
+    // Nome file con data corrente e informazioni sui filtri
+    let fileName = `transazioni_${new Date().toISOString().split('T')[0]}`;
+    if (filtroTipo !== 'tutte') fileName += `_${filtroTipo}`;
+    if (filtroCategoria) fileName += `_${filtroCategoria.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    fileName += '.csv';
+    
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
 
   return (
     <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
@@ -398,22 +443,40 @@ function Filtri() {
               </div>
             </div>
             
-            {/* Pulsante reset */}
-            <button
-              className="px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 flex items-center space-x-2"
-              onClick={() => {
-                setFiltroCategoria('');
-                setFiltroTipo('tutte');
-                setDataInizio('');
-                setDataFine('');
-                setRicercaDescrizione('');
-              }}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Reset Filtri</span>
-            </button>
+            {/* Pulsanti azioni */}
+            <div className="flex space-x-3">
+              <button
+                className="px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 flex items-center space-x-2"
+                onClick={() => {
+                  setFiltroCategoria('');
+                  setFiltroTipo('tutte');
+                  setDataInizio('');
+                  setDataFine('');
+                  setRicercaDescrizione('');
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Reset Filtri</span>
+              </button>
+              
+              <button
+                className={`px-6 py-3 font-semibold rounded-lg transition-all duration-200 flex items-center space-x-2 ${
+                  transazioniFiltrate.length === 0
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105'
+                }`}
+                onClick={downloadCSV}
+                disabled={transazioniFiltrate.length === 0}
+                title={transazioniFiltrate.length === 0 ? 'Nessuna transazione da esportare' : 'Scarica come CSV'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Download</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
