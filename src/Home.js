@@ -18,7 +18,7 @@ function Home() {
   const [error, setError] = useState(null);
   
   // Stati per transazioni periodiche
-  const [modalitaTransazione, setModalitaTransazione] = useState('una_tantum'); // 'una_tantum' | 'periodica'
+  const [modalitaTransazione, setModalitaTransazione] = useState('una_tantum'); // 'una_tantum' | 'periodica' | 'archivio'
   const [tipoRipetizione, setTipoRipetizione] = useState('mensile');
   const [configurazione, setConfigurazione] = useState({
     giorno: 1,
@@ -278,7 +278,7 @@ function Home() {
   };
   
   const eliminaAbbonamento = async (id) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questo abbonamento?')) return;
+    if (!window.confirm('Sei sicuro di voler eliminare questa transazione periodica?')) return;
     
     try {
       const token = localStorage.getItem('token');
@@ -287,10 +287,10 @@ function Home() {
       });
       
       await caricaAbbonamentiAttivi();
-      alert('Abbonamento eliminato con successo!');
+      alert('Transazione periodica eliminata con successo!');
     } catch (error) {
       console.error('Errore nell\'eliminazione abbonamento:', error);
-      alert('Errore nell\'eliminazione dell\'abbonamento');
+      alert('Errore nell\'eliminazione della transazione periodica');
     }
   };
 
@@ -351,36 +351,151 @@ function Home() {
             </button>
           </div>
         </div>
+        
+        {/* Bottone Archivio Transazioni Periodiche */}
+        <div className="flex justify-center">
+          <button
+            type="button"
+            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+              modalitaTransazione === 'archivio'
+                ? 'bg-purple-600 text-white shadow-lg transform scale-105'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}
+            onClick={() => setModalitaTransazione('archivio')}
+          >
+            <span>📋</span>
+            <span>Archivio transazioni periodiche</span>
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={aggiungiTransazione} className="space-y-6">
-        {/* Tipo Transazione */}
-        <div className="mb-6 flex justify-center">
-          <div className="flex rounded-md shadow-sm max-w-md w-full">
-            <button
-              type="button"
-              className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-l-lg focus:outline-none ${
-                tipo === 'spesa'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-              onClick={() => handleTipoChange('spesa')}
-            >
-              Spesa
-            </button>
-            <button
-              type="button" 
-              className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-r-lg focus:outline-none ${
-                tipo === 'entrata'
-                  ? 'bg-green-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-              onClick={() => handleTipoChange('entrata')}
-            >
-              Entrata
-            </button>
-          </div>
+      {modalitaTransazione === 'archivio' ? (
+        /* Sezione Archivio Transazioni Periodiche */
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-center text-purple-700 dark:text-purple-300 mb-6">
+            📋 Archivio Transazioni Periodiche
+          </h2>
+          
+          {abbonamentiAttivi.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📋</div>
+              <p className="text-xl text-gray-500 dark:text-gray-400 mb-2">
+                Nessuna transazione periodica trovata
+              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Crea la tua prima transazione periodica utilizzando il bottone "Periodica"
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {abbonamentiAttivi.map((abbonamento) => (
+                <div 
+                  key={abbonamento._id}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-purple-500"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <span className="text-2xl">
+                          {abbonamento.importo < 0 ? '💸' : '💰'}
+                        </span>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            {abbonamento.descrizione || 'Transazione periodica'}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {abbonamento.categoria}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Importo:</span>
+                          <p className={`font-semibold ${
+                            abbonamento.importo < 0 
+                              ? 'text-red-600 dark:text-red-400' 
+                              : 'text-green-600 dark:text-green-400'
+                          }`}>
+                            €{Math.abs(abbonamento.importo).toFixed(2)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Ripetizione:</span>
+                          <p className="text-gray-900 dark:text-white">
+                            {tipiRipetizioneOptions.find(opt => opt.value === abbonamento.tipo_ripetizione)?.label || abbonamento.tipo_ripetizione}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Data inizio:</span>
+                          <p className="text-gray-900 dark:text-white">
+                            {new Date(abbonamento.data_inizio).toLocaleDateString('it-IT')}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Stato:</span>
+                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                            abbonamento.attiva 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {abbonamento.attiva ? 'Attiva' : 'Inattiva'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {abbonamento.data_fine && (
+                        <div className="mt-2 text-sm">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Data fine:</span>
+                          <span className="ml-2 text-gray-900 dark:text-white">
+                            {new Date(abbonamento.data_fine).toLocaleDateString('it-IT')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => eliminaAbbonamento(abbonamento._id)}
+                      className="ml-4 px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 text-red-700 dark:text-red-300 rounded-md text-sm font-medium transition-colors duration-200"
+                      title="Elimina transazione periodica"
+                    >
+                      🗑️ Elimina
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      ) : (
+        <form onSubmit={aggiungiTransazione} className="space-y-6">
+          {/* Tipo Transazione */}
+          <div className="mb-6 flex justify-center">
+            <div className="flex rounded-md shadow-sm max-w-md w-full">
+              <button
+                type="button"
+                className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-l-lg focus:outline-none ${
+                  tipo === 'spesa'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+                onClick={() => handleTipoChange('spesa')}
+              >
+                Spesa
+              </button>
+              <button
+                type="button" 
+                className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-r-lg focus:outline-none ${
+                  tipo === 'entrata'
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+                onClick={() => handleTipoChange('entrata')}
+              >
+                Entrata
+              </button>
+            </div>
+          </div>
 
         {/* Form centrato */}
         <div className="flex flex-col items-center space-y-6">
@@ -612,7 +727,8 @@ function Home() {
             {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? 'Crea ricorrenza periodica' : 'Aggiungi'}
           </button>
         </div>
-      </form>
+        </form>
+      )}
     </div>
   );
 }
