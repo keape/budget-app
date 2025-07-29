@@ -115,12 +115,12 @@ const calcolaDateMancanti = (abbonamento) => {
   return dateDaGenerare;
 };
 
-// GET - Lista tutte le transazioni periodiche dell'utente
+// GET - Lista tutte le transazioni periodiche dell'utente (attive e sospese)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const transazioni = await TransazionePeriodica.find({ 
-      userId: req.user.userId,
-      attiva: true 
+      userId: req.user.userId
+      // Rimuove il filtro attiva: true per mostrare anche quelle sospese
     }).sort({ createdAt: -1 });
     
     res.json(transazioni);
@@ -179,6 +179,33 @@ router.put('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Errore nella modifica transazione periodica:', error);
     res.status(400).json({ message: 'Errore nella modifica', error: error.message });
+  }
+});
+
+// PATCH - Cambia stato (attiva/sospendi) di una transazione periodica
+router.patch('/:id/stato', authenticateToken, async (req, res) => {
+  try {
+    const { attiva } = req.body;
+    
+    const transazione = await TransazionePeriodica.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.userId },
+      { attiva: attiva },
+      { new: true }
+    );
+    
+    if (!transazione) {
+      return res.status(404).json({ message: 'Transazione periodica non trovata' });
+    }
+    
+    const azione = attiva ? 'attivato' : 'sospeso';
+    console.log(`${attiva ? '✅' : '⏸️'} Abbonamento ${azione}: ${transazione.descrizione}`);
+    res.json({ 
+      message: `Transazione periodica ${azione}`, 
+      transazione: transazione 
+    });
+  } catch (error) {
+    console.error('Errore nel cambio stato transazione periodica:', error);
+    res.status(500).json({ message: 'Errore del server' });
   }
 });
 
