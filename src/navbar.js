@@ -24,29 +24,8 @@ function Navbar() {
   return (
     <header className="bg-white dark:bg-gray-800 shadow mb-6" role="banner">
       <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-        <nav className="space-x-6 text-lg" role="navigation" aria-label="Menu principale">
-          <Link 
-            to="/budget" 
-            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-              location.pathname === '/budget'
-                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-            aria-current={location.pathname === '/budget' ? 'page' : undefined}
-          >
-            Budget
-          </Link>
-          <Link 
-            to="/filtri" 
-            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
-              location.pathname === '/filtri'
-                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
-                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
-            }`}
-            aria-current={location.pathname === '/filtri' ? 'page' : undefined}
-          >
-            Movimenti
-          </Link>
+        {/* Menu principale a sinistra */}
+        <nav className="flex space-x-6 text-lg" role="navigation" aria-label="Menu principale">
           <Link 
             to="/" 
             className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
@@ -58,6 +37,47 @@ function Navbar() {
           >
             Inserisci transazione
           </Link>
+          <Link 
+            to="/filtri" 
+            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
+              location.pathname === '/filtri'
+                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+            aria-current={location.pathname === '/filtri' ? 'page' : undefined}
+          >
+            Transazioni
+          </Link>
+          <Link 
+            to="/budget" 
+            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
+              location.pathname === '/budget'
+                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+            aria-current={location.pathname === '/budget' ? 'page' : undefined}
+          >
+            Budget
+          </Link>
+        </nav>
+        
+        {/* Menu utente e toggle tema a destra */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={toggleDarkMode}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleDarkMode();
+              }
+            }}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+            aria-label={darkMode ? 'Attiva tema chiaro' : 'Attiva tema scuro'}
+            aria-pressed={darkMode}
+            title={darkMode ? 'Attiva tema chiaro' : 'Attiva tema scuro'}
+          >
+            <span aria-hidden="true">{darkMode ? '☀️' : '🌙'}</span>
+          </button>
           
           {/* Menu Dropdown Gestione Account */}
           <div className="relative inline-block">
@@ -119,7 +139,7 @@ function Navbar() {
                   tabIndex={0}
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z" />
                   </svg>
                   Cambia Password
                 </Link>
@@ -137,24 +157,6 @@ function Navbar() {
               </div>
             )}
           </div>
-        </nav>
-        
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={toggleDarkMode}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                toggleDarkMode();
-              }
-            }}
-            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-            aria-label={darkMode ? 'Attiva tema chiaro' : 'Attiva tema scuro'}
-            aria-pressed={darkMode}
-            title={darkMode ? 'Attiva tema chiaro' : 'Attiva tema scuro'}
-          >
-            <span aria-hidden="true">{darkMode ? '☀️' : '🌙'}</span>
-          </button>
         </div>
       </div>
     </header>
