@@ -19,6 +19,7 @@ function Home() {
   
   // Stati per transazioni periodiche
   const [modalitaTransazione, setModalitaTransazione] = useState('una_tantum'); // 'una_tantum' | 'periodica' | 'archivio'
+  const [transazioneInModifica, setTransazioneInModifica] = useState(null);
   const [tipoRipetizione, setTipoRipetizione] = useState('mensile');
   const [configurazione, setConfigurazione] = useState({
     giorno: 1,
@@ -250,11 +251,22 @@ function Home() {
           attiva: true
         };
         
-        await axios.post(`${BASE_URL}/api/transazioni-periodiche`, abbonamento, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        alert('Ricorrenza creata con successo!');
+        if (transazioneInModifica) {
+          // Modifica transazione esistente
+          await axios.put(`${BASE_URL}/api/transazioni-periodiche/${transazioneInModifica._id}`, abbonamento, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          alert('Ricorrenza modificata con successo!');
+          setTransazioneInModifica(null);
+        } else {
+          // Crea nuova transazione
+          await axios.post(`${BASE_URL}/api/transazioni-periodiche`, abbonamento, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          alert('Ricorrenza creata con successo!');
+        }
         
         // Reset form
         setDescrizione('');
@@ -292,6 +304,44 @@ function Home() {
       console.error('Errore nell\'eliminazione abbonamento:', error);
       alert('Errore nell\'eliminazione della transazione periodica');
     }
+  };
+
+  const modificaAbbonamento = (abbonamento) => {
+    // Popola i campi del form con i dati della transazione da modificare
+    setTransazioneInModifica(abbonamento);
+    setTipo(abbonamento.importo < 0 ? 'spesa' : 'entrata');
+    setImporto(Math.abs(abbonamento.importo).toString());
+    setCategoria(abbonamento.categoria);
+    setDescrizione(abbonamento.descrizione || '');
+    setTipoRipetizione(abbonamento.tipo_ripetizione);
+    setConfigurazione(abbonamento.configurazione);
+    setDataInizio(abbonamento.data_inizio.split('T')[0]);
+    setDataFine(abbonamento.data_fine ? abbonamento.data_fine.split('T')[0] : '');
+    setInfinito(!abbonamento.data_fine);
+    
+    // Torna alla modalità periodica per permettere la modifica
+    setModalitaTransazione('periodica');
+  };
+
+  const annullaModifica = () => {
+    setTransazioneInModifica(null);
+    // Reset form
+    setDescrizione('');
+    setImporto('');
+    setCategoria('');
+    setDataInizio(new Date().toISOString().split('T')[0]);
+    setDataFine('');
+    setInfinito(true);
+    setTipoRipetizione('mensile');
+    setConfigurazione({
+      giorno: 1,
+      gestione_giorno_mancante: 'ultimo_disponibile',
+      ogni_n_mesi: 1,
+      mese: 1,
+      giorni_settimana: [],
+      giorno_settimana: 1,
+      ogni_n_giorni: 30
+    });
   };
 
   const tipiRipetizioneOptions = [
@@ -352,21 +402,19 @@ function Home() {
           </div>
         </div>
         
-        {/* Bottone Archivio Transazioni Periodiche */}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
-              modalitaTransazione === 'archivio'
-                ? 'bg-purple-600 text-white shadow-lg transform scale-105'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}
-            onClick={() => setModalitaTransazione('archivio')}
-          >
-            <span>📋</span>
-            <span>Archivio transazioni periodiche</span>
-          </button>
-        </div>
+        {/* Bottone Archivio solo in modalità Periodica */}
+        {modalitaTransazione === 'periodica' && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 bg-purple-600 text-white hover:bg-purple-700 shadow-md"
+              onClick={() => setModalitaTransazione('archivio')}
+            >
+              <span>📋</span>
+              <span>Archivio transazioni periodiche</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {modalitaTransazione === 'archivio' ? (
@@ -454,13 +502,22 @@ function Home() {
                       )}
                     </div>
                     
-                    <button
-                      onClick={() => eliminaAbbonamento(abbonamento._id)}
-                      className="ml-4 px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 text-red-700 dark:text-red-300 rounded-md text-sm font-medium transition-colors duration-200"
-                      title="Elimina transazione periodica"
-                    >
-                      🗑️ Elimina
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => modificaAbbonamento(abbonamento)}
+                        className="px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-md text-sm font-medium transition-colors duration-200"
+                        title="Modifica transazione periodica"
+                      >
+                        ✏️ Modifica
+                      </button>
+                      <button
+                        onClick={() => eliminaAbbonamento(abbonamento._id)}
+                        className="px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 text-red-700 dark:text-red-300 rounded-md text-sm font-medium transition-colors duration-200"
+                        title="Elimina transazione periodica"
+                      >
+                        🗑️ Elimina
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -548,9 +605,21 @@ function Home() {
           ) : (
             /* Configurazione Periodica */
             <div className="w-full max-w-2xl space-y-6 bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border-2 border-green-300 dark:border-green-600">
-              <h3 className="text-xl font-semibold text-green-800 dark:text-green-200 text-center mb-4">
-                ⚙️ Configurazione Periodicità
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-green-800 dark:text-green-200 text-center flex-1">
+                  {transazioneInModifica ? '✏️ Modifica Ricorrenza Periodica' : '⚙️ Configurazione Periodicità'}
+                </h3>
+                {transazioneInModifica && (
+                  <button
+                    type="button"
+                    onClick={annullaModifica}
+                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors duration-200"
+                    title="Annulla modifica"
+                  >
+                    ❌ Annulla
+                  </button>
+                )}
+              </div>
               
               {/* Tipo Ripetizione */}
               <div className="w-full">
@@ -724,7 +793,7 @@ function Home() {
               isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? 'Crea ricorrenza periodica' : 'Aggiungi'}
+            {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? (transazioneInModifica ? 'Salva modifiche' : 'Crea ricorrenza periodica') : 'Aggiungi'}
           </button>
         </div>
         </form>
