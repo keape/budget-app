@@ -344,6 +344,28 @@ function Home() {
     });
   };
 
+  const toggleStatoAbbonamento = async (id, statoAttuale) => {
+    const nuovoStato = !statoAttuale;
+    const azione = nuovoStato ? 'attivare' : 'sospendere';
+    
+    if (!window.confirm(`Sei sicuro di voler ${azione} questa transazione periodica?`)) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${BASE_URL}/api/transazioni-periodiche/${id}/stato`, {
+        attiva: nuovoStato
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      await caricaAbbonamentiAttivi();
+      alert(`Transazione periodica ${nuovoStato ? 'attivata' : 'sospesa'} con successo!`);
+    } catch (error) {
+      console.error('Errore nel cambio stato:', error);
+      alert('Errore nel cambio di stato della transazione periodica');
+    }
+  };
+
   const tipiRipetizioneOptions = [
     { value: 'giornaliera', label: 'Ogni giorno' },
     { value: 'settimanale', label: 'Ogni settimana' },
@@ -509,6 +531,17 @@ function Home() {
                         title="Modifica transazione periodica"
                       >
                         ✏️ Modifica
+                      </button>
+                      <button
+                        onClick={() => toggleStatoAbbonamento(abbonamento._id, abbonamento.attiva)}
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
+                          abbonamento.attiva
+                            ? 'bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-700 dark:text-yellow-300'
+                            : 'bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-300'
+                        }`}
+                        title={abbonamento.attiva ? 'Sospendi transazione periodica' : 'Attiva transazione periodica'}
+                      >
+                        {abbonamento.attiva ? '⏸️ Sospendi' : '▶️ Attiva'}
                       </button>
                       <button
                         onClick={() => eliminaAbbonamento(abbonamento._id)}
