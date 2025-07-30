@@ -89,7 +89,8 @@ app.get('/api/debug-env', (req, res) => {
     hasMongodbUri: !!process.env.MONGODB_URI,
     hasJwtSecret: !!process.env.JWT_SECRET,
     mongodbUriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
-    mongodbUriStart: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'MISSING'
+    mongodbUriStart: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'MISSING',
+    mongodbUriFull: process.env.MONGODB_URI // Mostra l'URI completa per debug
   });
 });
 
@@ -346,9 +347,9 @@ app.use('/api/*', (req, res) => {
 // MongoDB connection with better error handling
 let isDbConnected = false;
 
-// Clean MONGODB_URI of any quotes that Render might add
-const mongoUri = process.env.MONGODB_URI?.replace(/^["']|["']$/g, '');
-console.log('🔧 Cleaned MongoDB URI length:', mongoUri?.length);
+// FORCE correct MongoDB URI - temporary fix for Render cache issue
+const mongoUri = 'mongodb+srv://keape86:trombino86@budgetapp.enqupoz.mongodb.net/budget-app?retryWrites=true&w=majority&appName=budgetapp';
+console.log('🔧 FORCED MongoDB URI for Render cache bug');
 
 mongoose.connect(mongoUri)
   .then(() => {
