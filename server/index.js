@@ -41,22 +41,14 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Database check middleware for all API routes except health and auth
+// Database check middleware - Allow auth endpoints to work without DB check
 app.use('/api', (req, res, next) => {
   // Skip database check for health endpoint and auth endpoints
-  if (req.path === '/health' || req.path.startsWith('/auth/')) {
+  if (req.path === '/health' || req.path === '/auth/login' || req.path === '/auth/register') {
     return next();
   }
   
-  // Check if mongoose is connected for other endpoints
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({
-      success: false,
-      error: 'Service Unavailable',
-      message: 'Database connection not available. Please try again later.'
-    });
-  }
-  
+  // For other endpoints, let them handle DB errors gracefully
   next();
 });
 
