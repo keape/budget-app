@@ -83,6 +83,16 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// DEBUG: Check environment variables
+app.get('/api/debug-env', (req, res) => {
+  res.json({
+    hasMongodbUri: !!process.env.MONGODB_URI,
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    mongodbUriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+    mongodbUriStart: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'MISSING'
+  });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/spese', speseRoutes);
