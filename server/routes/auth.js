@@ -94,7 +94,14 @@ router.post('/login', async (req, res) => {
     res.json({ token });
   } catch (error) {
     console.error('❌ Errore durante il login:', error);
-    res.status(500).json({ message: "Errore durante il login" });
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ 
+      message: "Errore durante il login", 
+      error: error.message,
+      errorType: error.name 
+    });
   }
 });
 
