@@ -41,14 +41,14 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Database check middleware for all API routes except health
+// Database check middleware for all API routes except health and auth
 app.use('/api', (req, res, next) => {
-  // Skip database check for health endpoint
-  if (req.path === '/health') {
+  // Skip database check for health endpoint and auth endpoints
+  if (req.path === '/health' || req.path.startsWith('/auth/')) {
     return next();
   }
   
-  // Check if mongoose is connected
+  // Check if mongoose is connected for other endpoints
   if (mongoose.connection.readyState !== 1) {
     return res.status(503).json({
       success: false,
