@@ -10,4 +10,8 @@ services:
         value: production
       - key: PORT
         value: 5001
+      - key: MONGODB_URI
+        value: mongodb+srv://keape86:trombino86@budgetapp.enqupoz.mongodb.net/budget-app?retryWrites=true&w=majority&appName=budgetapp
+      - key: JWT_SECRET
+        value: mySecretKey123
     healthCheckPath: /api/health
