@@ -21,6 +21,7 @@ const corsOptions = {
     'https://budget-app-cd5o.onrender.com',
     'https://budget-app-keape.vercel.app',
     'https://budget-app-three-gules.vercel.app',
+    'https://budget-app-backend.onrender.com',
     'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev'
   ],
   credentials: true,
@@ -33,6 +34,31 @@ app.use(cors(corsOptions));
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// JSON Response Middleware - Force Content-Type to application/json for API routes
+app.use('/api', (req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
+// Database check middleware for all API routes except health
+app.use('/api', (req, res, next) => {
+  // Skip database check for health endpoint
+  if (req.path === '/health') {
+    return next();
+  }
+  
+  // Check if mongoose is connected
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      error: 'Service Unavailable',
+      message: 'Database connection not available. Please try again later.'
+    });
+  }
+  
+  next();
+});
 
 // Security Headers Middleware
 app.use((req, res, next) => {
@@ -53,6 +79,16 @@ app.use((req, res, next) => {
     }
   }
   next();
+});
+
+// Health check endpoint - must be before database middleware
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    server: 'running',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Routes
@@ -256,13 +292,67 @@ app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
   }
 });
 
-// MongoDB connection
+// Error handling middleware - must be after all routes
+app.use((err, req, res, next) => {
+  console.error('❌ Error caught by middleware:', err);
+  
+  // Set proper JSON content type
+  res.setHeader('Content-Type', 'application/json');
+  
+  // Handle different error types
+  if (err.name === 'MongoServerError' || err.name === 'MongoError') {
+    return res.status(500).json({
+      success: false,
+      error: 'Database connection error',
+      message: 'Unable to connect to database. Please try again later.'
+    });
+  }
+  
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      message: err.message
+    });
+  }
+  
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication error',
+      message: 'Invalid token'
+    });
+  }
+  
+  // Generic error handler
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.name || 'Internal Server Error',
+    message: err.message || 'An unexpected error occurred'
+  });
+});
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Not Found',
+    message: `API endpoint ${req.originalUrl} not found`
+  });
+});
+
+// MongoDB connection with better error handling
+let isDbConnected = false;
+
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('✅ Connessione a MongoDB riuscita');
+    isDbConnected = true;
   })
   .catch((error) => {
-    console.error('❌ Errore di connessione a MongoDB:', error);
+    console.error('❌ Errore di connessione a MongoDB:', error.message);
+    console.log('⚠️ Server will continue without database connection');
+    isDbConnected = false;
   });
 
 // Start server
