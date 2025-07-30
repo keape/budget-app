@@ -346,7 +346,11 @@ app.use('/api/*', (req, res) => {
 // MongoDB connection with better error handling
 let isDbConnected = false;
 
-mongoose.connect(process.env.MONGODB_URI)
+// Clean MONGODB_URI of any quotes that Render might add
+const mongoUri = process.env.MONGODB_URI?.replace(/^["']|["']$/g, '');
+console.log('🔧 Cleaned MongoDB URI length:', mongoUri?.length);
+
+mongoose.connect(mongoUri)
   .then(() => {
     console.log('✅ Connessione a MongoDB riuscita');
     isDbConnected = true;
