@@ -10,6 +10,7 @@ import Register from './Register';
 import ChangePassword from './ChangePassword';
 import ForgotPassword from './ForgotPassword';
 import ResetPassword from './ResetPassword';
+import AboutUs from './AboutUs';
 import Navbar from './navbar';
 import ProtectedRoute from './ProtectedRoute';
 import { ThemeProvider } from './ThemeContext';
@@ -29,6 +30,16 @@ function App() {
             <Route path="/change-password" element={
               <ProtectedRoute>
                 <ChangePassword />
+              </ProtectedRoute>
+            } />
+            <Route path="/about-us" element={
+              <ProtectedRoute>
+                <>
+                  <Navbar />
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <AboutUs />
+                  </div>
+                </>
               </ProtectedRoute>
             } />
             <Route path="/" element={
