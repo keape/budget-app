@@ -687,7 +687,7 @@ function BudgetSettings() {
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="Importo..."
+                    placeholder="Budget massimo (€)..."
                     value={newCategory.type === 'spese' ? newCategory.value : ''}
                     onChange={(e) => setNewCategory({ type: 'spese', name: newCategory.name, value: e.target.value })}
                     className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -772,6 +772,8 @@ function BudgetSettings() {
                     type="number"
                     min="0"
                     step="0.01"
+                    placeholder="Budget €"
+                    title="Inserisci il budget massimo per questa categoria"
                     value={budgetSettings.spese?.[categoria] ?? ''}
                     onChange={(e) => handleBudgetChange(categoria, 'spese', e.target.value)}
                     className="w-32 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -812,7 +814,7 @@ function BudgetSettings() {
                     type="number"
                     min="0"
                     step="0.01"
-                    placeholder="Importo..."
+                    placeholder="Budget previsto (€)..."
                     value={newCategory.type === 'entrate' ? newCategory.value : ''}
                     onChange={(e) => setNewCategory({ type: 'entrate', name: newCategory.name, value: e.target.value })}
                     className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -897,6 +899,8 @@ function BudgetSettings() {
                     type="number"
                     min="0"
                     step="0.01"
+                    placeholder="Budget €"
+                    title="Inserisci il budget previsto per questa categoria"
                     value={budgetSettings.entrate?.[categoria] ?? ''}
                     onChange={(e) => handleBudgetChange(categoria, 'entrate', e.target.value)}
                     className="w-32 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

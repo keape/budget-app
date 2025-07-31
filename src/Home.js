@@ -7,34 +7,20 @@ import NotificationBar from './components/NotificationBar';
 
 function Home() {
   const navigate = useNavigate();
-  const [tipo, setTipo] = useState('spesa');
-  const [importo, setImporto] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [descrizione, setDescrizione] = useState('');
-  const [data, setData] = useState('');
-  const [categorieSpese, setCategorieSpese] = useState([]);
-  const [categorieEntrate, setCategorieEntrate] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // Stati per transazioni periodiche
-  const [modalitaTransazione, setModalitaTransazione] = useState('una_tantum'); // 'una_tantum' | 'periodica' | 'archivio'
-  const [transazioneInModifica, setTransazioneInModifica] = useState(null);
-  const [tipoRipetizione, setTipoRipetizione] = useState('mensile');
-  const [configurazione, setConfigurazione] = useState({
-    giorno: 1,
-    gestione_giorno_mancante: 'ultimo_disponibile',
-    ogni_n_mesi: 1,
-    mese: 1,
-    giorni_settimana: [],
-    giorno_settimana: 1,
-    ogni_n_giorni: 30
+  const [riepilogoData, setRiepilogoData] = useState({
+    totaleSpeseOggi: 0,
+    totaleEntrateOggi: 0,
+    totaleSpeseSettimana: 0,
+    totaleEntrateSettimana: 0,
+    totaleSpeseMese: 0,
+    totaleEntrateMese: 0,
+    bilancioMese: 0,
+    ultimaTransazione: null,
+    categoriaTopSpese: null,
+    numeroTransazioniMese: 0
   });
-  const [dataInizio, setDataInizio] = useState(new Date().toISOString().split('T')[0]);
-  const [dataFine, setDataFine] = useState('');
-  const [infinito, setInfinito] = useState(true);
-  const [abbonamentiAttivi, setAbbonamentiAttivi] = useState([]);
-  const [anteprimaDate, setAnteprimaDate] = useState([]);
   
   const { addMultipleNotifications } = useNotifications();
 
@@ -45,343 +31,94 @@ function Home() {
       return;
     }
 
-    // Carica le categorie
-    const fetchCategorie = async () => {
-      try {
-        const response = await axios.get(`${BASE_URL}/api/categorie`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.data && response.data.categorie) {
-          setCategorieSpese(response.data.categorie.spese || []);
-          setCategorieEntrate(response.data.categorie.entrate || []);
-          
-          // Imposta la categoria predefinita
-          if (tipo === 'spesa' && response.data.categorie.spese && response.data.categorie.spese.length > 0) {
-            setCategoria(response.data.categorie.spese[0]);
-          } else if (tipo === 'entrata' && response.data.categorie.entrate && response.data.categorie.entrate.length > 0) {
-            setCategoria(response.data.categorie.entrate[0]);
-          }
-        }
-      } catch (error) {
-        console.error('Errore nel caricamento delle categorie:', error);
-        setError('Impossibile caricare le categorie. Riprova più tardi.');
-      }
-    };
+    caricaRiepilogoData();
+  }, [navigate]);
 
-    fetchCategorie();
-    caricaAbbonamentiAttivi();
-    generaTransazioniPeriodiche();
-  }, [navigate, tipo]);
-  
-  // Carica abbonamenti attivi
-  const caricaAbbonamentiAttivi = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      
-      const response = await axios.get(`${BASE_URL}/api/transazioni-periodiche`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      setAbbonamentiAttivi(response.data || []);
-    } catch (error) {
-      console.error('Errore nel caricamento abbonamenti:', error);
-    }
-  };
-  
-  // Genera transazioni periodiche mancanti
-  const generaTransazioniPeriodiche = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      
-      const response = await axios.post(`${BASE_URL}/api/transazioni-periodiche/genera`, {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.data.notifiche && response.data.notifiche.length > 0) {
-        addMultipleNotifications(response.data.notifiche);
-      }
-    } catch (error) {
-      console.error('Errore nella generazione transazioni periodiche:', error);
-    }
-  };
-
-  const handleTipoChange = (nuovoTipo) => {
-    setTipo(nuovoTipo);
-    setCategoria(''); // Reset categoria quando cambia il tipo
-  };
-  
-  // Calcola anteprima date per transazioni periodiche
-  useEffect(() => {
-    if (modalitaTransazione === 'periodica') {
-      calcolaAnteprimaDate();
-    }
-  }, [modalitaTransazione, tipoRipetizione, configurazione, dataInizio]);
-  
-  const calcolaAnteprimaDate = () => {
-    const date = [];
-    let dataCorrente = new Date(dataInizio);
-    
-    // Genera 6 date di esempio
-    for (let i = 0; i < 6; i++) {
-      if (i > 0) {
-        dataCorrente = calcolaProximaData(dataCorrente);
-      }
-      date.push(new Date(dataCorrente));
-    }
-    
-    setAnteprimaDate(date);
-  };
-  
-  const calcolaProximaData = (dataBase) => {
-    const data = new Date(dataBase);
-    
-    switch (tipoRipetizione) {
-      case 'giornaliera':
-        data.setDate(data.getDate() + 1);
-        break;
-      case 'settimanale':
-        data.setDate(data.getDate() + 7);
-        break;
-      case 'quindicinale':
-        data.setDate(data.getDate() + 14);
-        break;
-      case 'mensile':
-      case 'bimestrale':
-      case 'trimestrale':
-      case 'semestrale':
-        const mesi = configurazione.ogni_n_mesi || 1;
-        let nuovoMese = data.getMonth() + mesi;
-        let nuovoAnno = data.getFullYear();
-        
-        while (nuovoMese > 11) {
-          nuovoMese -= 12;
-          nuovoAnno++;
-        }
-        
-        let nuovoGiorno = configurazione.giorno;
-        const ultimoGiornoMese = new Date(nuovoAnno, nuovoMese + 1, 0).getDate();
-        
-        if (nuovoGiorno > ultimoGiornoMese) {
-          nuovoGiorno = configurazione.gestione_giorno_mancante === 'ultimo_disponibile' 
-            ? ultimoGiornoMese : 1;
-          if (configurazione.gestione_giorno_mancante === 'primo_disponibile') {
-            nuovoMese = nuovoMese === 11 ? 0 : nuovoMese + 1;
-            if (nuovoMese === 0) nuovoAnno++;
-          }
-        }
-        
-        data.setFullYear(nuovoAnno, nuovoMese, nuovoGiorno);
-        break;
-      case 'annuale':
-        data.setFullYear(data.getFullYear() + 1);
-        break;
-      case 'personalizzata':
-        data.setDate(data.getDate() + (configurazione.ogni_n_giorni || 30));
-        break;
-    }
-    
-    return data;
-  };
-  
-  const aggiungiTransazione = async (e) => {
-    e.preventDefault();
+  const caricaRiepilogoData = async () => {
     setIsLoading(true);
-    setError(null);
-
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      if (modalitaTransazione === 'una_tantum') {
-        // Transazione normale
-        const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-        const dataTransazione = data || new Date().toISOString().split('T')[0];
-
-        await axios.post(`${BASE_URL}/api/${endpoint}`, {
-          descrizione,
-          importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
-          categoria,
-          data: dataTransazione
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        alert(`${tipo === 'spesa' ? 'Spesa' : 'Entrata'} inserita con successo!`);
-        
-        // Reset form
-        setDescrizione('');
-        setImporto('');
-        setCategoria('');
-        setData('');
-        
-      } else {
-        // Transazione periodica
-        const configurazioneCompleta = { ...configurazione };
-        
-        // Adatta configurazione in base al tipo ripetizione
-        switch (tipoRipetizione) {
-          case 'mensile':
-            configurazioneCompleta.ogni_n_mesi = 1;
-            break;
-          case 'bimestrale':
-            configurazioneCompleta.ogni_n_mesi = 2;
-            break;
-          case 'trimestrale':
-            configurazioneCompleta.ogni_n_mesi = 3;
-            break;
-          case 'semestrale':
-            configurazioneCompleta.ogni_n_mesi = 6;
-            break;
-        }
-        
-        const abbonamento = {
-          importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
-          categoria,
-          descrizione,
-          tipo_ripetizione: tipoRipetizione,
-          configurazione: configurazioneCompleta,
-          data_inizio: dataInizio,
-          data_fine: infinito ? null : dataFine,
-          attiva: true
-        };
-        
-        if (transazioneInModifica) {
-          // Modifica transazione esistente
-          await axios.put(`${BASE_URL}/api/transazioni-periodiche/${transazioneInModifica._id}`, abbonamento, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          alert('Ricorrenza modificata con successo!');
-          setTransazioneInModifica(null);
-        } else {
-          // Crea nuova transazione
-          await axios.post(`${BASE_URL}/api/transazioni-periodiche`, abbonamento, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          
-          alert('Ricorrenza creata con successo!');
-        }
-        
-        // Reset form
-        setDescrizione('');
-        setImporto('');
-        setCategoria('');
-        setDataInizio(new Date().toISOString().split('T')[0]);
-        setDataFine('');
-        setInfinito(true);
-        
-        // Ricarica abbonamenti
-        await caricaAbbonamentiAttivi();
-        await generaTransazioniPeriodiche();
-      }
       
+      // Carica transazioni recenti
+      const [speseRes, entrateRes] = await Promise.all([
+        axios.get(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } })
+      ]);
+
+      const tutte_spese = speseRes.data.spese || [];
+      const tutte_entrate = entrateRes.data.entrate || [];
+      const tutte_transazioni = [...tutte_spese, ...tutte_entrate].sort((a, b) => 
+        new Date(b.data || b.createdAt) - new Date(a.data || a.createdAt)
+      );
+
+      // Calcola date per filtri
+      const oggi = new Date();
+      const inizioOggi = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+      const inizioSettimana = new Date(oggi);
+      inizioSettimana.setDate(oggi.getDate() - oggi.getDay());
+      const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
+
+      // Calcola totali
+      const speseOggi = tutte_spese.filter(s => new Date(s.data || s.createdAt) >= inizioOggi);
+      const entrateOggi = tutte_entrate.filter(e => new Date(e.data || e.createdAt) >= inizioOggi);
+      const speseSettimana = tutte_spese.filter(s => new Date(s.data || s.createdAt) >= inizioSettimana);
+      const entrateSettimana = tutte_entrate.filter(e => new Date(e.data || e.createdAt) >= inizioSettimana);
+      const speseMese = tutte_spese.filter(s => new Date(s.data || s.createdAt) >= inizioMese);
+      const entrateMese = tutte_entrate.filter(e => new Date(e.data || e.createdAt) >= inizioMese);
+
+      // Categoria top spese del mese
+      const categorieSpese = {};
+      speseMese.forEach(s => {
+        const cat = s.categoria || 'Altro';
+        categorieSpese[cat] = (categorieSpese[cat] || 0) + Math.abs(s.importo);
+      });
+      const categoriaTop = Object.entries(categorieSpese).sort((a, b) => b[1] - a[1])[0];
+
+      setRiepilogoData({
+        totaleSpeseOggi: speseOggi.reduce((sum, s) => sum + Math.abs(s.importo), 0),
+        totaleEntrateOggi: entrateOggi.reduce((sum, e) => sum + e.importo, 0),
+        totaleSpeseSettimana: speseSettimana.reduce((sum, s) => sum + Math.abs(s.importo), 0),
+        totaleEntrateSettimana: entrateSettimana.reduce((sum, e) => sum + e.importo, 0),
+        totaleSpeseMese: speseMese.reduce((sum, s) => sum + Math.abs(s.importo), 0),
+        totaleEntrateMese: entrateMese.reduce((sum, e) => sum + e.importo, 0),
+        bilancioMese: entrateMese.reduce((sum, e) => sum + e.importo, 0) - speseMese.reduce((sum, s) => sum + Math.abs(s.importo), 0),
+        ultime5Transazioni: tutte_transazioni.slice(0, 5),
+        categoriaTopSpese: categoriaTop ? { nome: categoriaTop[0], importo: categoriaTop[1] } : null,
+        numeroTransazioniMese: speseMese.length + entrateMese.length,
+        dettagliCategorie: {
+          spese: Object.entries(categorieSpese).sort((a, b) => b[1] - a[1]).slice(0, 5),
+          entrate: (() => {
+            const categorieEntrate = {};
+            entrateMese.forEach(e => {
+              const cat = e.categoria || 'Altro';
+              categorieEntrate[cat] = (categorieEntrate[cat] || 0) + e.importo;
+            });
+            return Object.entries(categorieEntrate).sort((a, b) => b[1] - a[1]).slice(0, 5);
+          })(),
+          numeroCategorieSpeseUsate: Object.keys(categorieSpese).length,
+          numeroCategorieEntrateUsate: (() => {
+            const categorieEntrate = {};
+            entrateMese.forEach(e => {
+              const cat = e.categoria || 'Altro';
+              categorieEntrate[cat] = (categorieEntrate[cat] || 0) + e.importo;
+            });
+            return Object.keys(categorieEntrate).length;
+          })()
+        }
+      });
+
     } catch (err) {
-      console.error(`Errore nell'inserimento:`, err);
-      setError(`Impossibile inserire la ${modalitaTransazione === 'una_tantum' ? 'transazione' : 'ricorrenza'}. Riprova più tardi.`);
+      console.error('Errore nel caricamento del riepilogo:', err);
+      setError('Errore nel caricamento dei dati di riepilogo');
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const eliminaAbbonamento = async (id) => {
-    if (!window.confirm('Sei sicuro di voler eliminare questa transazione periodica?')) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${BASE_URL}/api/transazioni-periodiche/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      await caricaAbbonamentiAttivi();
-      alert('Transazione periodica eliminata con successo!');
-    } catch (error) {
-      console.error('Errore nell\'eliminazione abbonamento:', error);
-      alert('Errore nell\'eliminazione della transazione periodica');
-    }
-  };
-
-  const modificaAbbonamento = (abbonamento) => {
-    // Popola i campi del form con i dati della transazione da modificare
-    setTransazioneInModifica(abbonamento);
-    setTipo(abbonamento.importo < 0 ? 'spesa' : 'entrata');
-    setImporto(Math.abs(abbonamento.importo).toString());
-    setCategoria(abbonamento.categoria);
-    setDescrizione(abbonamento.descrizione || '');
-    setTipoRipetizione(abbonamento.tipo_ripetizione);
-    setConfigurazione(abbonamento.configurazione);
-    setDataInizio(abbonamento.data_inizio.split('T')[0]);
-    setDataFine(abbonamento.data_fine ? abbonamento.data_fine.split('T')[0] : '');
-    setInfinito(!abbonamento.data_fine);
-    
-    // Torna alla modalità periodica per permettere la modifica
-    setModalitaTransazione('periodica');
-  };
-
-  const annullaModifica = () => {
-    setTransazioneInModifica(null);
-    // Reset form
-    setDescrizione('');
-    setImporto('');
-    setCategoria('');
-    setDataInizio(new Date().toISOString().split('T')[0]);
-    setDataFine('');
-    setInfinito(true);
-    setTipoRipetizione('mensile');
-    setConfigurazione({
-      giorno: 1,
-      gestione_giorno_mancante: 'ultimo_disponibile',
-      ogni_n_mesi: 1,
-      mese: 1,
-      giorni_settimana: [],
-      giorno_settimana: 1,
-      ogni_n_giorni: 30
-    });
-  };
-
-  const toggleStatoAbbonamento = async (id, statoAttuale) => {
-    const nuovoStato = !statoAttuale;
-    const azione = nuovoStato ? 'attivare' : 'sospendere';
-    
-    if (!window.confirm(`Sei sicuro di voler ${azione} questa transazione periodica?`)) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      await axios.patch(`${BASE_URL}/api/transazioni-periodiche/${id}/stato`, {
-        attiva: nuovoStato
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      await caricaAbbonamentiAttivi();
-      alert(`Transazione periodica ${nuovoStato ? 'attivata' : 'sospesa'} con successo!`);
-    } catch (error) {
-      console.error('Errore nel cambio stato:', error);
-      alert('Errore nel cambio di stato della transazione periodica');
-    }
-  };
-
-  const tipiRipetizioneOptions = [
-    { value: 'giornaliera', label: 'Ogni giorno' },
-    { value: 'settimanale', label: 'Ogni settimana' },
-    { value: 'quindicinale', label: 'Ogni 2 settimane' },
-    { value: 'mensile', label: 'Ogni mese' },
-    { value: 'bimestrale', label: 'Ogni 2 mesi' },
-    { value: 'trimestrale', label: 'Ogni 3 mesi' },
-    { value: 'semestrale', label: 'Ogni 6 mesi' },
-    { value: 'annuale', label: 'Ogni anno' },
-    { value: 'personalizzata', label: 'Personalizzata' }
-  ];
 
   return (
-    <div className="theme-container p-6 max-w-4xl mx-auto">
-      <h1 className="text-4xl font-bold text-center mb-8 text-indigo-700 dark:text-indigo-300">
-        Gestione Transazioni
+    <div className="max-w-6xl mx-auto p-6">
+      <h1 className="text-4xl font-bold text-center mb-8 text-gray-800 dark:text-white">
+        📊 Dashboard Budget
       </h1>
 
       {/* Barra Notifiche */}
@@ -393,443 +130,257 @@ function Home() {
         </div>
       )}
 
-      {/* Selettore Modalità */}
-      <div className="mb-8">
-        <div className="flex justify-center mb-6">
-          <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg flex">
-            <button
-              type="button"
-              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 flex items-center space-x-2 ${
-                modalitaTransazione === 'una_tantum'
-                  ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => setModalitaTransazione('una_tantum')}
-            >
-              <span>📅</span>
-              <span>Una tantum</span>
-            </button>
-            <button
-              type="button"
-              className={`px-6 py-3 rounded-md font-semibold transition-all duration-200 flex items-center space-x-2 ${
-                modalitaTransazione === 'periodica'
-                  ? 'bg-green-600 text-white shadow-lg transform scale-105'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-              onClick={() => setModalitaTransazione('periodica')}
-            >
-              <span>🔄</span>
-              <span>Periodica</span>
-            </button>
-          </div>
-        </div>
-        
-        {/* Bottone Archivio solo in modalità Periodica */}
-        {modalitaTransazione === 'periodica' && (
-          <div className="flex justify-center">
-            <button
-              type="button"
-              className="px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 bg-purple-600 text-white hover:bg-purple-700 shadow-md"
-              onClick={() => setModalitaTransazione('archivio')}
-            >
-              <span>📋</span>
-              <span>Archivio transazioni periodiche</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {modalitaTransazione === 'archivio' ? (
-        /* Sezione Archivio Transazioni Periodiche */
-        <div className="space-y-6">
-          <h2 className="text-2xl font-bold text-center text-purple-700 dark:text-purple-300 mb-6">
-            📋 Archivio Transazioni Periodiche
-          </h2>
-          
-          {abbonamentiAttivi.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📋</div>
-              <p className="text-xl text-gray-500 dark:text-gray-400 mb-2">
-                Nessuna transazione periodica trovata
-              </p>
-              <p className="text-sm text-gray-400 dark:text-gray-500">
-                Crea la tua prima transazione periodica utilizzando il bottone "Periodica"
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {abbonamentiAttivi.map((abbonamento) => (
-                <div 
-                  key={abbonamento._id}
-                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border-l-4 border-purple-500"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <span className="text-2xl">
-                          {abbonamento.importo < 0 ? '💸' : '💰'}
-                        </span>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {abbonamento.descrizione || 'Transazione periodica'}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {abbonamento.categoria}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Importo:</span>
-                          <p className={`font-semibold ${
-                            abbonamento.importo < 0 
-                              ? 'text-red-600 dark:text-red-400' 
-                              : 'text-green-600 dark:text-green-400'
-                          }`}>
-                            €{Math.abs(abbonamento.importo).toFixed(2)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Ripetizione:</span>
-                          <p className="text-gray-900 dark:text-white">
-                            {tipiRipetizioneOptions.find(opt => opt.value === abbonamento.tipo_ripetizione)?.label || abbonamento.tipo_ripetizione}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Data inizio:</span>
-                          <p className="text-gray-900 dark:text-white">
-                            {new Date(abbonamento.data_inizio).toLocaleDateString('it-IT')}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Stato:</span>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            abbonamento.attiva 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
-                            {abbonamento.attiva ? 'Attiva' : 'Inattiva'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {abbonamento.data_fine && (
-                        <div className="mt-2 text-sm">
-                          <span className="font-medium text-gray-700 dark:text-gray-300">Data fine:</span>
-                          <span className="ml-2 text-gray-900 dark:text-white">
-                            {new Date(abbonamento.data_fine).toLocaleDateString('it-IT')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => modificaAbbonamento(abbonamento)}
-                        className="px-3 py-1 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-md text-sm font-medium transition-colors duration-200"
-                        title="Modifica transazione periodica"
-                      >
-                        ✏️ Modifica
-                      </button>
-                      <button
-                        onClick={() => toggleStatoAbbonamento(abbonamento._id, abbonamento.attiva)}
-                        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
-                          abbonamento.attiva
-                            ? 'bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-700 dark:text-yellow-300'
-                            : 'bg-green-100 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 text-green-700 dark:text-green-300'
-                        }`}
-                        title={abbonamento.attiva ? 'Sospendi transazione periodica' : 'Attiva transazione periodica'}
-                      >
-                        {abbonamento.attiva ? '⏸️ Sospendi' : '▶️ Attiva'}
-                      </button>
-                      <button
-                        onClick={() => eliminaAbbonamento(abbonamento._id)}
-                        className="px-3 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 text-red-700 dark:text-red-300 rounded-md text-sm font-medium transition-colors duration-200"
-                        title="Elimina transazione periodica"
-                      >
-                        🗑️ Elimina
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Caricamento riepilogo...</p>
         </div>
       ) : (
-        <form onSubmit={aggiungiTransazione} className="space-y-6">
-          {/* Tipo Transazione */}
-          <div className="mb-6 flex justify-center">
-            <div className="flex rounded-md shadow-sm max-w-md w-full">
-              <button
-                type="button"
-                className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-l-lg focus:outline-none ${
-                  tipo === 'spesa'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                }`}
-                onClick={() => handleTipoChange('spesa')}
-              >
-                Spesa
-              </button>
-              <button
-                type="button" 
-                className={`w-1/2 py-3 px-4 text-center text-sm font-medium rounded-r-lg focus:outline-none ${
-                  tipo === 'entrata'
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                }`}
-                onClick={() => handleTipoChange('entrata')}
-              >
-                Entrata
-              </button>
-            </div>
-          </div>
-
-        {/* Form centrato */}
-        <div className="flex flex-col items-center space-y-6">
-          <div className="w-full max-w-md">
-            <input
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-              type="number"
-              step="0.01"
-              placeholder="Importo"
-              value={importo}
-              onChange={e => setImporto(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="w-full max-w-md">
-            <select
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-              value={categoria}
-              onChange={e => setCategoria(e.target.value)}
-              required
+        <>
+          {/* Quick Actions */}
+          <div className="mb-8 text-center">
+            <button
+              onClick={() => navigate('/transazioni')}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-xl font-bold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl mx-2 mb-2"
             >
-              <option value="">Seleziona categoria</option>
-              {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              💸 Gestisci Transazioni
+            </button>
+            <button
+              onClick={() => navigate('/filtri')}
+              className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-xl font-bold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl mx-2 mb-2"
+            >
+              🔍 Ricerca e Filtri
+            </button>
+            <button
+              onClick={() => navigate('/budget/settings')}
+              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white text-xl font-bold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl mx-2 mb-2"
+            >
+              ⚙️ Gestisci Categorie
+            </button>
           </div>
 
-          <div className="w-full max-w-md">
-            <input
-              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-              type="text"
-              placeholder="Descrizione (facoltativa)"
-              value={descrizione}
-              onChange={e => setDescrizione(e.target.value)}
-            />
-          </div>
-
-          {modalitaTransazione === 'una_tantum' ? (
-            <div className="w-full max-w-md">
-              <input
-                className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
-                type="date"
-                placeholder="Data (facoltativa)"
-                value={data}
-                onChange={e => setData(e.target.value)}
-              />
+          {/* Riepilogo Oggi */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center">
+              <span className="mr-2">📅</span>
+              Oggi
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-green-50 dark:bg-green-900 p-6 rounded-xl shadow-md border-l-4 border-green-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-700 dark:text-green-300 text-sm font-medium">Entrate Oggi</p>
+                    <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{riepilogoData.totaleEntrateOggi.toFixed(2)}</p>
+                  </div>
+                  <span className="text-3xl">💰</span>
+                </div>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900 p-6 rounded-xl shadow-md border-l-4 border-red-500">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-red-700 dark:text-red-300 text-sm font-medium">Spese Oggi</p>
+                    <p className="text-2xl font-bold text-red-800 dark:text-red-200">€{riepilogoData.totaleSpeseOggi.toFixed(2)}</p>
+                  </div>
+                  <span className="text-3xl">💸</span>
+                </div>
+              </div>
+              <div className={`p-6 rounded-xl shadow-md border-l-4 ${
+                (riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 
+                  ? 'bg-blue-50 dark:bg-blue-900 border-blue-500' 
+                  : 'bg-orange-50 dark:bg-orange-900 border-orange-500'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      (riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 
+                        ? 'text-blue-700 dark:text-blue-300' 
+                        : 'text-orange-700 dark:text-orange-300'
+                    }`}>Bilancio Oggi</p>
+                    <p className={`text-2xl font-bold ${
+                      (riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 
+                        ? 'text-blue-800 dark:text-blue-200' 
+                        : 'text-orange-800 dark:text-orange-200'
+                    }`}>
+                      €{(riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi).toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="text-3xl">{(riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 ? '📈' : '📉'}</span>
+                </div>
+              </div>
             </div>
-          ) : (
-            /* Configurazione Periodica */
-            <div className="w-full max-w-2xl space-y-6 bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border-2 border-green-300 dark:border-green-600">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-green-800 dark:text-green-200 text-center flex-1">
-                  {transazioneInModifica ? '✏️ Modifica Ricorrenza Periodica' : '⚙️ Configurazione Periodicità'}
+          </div>
+
+          {/* Riepilogo Mese */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center">
+              <span className="mr-2">📊</span>
+              Questo Mese
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">Entrate Mese</p>
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400">€{riepilogoData.totaleEntrateMese.toFixed(2)}</p>
+                  </div>
+                  <span className="text-2xl">📈</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">Spese Mese</p>
+                    <p className="text-xl font-bold text-red-600 dark:text-red-400">€{riepilogoData.totaleSpeseMese.toFixed(2)}</p>
+                  </div>
+                  <span className="text-2xl">📉</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">Bilancio Mese</p>
+                    <p className={`text-xl font-bold ${riepilogoData.bilancioMese >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      €{riepilogoData.bilancioMese.toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="text-2xl">{riepilogoData.bilancioMese >= 0 ? '✅' : '⚠️'}</span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">Transazioni</p>
+                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{riepilogoData.numeroTransazioniMese}</p>
+                  </div>
+                  <span className="text-2xl">📝</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dettagli Categorie */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center">
+              <span className="mr-2">📋</span>
+              Categorie Questo Mese
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Categorie Spese */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-bold mb-4 text-red-600 dark:text-red-400 flex items-center">
+                  <span className="mr-2">💸</span>
+                  Top Categorie Spese ({riepilogoData.dettagliCategorie?.numeroCategorieSpeseUsate || 0} totali)
                 </h3>
-                {transazioneInModifica && (
-                  <button
-                    type="button"
-                    onClick={annullaModifica}
-                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium transition-colors duration-200"
-                    title="Annulla modifica"
-                  >
-                    ❌ Annulla
-                  </button>
-                )}
-              </div>
-              
-              {/* Tipo Ripetizione */}
-              <div className="w-full">
-                <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                  Tipo di ripetizione
-                </label>
-                <select
-                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                  value={tipoRipetizione}
-                  onChange={e => setTipoRipetizione(e.target.value)}
-                >
-                  {tipiRipetizioneOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Configurazioni specifiche per tipo */}
-              {['mensile', 'bimestrale', 'trimestrale', 'semestrale'].includes(tipoRipetizione) && (
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                    Giorno del mese
-                  </label>
-                  <div className="flex space-x-4">
-                    <input
-                      type="number"
-                      min="1"
-                      max="31"
-                      className="flex-1 px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                      value={configurazione.giorno}
-                      onChange={e => setConfigurazione({...configurazione, giorno: parseInt(e.target.value)})}
-                    />
-                    <select
-                      className="flex-1 px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                      value={configurazione.gestione_giorno_mancante}
-                      onChange={e => setConfigurazione({...configurazione, gestione_giorno_mancante: e.target.value})}
-                    >
-                      <option value="ultimo_disponibile">Ultimo giorno disponibile</option>
-                      <option value="primo_disponibile">Primo giorno del mese successivo</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {tipoRipetizione === 'settimanale' && (
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                    Giorno della settimana
-                  </label>
-                  <select
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                    value={configurazione.giorno_settimana}
-                    onChange={e => setConfigurazione({...configurazione, giorno_settimana: parseInt(e.target.value)})}
-                  >
-                    <option value={1}>Lunedì</option>
-                    <option value={2}>Martedì</option>
-                    <option value={3}>Mercoledì</option>
-                    <option value={4}>Giovedì</option>
-                    <option value={5}>Venerdì</option>
-                    <option value={6}>Sabato</option>
-                    <option value={0}>Domenica</option>
-                  </select>
-                </div>
-              )}
-
-              {tipoRipetizione === 'personalizzata' && (
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                    Ogni quanti giorni
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                    value={configurazione.ogni_n_giorni}
-                    onChange={e => setConfigurazione({...configurazione, ogni_n_giorni: parseInt(e.target.value)})}
-                  />
-                </div>
-              )}
-
-              {tipoRipetizione === 'annuale' && (
-                <div className="w-full">
-                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                    Mese
-                  </label>
-                  <select
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                    value={configurazione.mese}
-                    onChange={e => setConfigurazione({...configurazione, mese: parseInt(e.target.value)})}
-                  >
-                    <option value={1}>Gennaio</option>
-                    <option value={2}>Febbraio</option>
-                    <option value={3}>Marzo</option>
-                    <option value={4}>Aprile</option>
-                    <option value={5}>Maggio</option>
-                    <option value={6}>Giugno</option>
-                    <option value={7}>Luglio</option>
-                    <option value={8}>Agosto</option>
-                    <option value={9}>Settembre</option>
-                    <option value={10}>Ottobre</option>
-                    <option value={11}>Novembre</option>
-                    <option value={12}>Dicembre</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Date di inizio e fine */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                    Data inizio
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                    value={dataInizio}
-                    onChange={e => setDataInizio(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      id="infinito"
-                      checked={infinito}
-                      onChange={e => setInfinito(e.target.checked)}
-                      className="rounded border-green-300 text-green-600 focus:ring-green-500"
-                    />
-                    <label htmlFor="infinito" className="text-sm font-medium text-green-700 dark:text-green-300">
-                      Senza fine
-                    </label>
-                  </div>
-                  {!infinito && (
-                    <input
-                      type="date"
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-700 border-2 border-green-300 dark:border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-white"
-                      value={dataFine}
-                      onChange={e => setDataFine(e.target.value)}
-                      min={dataInizio}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Anteprima date */}
-              {anteprimaDate.length > 0 && (
-                <div className="w-full bg-white dark:bg-gray-800 p-4 rounded-lg border border-green-200 dark:border-green-700">
-                  <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                    📅 Anteprima prossime date:
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {anteprimaDate.slice(0, 6).map((data, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs rounded-full"
-                      >
-                        {data.toLocaleDateString('it-IT')}
-                      </span>
+                {riepilogoData.dettagliCategorie?.spese?.length > 0 ? (
+                  <div className="space-y-3">
+                    {riepilogoData.dettagliCategorie.spese.map(([categoria, importo], index) => (
+                      <div key={categoria} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg font-bold text-red-600 dark:text-red-400">#{index + 1}</span>
+                          <span className="font-semibold text-gray-800 dark:text-white">{categoria}</span>
+                        </div>
+                        <span className="text-lg font-bold text-red-600 dark:text-red-400">€{importo.toFixed(2)}</span>
+                      </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 italic">Nessuna spesa questo mese</p>
+                )}
+              </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`px-8 py-4 text-lg font-semibold text-white rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105 ${
-              isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {isLoading ? 'Inserimento in corso...' : modalitaTransazione === 'periodica' ? (transazioneInModifica ? 'Salva modifiche' : 'Crea ricorrenza periodica') : 'Aggiungi'}
-          </button>
-        </div>
-        </form>
+              {/* Top Categorie Entrate */}
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-bold mb-4 text-green-600 dark:text-green-400 flex items-center">
+                  <span className="mr-2">💰</span>
+                  Top Categorie Entrate ({riepilogoData.dettagliCategorie?.numeroCategorieEntrateUsate || 0} totali)
+                </h3>
+                {riepilogoData.dettagliCategorie?.entrate?.length > 0 ? (
+                  <div className="space-y-3">
+                    {riepilogoData.dettagliCategorie.entrate.map(([categoria, importo], index) => (
+                      <div key={categoria} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-500">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-lg font-bold text-green-600 dark:text-green-400">#{index + 1}</span>
+                          <span className="font-semibold text-gray-800 dark:text-white">{categoria}</span>
+                        </div>
+                        <span className="text-lg font-bold text-green-600 dark:text-green-400">€{importo.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 italic">Nessuna entrata questo mese</p>
+                )}
+              </div>
+            </div>
+
+            {/* Statistiche Categorie */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 rounded-xl text-white text-center">
+                <div className="text-2xl font-bold">
+                  {(riepilogoData.dettagliCategorie?.numeroCategorieSpeseUsate || 0) + (riepilogoData.dettagliCategorie?.numeroCategorieEntrateUsate || 0)}
+                </div>
+                <div className="text-sm opacity-90">Categorie Utilizzate</div>
+              </div>
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 rounded-xl text-white text-center">
+                <div className="text-2xl font-bold">
+                  {riepilogoData.dettagliCategorie?.spese?.length > 0 ? 
+                    `€${Math.max(...riepilogoData.dettagliCategorie.spese.map(([, importo]) => importo)).toFixed(0)}` : 
+                    '€0'
+                  }
+                </div>
+                <div className="text-sm opacity-90">Spesa Max per Categoria</div>
+              </div>
+              <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 rounded-xl text-white text-center">
+                <div className="text-2xl font-bold">
+                  {riepilogoData.dettagliCategorie?.entrate?.length > 0 ? 
+                    `€${Math.max(...riepilogoData.dettagliCategorie.entrate.map(([, importo]) => importo)).toFixed(0)}` : 
+                    '€0'
+                  }
+                </div>
+                <div className="text-sm opacity-90">Entrata Max per Categoria</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Informazioni Aggiuntive */}
+          <div className="grid grid-cols-1 gap-6">
+            {/* Ultime 5 Transazioni */}
+            {riepilogoData.ultime5Transazioni?.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
+                <h3 className="text-lg font-bold mb-4 text-gray-800 dark:text-white flex items-center">
+                  <span className="mr-2">🕐</span>
+                  Ultime 5 Transazioni
+                </h3>
+                <div className="space-y-3">
+                  {riepilogoData.ultime5Transazioni.map((transazione, index) => (
+                    <div key={index} className={`flex items-center justify-between p-3 rounded-lg border-l-4 ${
+                      transazione.importo >= 0 
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-500' 
+                        : 'bg-red-50 dark:bg-red-900/20 border-red-500'
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <span className={`text-lg font-bold ${transazione.importo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          #{index + 1}
+                        </span>
+                        <div>
+                          <span className="font-semibold text-gray-800 dark:text-white">{transazione.descrizione}</span>
+                          <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+                            <span>{transazione.categoria}</span>
+                            <span>•</span>
+                            <span>{new Date(transazione.data || transazione.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <span className={`text-lg font-bold ${transazione.importo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {transazione.importo >= 0 ? '+' : ''}€{Math.abs(transazione.importo).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
