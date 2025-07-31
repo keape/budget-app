@@ -17,6 +17,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:3000',
+    'http://192.168.68.177:3000',
     'https://budget-app-ao5r.onrender.com',
     'https://budget-app-cd5o.onrender.com',
     'https://budget-app-keape.vercel.app',
