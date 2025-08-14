@@ -482,7 +482,7 @@ function Filtri() {
       </div>
 
       {/* Grafici statistici */}
-      {transazioniFiltrate.length > 0 && filtroTipo !== 'tutte' && (
+      {transazioniFiltrate.length > 0 && (
         <>
           {/* Grafico a torta per distribuzione per categoria */}
           {!filtroCategoria && (
