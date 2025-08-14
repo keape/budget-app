@@ -159,7 +159,20 @@ function Filtri() {
   });
 
 
-  const colors = ['#60a5fa', '#818cf8', '#34d399', '#f472b6', '#fcd34d', '#f87171'];
+  const colors = [
+    '#3B82F6', // Blue
+    '#EF4444', // Red
+    '#10B981', // Emerald
+    '#F59E0B', // Amber
+    '#8B5CF6', // Purple
+    '#EC4899', // Pink
+    '#06B6D4', // Cyan
+    '#84CC16', // Lime
+    '#F97316', // Orange
+    '#6366F1', // Indigo
+    '#14B8A6', // Teal
+    '#A855F7'  // Violet
+  ];
 
   function categoriaClasse(categoria) {
     switch (categoria) {
@@ -485,52 +498,154 @@ function Filtri() {
       {transazioniFiltrate.length > 0 && (
         <>
           {/* Grafico a torta per distribuzione per categoria */}
-          {!filtroCategoria && (
-            <div className="mt-8 mb-8">
-              <ResponsiveContainer width="100%" height={400}>
-                <PieChart>
-                  <Pie
-                    data={Object.entries(
-                      transazioniFiltrate.reduce((acc, t) => {
-                        acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
-                        return acc;
-                      }, {})
-                    )
-                      .map(([categoria, valore]) => ({ categoria, valore }))
-                      .sort((a, b) => b.valore - a.valore)}
-                    dataKey="valore"
-                    nameKey="categoria"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={150}
-                    fill="#8884d8"
-                    label={({ categoria, percent }) => `${categoria}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {Object.entries(transazioniFiltrate.reduce((acc, t) => {
-                      acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
-                      return acc;
-                    }, {})).map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend 
-                    layout="horizontal" 
-                    align="center" 
-                    verticalAlign="bottom"
-                    wrapperStyle={{
-                      paddingTop: "20px",
-                      width: "100%",
-                      display: "flex",
-                      flexWrap: "wrap",
-                      justifyContent: "center",
-                      gap: "10px"
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {!filtroCategoria && (() => {
+            // Calcola i dati e prepara per il grafico
+            const categorieData = Object.entries(
+              transazioniFiltrate.reduce((acc, t) => {
+                acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
+                return acc;
+              }, {})
+            )
+            .map(([categoria, valore]) => ({ categoria, valore }))
+            .sort((a, b) => b.valore - a.valore);
+            
+            const totaleImporti = categorieData.reduce((sum, item) => sum + item.valore, 0);
+            
+            // Prendi le top 8 categorie e raggruppa il resto in "Altro"
+            const topCategorie = categorieData.slice(0, 8);
+            const altreCategorie = categorieData.slice(8);
+            const altroImporto = altreCategorie.reduce((sum, item) => sum + item.valore, 0);
+            
+            const finalData = [...topCategorie];
+            if (altroImporto > 0) {
+              finalData.push({ categoria: 'Altro', valore: altroImporto });
+            }
+            
+            // Filtra categorie con meno dell'1% del totale se sono troppe
+            const dataFiltered = finalData.filter(item => 
+              (item.valore / totaleImporti) >= 0.01 || item.categoria === 'Altro'
+            );
+            
+            const handlePieClick = (data) => {
+              if (data && data.categoria !== 'Altro') {
+                setFiltroCategoria(data.categoria);
+              }
+            };
+            
+            return (
+              <div className="mt-8 mb-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mb-2">
+                    Distribuzione Spese per Categoria
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Totale: <span className="font-semibold">{totaleImporti.toFixed(2)} €</span> • 
+                    Clicca su una categoria per filtrare
+                  </p>
+                </div>
+                
+                <ResponsiveContainer width="100%" height={500}>
+                  <PieChart>
+                    <Pie
+                      data={dataFiltered}
+                      dataKey="valore"
+                      nameKey="categoria"
+                      cx="50%"
+                      cy="45%"
+                      outerRadius={window.innerWidth < 768 ? 100 : 140}
+                      fill="#8884d8"
+                      onClick={handlePieClick}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {dataFiltered.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={colors[index % colors.length]}
+                          stroke={darkMode ? '#374151' : '#ffffff'}
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        `${parseFloat(value).toFixed(2)} €`,
+                        name
+                      ]}
+                      labelFormatter={(label) => `Categoria: ${label}`}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0];
+                          const percent = ((data.value / totaleImporti) * 100).toFixed(1);
+                          return (
+                            <div className={`p-3 rounded-lg shadow-lg border ${
+                              darkMode 
+                                ? 'bg-gray-800 border-gray-600 text-white' 
+                                : 'bg-white border-gray-200 text-gray-900'
+                            }`}>
+                              <p className="font-semibold text-lg">{data.payload.categoria}</p>
+                              <p className="text-sm">
+                                <span className="font-medium">{data.value.toFixed(2)} €</span>
+                                <span className="ml-2 text-gray-500">({percent}%)</span>
+                              </p>
+                              {data.payload.categoria !== 'Altro' && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Click per filtrare
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend 
+                      layout="horizontal" 
+                      align="center" 
+                      verticalAlign="bottom"
+                      wrapperStyle={{
+                        paddingTop: "30px",
+                        paddingBottom: "10px"
+                      }}
+                      content={({ payload }) => (
+                        <div className="flex flex-wrap justify-center gap-4 mt-4">
+                          {payload.map((entry, index) => {
+                            const percent = ((entry.payload.valore / totaleImporti) * 100).toFixed(0);
+                            return (
+                              <div 
+                                key={`legend-${index}`} 
+                                className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                                onClick={() => entry.payload.categoria !== 'Altro' && setFiltroCategoria(entry.payload.categoria)}
+                              >
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: entry.color }}
+                                />
+                                <span className={`text-sm font-medium ${
+                                  darkMode ? 'text-gray-200' : 'text-gray-700'
+                                }`}>
+                                  {entry.payload.categoria} ({percent}%)
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                
+                {altroImporto > 0 && (
+                  <div className="text-center mt-4">
+                    <p className={`text-sm ${
+                      darkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      "Altro" include {altreCategorie.length} categorie minori per un totale di {altroImporto.toFixed(2)} €
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Grafico a barre per andamento temporale quando si filtra per categoria */}
           {filtroCategoria && (
