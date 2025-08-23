@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import BASE_URL from './config';
 import { useNotifications } from './contexts/NotificationContext';
 import NotificationBar from './components/NotificationBar';
+import MonthlySummaryChart from './components/MonthlySummaryChart';
 
 function Home() {
   const navigate = useNavigate();
@@ -20,6 +21,11 @@ function Home() {
     ultimaTransazione: null,
     categoriaTopSpese: null,
     numeroTransazioniMese: 0
+  });
+  
+  const [budgetData, setBudgetData] = useState({
+    budgetSpeseMese: 0,
+    budgetEntrateMese: 0
   });
   
   const { addMultipleNotifications } = useNotifications();
@@ -39,10 +45,21 @@ function Home() {
     try {
       const token = localStorage.getItem('token');
       
-      // Carica transazioni recenti
-      const [speseRes, entrateRes] = await Promise.all([
+      // Carica transazioni recenti e dati budget
+      const oggi = new Date();
+      const meseCorrente = oggi.getMonth();
+      const annoCorrente = oggi.getFullYear();
+      
+      const [speseRes, entrateRes, budgetRes] = await Promise.all([
         axios.get(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        axios.get(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } })
+        axios.get(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        axios.get(`${BASE_URL}/api/budget-settings`, { 
+          params: { anno: annoCorrente, mese: meseCorrente },
+          headers: { 'Authorization': `Bearer ${token}` } 
+        }).catch(err => {
+          console.warn('Errore caricamento budget:', err);
+          return { data: { spese: {}, entrate: {} } };
+        })
       ]);
 
       const tutte_spese = speseRes.data.spese || [];
@@ -51,8 +68,17 @@ function Home() {
         new Date(b.data || b.createdAt) - new Date(a.data || a.createdAt)
       );
 
+      // Elabora i dati del budget
+      const budgetSettings = budgetRes.data || { spese: {}, entrate: {} };
+      const totaleBudgetSpese = Object.values(budgetSettings.spese || {}).reduce((sum, val) => sum + val, 0);
+      const totaleBudgetEntrate = Object.values(budgetSettings.entrate || {}).reduce((sum, val) => sum + val, 0);
+      
+      setBudgetData({
+        budgetSpeseMese: totaleBudgetSpese,
+        budgetEntrateMese: totaleBudgetEntrate
+      });
+
       // Calcola date per filtri
-      const oggi = new Date();
       const inizioOggi = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
       const inizioSettimana = new Date(oggi);
       inizioSettimana.setDate(oggi.getDate() - oggi.getDay());
@@ -159,56 +185,6 @@ function Home() {
             </button>
           </div>
 
-          {/* Riepilogo Oggi */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white flex items-center">
-              <span className="mr-2">📅</span>
-              Oggi
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-green-50 dark:bg-green-900 p-6 rounded-xl shadow-md border-l-4 border-green-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-700 dark:text-green-300 text-sm font-medium">Entrate Oggi</p>
-                    <p className="text-2xl font-bold text-green-800 dark:text-green-200">€{riepilogoData.totaleEntrateOggi.toFixed(2)}</p>
-                  </div>
-                  <span className="text-3xl">💰</span>
-                </div>
-              </div>
-              <div className="bg-red-50 dark:bg-red-900 p-6 rounded-xl shadow-md border-l-4 border-red-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-red-700 dark:text-red-300 text-sm font-medium">Spese Oggi</p>
-                    <p className="text-2xl font-bold text-red-800 dark:text-red-200">€{riepilogoData.totaleSpeseOggi.toFixed(2)}</p>
-                  </div>
-                  <span className="text-3xl">💸</span>
-                </div>
-              </div>
-              <div className={`p-6 rounded-xl shadow-md border-l-4 ${
-                (riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 
-                  ? 'bg-blue-50 dark:bg-blue-900 border-blue-500' 
-                  : 'bg-orange-50 dark:bg-orange-900 border-orange-500'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm font-medium ${
-                      (riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 
-                        ? 'text-blue-700 dark:text-blue-300' 
-                        : 'text-orange-700 dark:text-orange-300'
-                    }`}>Bilancio Oggi</p>
-                    <p className={`text-2xl font-bold ${
-                      (riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 
-                        ? 'text-blue-800 dark:text-blue-200' 
-                        : 'text-orange-800 dark:text-orange-200'
-                    }`}>
-                      €{(riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi).toFixed(2)}
-                    </p>
-                  </div>
-                  <span className="text-3xl">{(riepilogoData.totaleEntrateOggi - riepilogoData.totaleSpeseOggi) >= 0 ? '📈' : '📉'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Riepilogo Mese */}
           <div className="mb-8">
@@ -255,6 +231,17 @@ function Home() {
                   <span className="text-2xl">📝</span>
                 </div>
               </div>
+            </div>
+            
+            {/* Grafico Andamento vs Budget */}
+            <div className="mt-6">
+              <MonthlySummaryChart
+                totaleSpeseMese={riepilogoData.totaleSpeseMese}
+                totaleEntrateMese={riepilogoData.totaleEntrateMese}
+                bilancioMese={riepilogoData.bilancioMese}
+                budgetSpeseMese={budgetData.budgetSpeseMese}
+                budgetEntrateMese={budgetData.budgetEntrateMese}
+              />
             </div>
           </div>
 
