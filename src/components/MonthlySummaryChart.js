@@ -15,7 +15,8 @@ const MonthlySummaryChart = ({
   const budgetBilancio = budgetEntrateMese - budgetSpeseMese;
   
   // Calcola gli scostamenti
-  const scostamentoSpese = totaleSpeseMese - budgetSpeseMese;
+  // Per le spese: se spendo meno del budget, ho PIÙ margine disponibile (positivo)
+  const scostamentoSpese = budgetSpeseMese - totaleSpeseMese; // Invertito: budget - effettivo
   const scostamentoEntrate = totaleEntrateMese - budgetEntrateMese;
   const scostamentoBilancio = bilancioMese - budgetBilancio;
 
@@ -59,7 +60,7 @@ const MonthlySummaryChart = ({
               <span className="font-semibold">Effettivo:</span> €{data.effettivo.toFixed(2)}
             </p>
             <p className={`font-semibold ${data.scostamento >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              <span>Scostamento:</span> {data.scostamento >= 0 ? '+' : ''}€{data.scostamento.toFixed(2)}
+              <span>{data.categoria === 'Spese' ? 'Margine disponibile:' : 'Scostamento:'}</span> {data.scostamento >= 0 ? '+' : ''}€{data.scostamento.toFixed(2)}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               ({data.percentuale >= 0 ? '+' : ''}{data.percentuale.toFixed(1)}%)
@@ -120,8 +121,8 @@ const MonthlySummaryChart = ({
       {/* Indicatori di stato sopra il grafico */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="text-center">
-          <div className={`text-sm font-medium ${scostamentoSpese <= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-            Spese {scostamentoSpese <= 0 ? 'sotto budget' : 'sopra budget'}
+          <div className={`text-sm font-medium ${scostamentoSpese >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            {scostamentoSpese >= 0 ? 'Margine disponibile' : 'Budget superato'}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
             {scostamentoSpese >= 0 ? '+' : ''}€{scostamentoSpese.toFixed(2)}
