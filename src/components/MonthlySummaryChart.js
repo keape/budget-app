@@ -53,7 +53,7 @@ const MonthlySummaryChart = ({
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
           <h3 className="font-bold text-gray-800 dark:text-white mb-2">{label}</h3>
           <div className="space-y-1">
-            <p className="text-blue-300 dark:text-blue-300">
+            <p className="text-purple-500 dark:text-purple-400">
               <span className="font-semibold">Budget:</span> €{data.budget.toFixed(2)}
             </p>
             <p className="text-blue-600 dark:text-blue-400">
@@ -157,7 +157,7 @@ const MonthlySummaryChart = ({
           <ReferenceLine y={0} stroke="#6B7280" strokeDasharray="3 3" />
           
           {/* Barre per budget e valori effettivi */}
-          <Bar dataKey="budget" fill="#93C5FD" name="Budget" opacity={0.7} />
+          <Bar dataKey="budget" fill="#A855F7" name="Budget" opacity={0.7} />
           <Bar 
             dataKey="effettivo" 
             fill="#3B82F6" 
