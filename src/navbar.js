@@ -46,7 +46,7 @@ function Navbar() {
             }`}
             aria-current={location.pathname === '/transazioni' ? 'page' : undefined}
           >
-            Transazioni
+            Aggiungi Spesa
           </Link>
           <Link 
             to="/filtri" 
@@ -57,7 +57,7 @@ function Navbar() {
             }`}
             aria-current={location.pathname === '/filtri' ? 'page' : undefined}
           >
-            Filtri
+            Ricerca e Filtri
           </Link>
           <Link 
             to="/budget" 
