@@ -143,7 +143,7 @@ function Home() {
               onClick={() => navigate('/transazioni')}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-xl font-bold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl mx-2 mb-2"
             >
-              💸 Gestisci Transazioni
+              💸 Aggiungi Spesa
             </button>
             <button
               onClick={() => navigate('/filtri')}
