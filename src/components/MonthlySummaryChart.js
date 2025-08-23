@@ -53,10 +53,10 @@ const MonthlySummaryChart = ({
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
           <h3 className="font-bold text-gray-800 dark:text-white mb-2">{label}</h3>
           <div className="space-y-1">
-            <p className="text-blue-600 dark:text-blue-400">
+            <p className="text-blue-300 dark:text-blue-300">
               <span className="font-semibold">Budget:</span> €{data.budget.toFixed(2)}
             </p>
-            <p className="text-gray-700 dark:text-gray-300">
+            <p className="text-blue-600 dark:text-blue-400">
               <span className="font-semibold">Effettivo:</span> €{data.effettivo.toFixed(2)}
             </p>
             <p className={`font-semibold ${data.scostamento >= 0 ? 'text-green-600' : 'text-red-600'}`}>
