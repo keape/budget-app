@@ -56,10 +56,24 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
             entrate: {}
           };
           
+          // Variabili per diagnostica
+          let mesiConBudget = 0;
+          let dettagliBudgetMensili = [];
+          
           // Somma i budget di tutti i mesi (gestendo errori individuali)
           budgetResponses.forEach((result, index) => {
             if (result.status === 'fulfilled') {
               const budgetMensile = result.value?.data || { spese: {}, entrate: {} };
+              
+              // Diagnostica: conta mesi con budget e salva dettagli
+              if (Object.keys(budgetMensile.spese || {}).length > 0 || Object.keys(budgetMensile.entrate || {}).length > 0) {
+                mesiConBudget++;
+                dettagliBudgetMensili.push({
+                  mese: index + 1,
+                  spese: budgetMensile.spese || {},
+                  entrate: budgetMensile.entrate || {}
+                });
+              }
               
               // Somma le spese
               Object.entries(budgetMensile.spese || {}).forEach(([categoria, importo]) => {
@@ -75,8 +89,53 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
             }
           });
           
-          console.log('Budget annuale calcolato:', budgetAnnuale);
-          setBudgetSettings(budgetAnnuale);
+          // 📊 DIAGNOSTICA INTERO ANNO
+          console.log('=== DIAGNOSTICA BUDGET INTERO ANNO ===');
+          console.log(`Anno: ${annoCorrente}`);
+          console.log(`Mesi con budget configurato: ${mesiConBudget}/12`);
+          console.log('Dettagli budget mensili:', dettagliBudgetMensili);
+          console.log('Budget annuale SOMMATO:', budgetAnnuale);
+          
+          // Calcola anche budget medio mensile per confronto
+          const budgetMedioMensile = {
+            spese: {},
+            entrate: {}
+          };
+          if (mesiConBudget > 0) {
+            Object.entries(budgetAnnuale.spese).forEach(([categoria, totale]) => {
+              budgetMedioMensile.spese[categoria] = totale / mesiConBudget;
+            });
+            Object.entries(budgetAnnuale.entrate).forEach(([categoria, totale]) => {
+              budgetMedioMensile.entrate[categoria] = totale / mesiConBudget;
+            });
+          }
+          console.log('Budget medio mensile (per confronto):', budgetMedioMensile);
+          
+          // 🔧 STRATEGIA BUDGET ANNUALE: Proviamo diverse logiche
+          // Strategia 1: Somma (logica attuale)
+          const budgetSommato = budgetAnnuale;
+          
+          // Strategia 2: Media mensile * 12 (logica alternativa)
+          const budgetMediato = {
+            spese: {},
+            entrate: {}
+          };
+          
+          if (mesiConBudget > 0) {
+            Object.entries(budgetMedioMensile.spese).forEach(([categoria, media]) => {
+              budgetMediato.spese[categoria] = media * 12;
+            });
+            Object.entries(budgetMedioMensile.entrate).forEach(([categoria, media]) => {
+              budgetMediato.entrate[categoria] = media * 12;
+            });
+          }
+          
+          console.log('STRATEGIA 1 - Budget sommato:', budgetSommato);
+          console.log('STRATEGIA 2 - Budget mediato x12:', budgetMediato);
+          console.log('=== FINE DIAGNOSTICA ===');
+          
+          // Per ora usiamo la strategia 1 (somma), ma possiamo cambiare basandoci sui log
+          setBudgetSettings(budgetSommato);
         } else {
           // Per un mese specifico, recupera solo il budget di quel mese
           const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
@@ -139,6 +198,32 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
         const entrateFiltrate = allEntrate.filter(filterByPeriod);
         console.log(`Filtrate a ${speseFiltrate.length} spese e ${entrateFiltrate.length} entrate per il periodo.`);
         
+        // 📊 DIAGNOSTICA TRANSAZIONI INTERO ANNO
+        if (meseCorrente === 0) {
+          console.log('=== DIAGNOSTICA TRANSAZIONI INTERO ANNO ===');
+          console.log(`Totale spese nell'anno ${annoCorrente}: ${speseFiltrate.length}`);
+          console.log(`Totale entrate nell'anno ${annoCorrente}: ${entrateFiltrate.length}`);
+          
+          // Campione transazioni per verifica filtro
+          if (speseFiltrate.length > 0) {
+            console.log('Campione spese filtrate:', speseFiltrate.slice(0, 3).map(s => ({
+              categoria: s.categoria,
+              importo: s.importo,
+              data: s.data,
+              anno: new Date(s.data).getFullYear()
+            })));
+          }
+          
+          if (entrateFiltrate.length > 0) {
+            console.log('Campione entrate filtrate:', entrateFiltrate.slice(0, 3).map(e => ({
+              categoria: e.categoria,
+              importo: e.importo,
+              data: e.data,
+              anno: new Date(e.data).getFullYear()
+            })));
+          }
+        }
+        
         // 🔍 DEBUG: Log dettagliato per febbraio
         if (meseCorrente === 2) { // Febbraio
           console.log('🔍 DEBUG FEBBRAIO - Tutte le entrate:', allEntrate.length);
@@ -168,6 +253,21 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
         
         setSpeseMensili(speseAggregated);
         setEntrateMensili(entrateAggregated);
+        
+        // 📊 DIAGNOSTICA AGGREGAZIONE INTERO ANNO
+        if (meseCorrente === 0) {
+          console.log('=== DIAGNOSTICA AGGREGAZIONE INTERO ANNO ===');
+          console.log('Spese aggregate per categoria:', speseAggregated);
+          console.log('Entrate aggregate per categoria:', entrateAggregated);
+          
+          // Totali per verifica
+          const totaleSpese = Object.values(speseAggregated).reduce((a, b) => a + b, 0);
+          const totaleEntrate = Object.values(entrateAggregated).reduce((a, b) => a + b, 0);
+          console.log(`Totale spese anno ${annoCorrente}: €${totaleSpese.toFixed(2)}`);
+          console.log(`Totale entrate anno ${annoCorrente}: €${totaleEntrate.toFixed(2)}`);
+          console.log(`Bilancio anno ${annoCorrente}: €${(totaleEntrate - totaleSpese).toFixed(2)}`);
+          console.log('=== FINE DIAGNOSTICA AGGREGAZIONE ===');
+        }
         
         // 🔍 DEBUG: Log aggregazione per febbraio
         if (meseCorrente === 2) {
