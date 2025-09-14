@@ -47,8 +47,8 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
             );
           }
           
-          // Esegui tutte le richieste in parallelo
-          const budgetResponses = await Promise.all(budgetPromises);
+          // Esegui tutte le richieste in parallelo con gestione errori
+          const budgetResponses = await Promise.allSettled(budgetPromises);
           
           // Inizializza oggetti per accumulare i budget
           const budgetAnnuale = {
@@ -56,19 +56,23 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
             entrate: {}
           };
           
-          // Somma i budget di tutti i mesi
-          budgetResponses.forEach((response, index) => {
-            const budgetMensile = response.data || { spese: {}, entrate: {} };
-            
-            // Somma le spese
-            Object.entries(budgetMensile.spese || {}).forEach(([categoria, importo]) => {
-              budgetAnnuale.spese[categoria] = (budgetAnnuale.spese[categoria] || 0) + importo;
-            });
-            
-            // Somma le entrate
-            Object.entries(budgetMensile.entrate || {}).forEach(([categoria, importo]) => {
-              budgetAnnuale.entrate[categoria] = (budgetAnnuale.entrate[categoria] || 0) + importo;
-            });
+          // Somma i budget di tutti i mesi (gestendo errori individuali)
+          budgetResponses.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              const budgetMensile = result.value?.data || { spese: {}, entrate: {} };
+              
+              // Somma le spese
+              Object.entries(budgetMensile.spese || {}).forEach(([categoria, importo]) => {
+                budgetAnnuale.spese[categoria] = (budgetAnnuale.spese[categoria] || 0) + importo;
+              });
+              
+              // Somma le entrate
+              Object.entries(budgetMensile.entrate || {}).forEach(([categoria, importo]) => {
+                budgetAnnuale.entrate[categoria] = (budgetAnnuale.entrate[categoria] || 0) + importo;
+              });
+            } else {
+              console.warn(`Errore caricamento budget mese ${index + 1}:`, result.reason);
+            }
           });
           
           console.log('Budget annuale calcolato:', budgetAnnuale);
@@ -105,7 +109,20 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
 
         // Filter Transactions by Selected Month or Year
         const filterByPeriod = (t) => {
+          // Validazione data
+          if (!t.data) {
+            console.warn('Transazione senza data:', t);
+            return false;
+          }
+          
           const data = new Date(t.data);
+          
+          // Verifica che la data sia valida
+          if (isNaN(data.getTime())) {
+            console.warn('Data invalida nella transazione:', t.data, t);
+            return false;
+          }
+          
           const transactionMonth = data.getMonth();
           const transactionYear = data.getFullYear();
           
