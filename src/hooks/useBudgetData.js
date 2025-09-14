@@ -132,10 +132,30 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
           
           console.log('STRATEGIA 1 - Budget sommato:', budgetSommato);
           console.log('STRATEGIA 2 - Budget mediato x12:', budgetMediato);
+          
+          // 🔧 CORREZIONE: L'utente ha confermato che deve essere SOMMA di tutti i 12 mesi
+          // Se alcuni mesi non hanno budget, usiamo la strategia 2 (media x 12)
+          // Se tutti i mesi hanno budget, usiamo la strategia 1 (somma diretta)
+          
+          let budgetFinale;
+          if (mesiConBudget === 12) {
+            // Tutti i mesi hanno budget → usa somma diretta
+            budgetFinale = budgetSommato;
+            console.log('✅ USANDO STRATEGIA 1: Tutti i 12 mesi hanno budget - somma diretta');
+          } else if (mesiConBudget > 0) {
+            // Solo alcuni mesi hanno budget → usa media x 12 per stimare l'anno
+            budgetFinale = budgetMediato;
+            console.log(`✅ USANDO STRATEGIA 2: Solo ${mesiConBudget}/12 mesi hanno budget - usando media x 12`);
+          } else {
+            // Nessun mese ha budget → usa oggetto vuoto
+            budgetFinale = { spese: {}, entrate: {} };
+            console.log('⚠️ NESSUN BUDGET CONFIGURATO per l\'anno');
+          }
+          
+          console.log('Budget finale per intero anno:', budgetFinale);
           console.log('=== FINE DIAGNOSTICA ===');
           
-          // Per ora usiamo la strategia 1 (somma), ma possiamo cambiare basandoci sui log
-          setBudgetSettings(budgetSommato);
+          setBudgetSettings(budgetFinale);
         } else {
           // Per un mese specifico, recupera solo il budget di quel mese
           const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
