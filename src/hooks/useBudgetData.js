@@ -34,13 +34,13 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
           // Array per memorizzare le promesse di tutte le richieste mensili
           const budgetPromises = [];
           
-          // Crea una richiesta per ogni mese dell'anno
-          for (let mese = 0; mese < 12; mese++) {
+          // Crea una richiesta per ogni mese dell'anno (1-12 per mantenere coerenza con il backend)
+          for (let mese = 1; mese <= 12; mese++) {
             budgetPromises.push(
               axios.get(`${BASE_URL}/api/budget-settings`, {
                 params: { 
                   anno: annoCorrente,
-                  mese: mese
+                  mese: mese - 1  // Converte a indice 0-based per il backend
                 },
                 headers: { 'Authorization': `Bearer ${token}` }
               })
