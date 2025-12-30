@@ -67,7 +67,7 @@ function Filtri() {
         const response = await axios.get(`${BASE_URL}/api/categorie`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (response.data && response.data.categorie) {
           setCategorieSpese(response.data.categorie.spese || []);
           setCategorieEntrate(response.data.categorie.entrate || []);
@@ -130,7 +130,7 @@ function Filtri() {
     // Se il tipo non è 'tutte', filtra per tipo specifico (uscita/entrata)
     if (filtroTipo === 'uscita' && t.tipo !== 'uscita') return false;
     if (filtroTipo === 'entrata' && t.tipo !== 'entrata') return false;
-    
+
     // Se c'è una categoria selezionata, filtra per categoria
     if (filtroCategoria && t.categoria !== filtroCategoria) return false;
 
@@ -140,25 +140,28 @@ function Filtri() {
       const ricerca = ricercaDescrizione.toLowerCase();
       if (!descrizione.toLowerCase().includes(ricerca)) return false;
     }
-  
+
     // Se ci sono date impostate, filtra per date
     if (dataInizio || dataFine) {
       const dataTransazione = new Date(t.data).setHours(0, 0, 0, 0);
-      
+
       if (dataInizio) {
         const inizio = new Date(dataInizio).setHours(0, 0, 0, 0);
         if (dataTransazione < inizio) return false;
       }
-      
+
       if (dataFine) {
         const fine = new Date(dataFine).setHours(0, 0, 0, 0);
         if (dataTransazione > fine) return false;
       }
     }
-  
+
     return true;
   });
 
+
+
+  const totaleFiltrato = transazioniFiltrate.reduce((acc, t) => acc + Number(t.importo), 0);
 
   const colors = [
     '#3B82F6', // Blue
@@ -201,10 +204,10 @@ function Filtri() {
 
   const handleEdit = (transaction) => {
     // Formatta la data per l'input type="date"
-    const formattedDate = transaction.data 
+    const formattedDate = transaction.data
       ? new Date(transaction.data).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0];
-    
+
     setEditingTransaction({
       ...transaction,
       data: formattedDate
@@ -214,7 +217,7 @@ function Filtri() {
 
   const handleSaveEdit = async () => {
     if (!editingTransaction) return;
-    
+
     try {
       const endpoint = editingTransaction.tipo === 'entrata' ? 'entrate' : 'spese';
       await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
@@ -223,7 +226,7 @@ function Filtri() {
         categoria: editingTransaction.categoria,
         data: editingTransaction.data
       });
-      
+
       setShowEditModal(false);
       setEditingTransaction(null);
       caricaTransazioni();
@@ -240,7 +243,7 @@ function Filtri() {
 
     // Intestazioni del CSV
     const headers = ['Data', 'Tipo', 'Categoria', 'Descrizione', 'Importo'];
-    
+
     // Dati delle transazioni
     const csvData = transazioniFiltrate.map(transazione => {
       const data = new Date(transazione.data).toLocaleDateString('it-IT');
@@ -248,7 +251,7 @@ function Filtri() {
       const categoria = transazione.categoria || '';
       const descrizione = (transazione.descrizione || '').replace(/,/g, ';'); // Sostituisce virgole con punto e virgola
       const importo = Number(transazione.importo).toFixed(2);
-      
+
       return [data, tipo, categoria, descrizione, importo];
     });
 
@@ -261,15 +264,15 @@ function Filtri() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
-    
+
     // Nome file con data corrente e informazioni sui filtri
     let fileName = `transazioni_${new Date().toISOString().split('T')[0]}`;
     if (filtroTipo !== 'tutte') fileName += `_${filtroTipo}`;
     if (filtroCategoria) fileName += `_${filtroCategoria.replace(/[^a-zA-Z0-9]/g, '_')}`;
     fileName += '.csv';
-    
+
     link.setAttribute('download', fileName);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
@@ -299,7 +302,7 @@ function Filtri() {
             </svg>
             Filtri Principali
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Filtro Tipo */}
             <div className="space-y-2">
@@ -308,31 +311,28 @@ function Filtri() {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
-                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    filtroTipo === 'tutte' 
-                      ? 'bg-indigo-600 text-white shadow-lg transform scale-105' 
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${filtroTipo === 'tutte'
+                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
                   onClick={() => setFiltroTipo('tutte')}
                 >
                   Tutte
                 </button>
                 <button
-                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    filtroTipo === 'entrata' 
-                      ? 'bg-green-600 text-white shadow-lg transform scale-105' 
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-gray-600'
-                  }`}
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${filtroTipo === 'entrata'
+                    ? 'bg-green-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-gray-600'
+                    }`}
                   onClick={() => setFiltroTipo('entrata')}
                 >
                   Entrate
                 </button>
                 <button
-                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
-                    filtroTipo === 'uscita' 
-                      ? 'bg-red-600 text-white shadow-lg transform scale-105' 
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-gray-600'
-                  }`}
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${filtroTipo === 'uscita'
+                    ? 'bg-red-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-gray-600'
+                    }`}
                   onClick={() => setFiltroTipo('uscita')}
                 >
                   Uscite
@@ -376,7 +376,7 @@ function Filtri() {
             </svg>
             Filtri Avanzati
           </h2>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Filtro Date */}
             <div className="space-y-3">
@@ -438,16 +438,21 @@ function Filtri() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
             {/* Contatore risultati */}
             <div className="flex items-center space-x-3">
-              <div className="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+              <div className="bg-indigo-600 text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center font-bold text-base shadow-md">
                 {transazioniFiltrate.length}
               </div>
-              <div>
-                <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  Transazioni trovate
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
+                  Transazioni & Totale
+                </p>
+                <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                  <span className={totaleFiltrato >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {totaleFiltrato > 0 ? '+' : ''}{totaleFiltrato.toFixed(2)} €
+                  </span>
                 </p>
                 {(filtroCategoria || ricercaDescrizione || dataInizio || dataFine || filtroTipo !== 'tutte') && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Filtri attivi: 
+                    Filtri attivi:
                     {filtroTipo !== 'tutte' && <span className="inline-block bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-2 py-1 rounded mr-1 text-xs">{filtroTipo}</span>}
                     {filtroCategoria && <span className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded mr-1 text-xs">{filtroCategoria}</span>}
                     {ricercaDescrizione && <span className="inline-block bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded mr-1 text-xs">testo: {ricercaDescrizione}</span>}
@@ -456,7 +461,7 @@ function Filtri() {
                 )}
               </div>
             </div>
-            
+
             {/* Pulsanti azioni */}
             <div className="flex space-x-3">
               <button
@@ -474,13 +479,12 @@ function Filtri() {
                 </svg>
                 <span>Reset Filtri</span>
               </button>
-              
+
               <button
-                className={`px-6 py-3 font-semibold rounded-lg transition-all duration-200 flex items-center space-x-2 ${
-                  transazioniFiltrate.length === 0
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105'
-                }`}
+                className={`px-6 py-3 font-semibold rounded-lg transition-all duration-200 flex items-center space-x-2 ${transazioniFiltrate.length === 0
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105'
+                  }`}
                 onClick={downloadCSV}
                 disabled={transazioniFiltrate.length === 0}
                 title={transazioniFiltrate.length === 0 ? 'Nessuna transazione da esportare' : 'Scarica come CSV'}
@@ -507,32 +511,32 @@ function Filtri() {
                 return acc;
               }, {})
             )
-            .map(([categoria, valore]) => ({ categoria, valore }))
-            .sort((a, b) => b.valore - a.valore);
-            
+              .map(([categoria, valore]) => ({ categoria, valore }))
+              .sort((a, b) => b.valore - a.valore);
+
             const totaleImporti = categorieData.reduce((sum, item) => sum + item.valore, 0);
-            
+
             // Prendi le top 8 categorie e raggruppa il resto in "Altro"
             const topCategorie = categorieData.slice(0, 8);
             const altreCategorie = categorieData.slice(8);
             const altroImporto = altreCategorie.reduce((sum, item) => sum + item.valore, 0);
-            
+
             const finalData = [...topCategorie];
             if (altroImporto > 0) {
               finalData.push({ categoria: 'Altro', valore: altroImporto });
             }
-            
+
             // Filtra categorie con meno dell'1% del totale se sono troppe
-            const dataFiltered = finalData.filter(item => 
+            const dataFiltered = finalData.filter(item =>
               (item.valore / totaleImporti) >= 0.01 || item.categoria === 'Altro'
             );
-            
+
             const handlePieClick = (data) => {
               if (data && data.categoria !== 'Altro') {
                 setFiltroCategoria(data.categoria);
               }
             };
-            
+
             return (
               <div className="mt-8 mb-8">
                 <div className="text-center mb-6">
@@ -540,11 +544,11 @@ function Filtri() {
                     Distribuzione Spese per Categoria
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Totale: <span className="font-semibold">{totaleImporti.toFixed(2)} €</span> • 
+                    Totale: <span className="font-semibold">{totaleImporti.toFixed(2)} €</span> •
                     Clicca su una categoria per filtrare
                   </p>
                 </div>
-                
+
                 <ResponsiveContainer width="100%" height={500}>
                   <PieChart>
                     <Pie
@@ -559,15 +563,15 @@ function Filtri() {
                       style={{ cursor: 'pointer' }}
                     >
                       {dataFiltered.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
+                        <Cell
+                          key={`cell-${index}`}
                           fill={colors[index % colors.length]}
                           stroke={darkMode ? '#374151' : '#ffffff'}
                           strokeWidth={2}
                         />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value, name) => [
                         `${parseFloat(value).toFixed(2)} €`,
                         name
@@ -578,11 +582,10 @@ function Filtri() {
                           const data = payload[0];
                           const percent = ((data.value / totaleImporti) * 100).toFixed(1);
                           return (
-                            <div className={`p-3 rounded-lg shadow-lg border ${
-                              darkMode 
-                                ? 'bg-gray-800 border-gray-600 text-white' 
-                                : 'bg-white border-gray-200 text-gray-900'
-                            }`}>
+                            <div className={`p-3 rounded-lg shadow-lg border ${darkMode
+                              ? 'bg-gray-800 border-gray-600 text-white'
+                              : 'bg-white border-gray-200 text-gray-900'
+                              }`}>
                               <p className="font-semibold text-lg">{data.payload.categoria}</p>
                               <p className="text-sm">
                                 <span className="font-medium">{data.value.toFixed(2)} €</span>
@@ -599,9 +602,9 @@ function Filtri() {
                         return null;
                       }}
                     />
-                    <Legend 
-                      layout="horizontal" 
-                      align="center" 
+                    <Legend
+                      layout="horizontal"
+                      align="center"
                       verticalAlign="bottom"
                       wrapperStyle={{
                         paddingTop: "30px",
@@ -612,18 +615,17 @@ function Filtri() {
                           {payload.map((entry, index) => {
                             const percent = ((entry.payload.valore / totaleImporti) * 100).toFixed(0);
                             return (
-                              <div 
-                                key={`legend-${index}`} 
+                              <div
+                                key={`legend-${index}`}
                                 className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                                 onClick={() => entry.payload.categoria !== 'Altro' && setFiltroCategoria(entry.payload.categoria)}
                               >
-                                <div 
-                                  className="w-3 h-3 rounded-full" 
+                                <div
+                                  className="w-3 h-3 rounded-full"
                                   style={{ backgroundColor: entry.color }}
                                 />
-                                <span className={`text-sm font-medium ${
-                                  darkMode ? 'text-gray-200' : 'text-gray-700'
-                                }`}>
+                                <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'
+                                  }`}>
                                   {entry.payload.categoria} ({percent}%)
                                 </span>
                               </div>
@@ -634,12 +636,11 @@ function Filtri() {
                     />
                   </PieChart>
                 </ResponsiveContainer>
-                
+
                 {altroImporto > 0 && (
                   <div className="text-center mt-4">
-                    <p className={`text-sm ${
-                      darkMode ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
                       "Altro" include {altreCategorie.length} categorie minori per un totale di {altroImporto.toFixed(2)} €
                     </p>
                   </div>
@@ -655,7 +656,7 @@ function Filtri() {
                 <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
                   {filtroCategoria}
                 </h3>
-                
+
                 <div className="flex items-center space-x-2 mt-4 md:mt-0">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ordina per:</span>
                   <select
@@ -681,7 +682,7 @@ function Filtri() {
                     }, {})
                   )
                     .map(([data, importo]) => ({
-                      data: new Date(data + '-01').toLocaleDateString('it-IT', { 
+                      data: new Date(data + '-01').toLocaleDateString('it-IT', {
                         year: 'numeric',
                         month: 'long'
                       }),
@@ -695,10 +696,10 @@ function Filtri() {
                       return b.importo - a.importo;
                     })}
                 >
-                  <XAxis 
-                    dataKey="data" 
-                    angle={-45} 
-                    textAnchor="end" 
+                  <XAxis
+                    dataKey="data"
+                    angle={-45}
+                    textAnchor="end"
                     height={100}
                     tick={{ fill: darkMode ? '#e5e7eb' : '#374151' }}
                   />
@@ -735,19 +736,17 @@ function Filtri() {
                 <div>
                   <div className="flex items-center gap-2">
                     <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{transazione.categoria}</div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      isEntrata
-                        ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' 
-                        : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                    }`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isEntrata
+                      ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                      : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                      }`}>
                       {isEntrata ? 'Entrata' : 'Uscita'}
                     </span>
                   </div>
-                  <div className={`font-semibold text-lg ${
-                    isEntrata
-                      ? 'text-green-600 dark:text-green-400' 
-                      : 'text-red-600 dark:text-red-400'
-                  }`}>
+                  <div className={`font-semibold text-lg ${isEntrata
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                    }`}>
                     {segno}{displayImporto.toFixed(2)} €
                   </div>
                   {transazione.descrizione && (
@@ -794,7 +793,7 @@ function Filtri() {
             <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
               Modifica {editingTransaction.tipo === 'entrata' ? 'Entrata' : 'Spesa'}
             </h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -853,17 +852,17 @@ function Filtri() {
                   })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
-                  {editingTransaction.tipo === 'entrata' 
+                  {editingTransaction.tipo === 'entrata'
                     ? categorieEntrate.map(categoria => (
-                        <option key={categoria} value={categoria}>
-                          {categoria}
-                        </option>
-                      ))
+                      <option key={categoria} value={categoria}>
+                        {categoria}
+                      </option>
+                    ))
                     : categorieSpese.map(categoria => (
-                        <option key={categoria} value={categoria}>
-                          {categoria}
-                        </option>
-                      ))
+                      <option key={categoria} value={categoria}>
+                        {categoria}
+                      </option>
+                    ))
                   }
                 </select>
               </div>
@@ -888,9 +887,9 @@ function Filtri() {
       )}
 
       {isLoading && (
-        <LoadingSpinner 
-          size="lg" 
-          text="Caricamento transazioni..." 
+        <LoadingSpinner
+          size="lg"
+          text="Caricamento transazioni..."
           className="py-8"
         />
       )}
