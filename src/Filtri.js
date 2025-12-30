@@ -24,6 +24,7 @@ function Filtri() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [ordinamentoGrafico, setOrdinamentoGrafico] = useState('importo');
 
 
   // Legge i parametri dall'URL all'avvio
@@ -650,9 +651,24 @@ function Filtri() {
           {/* Grafico a barre per andamento temporale quando si filtra per categoria */}
           {filtroCategoria && (
             <div className="mt-8 mb-8">
-              <h3 className="text-2xl font-bold text-center mb-6 text-indigo-700 dark:text-indigo-300">
-                {filtroCategoria}
-              </h3>
+              <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+                  {filtroCategoria}
+                </h3>
+                
+                <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ordina per:</span>
+                  <select
+                    value={ordinamentoGrafico}
+                    onChange={(e) => setOrdinamentoGrafico(e.target.value)}
+                    className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
+                  >
+                    <option value="importo">Importo (Decrescente)</option>
+                    <option value="cronologico">Cronologico</option>
+                  </select>
+                </div>
+              </div>
+
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart
                   data={Object.entries(
@@ -669,9 +685,15 @@ function Filtri() {
                         year: 'numeric',
                         month: 'long'
                       }),
+                      rawDate: data,
                       importo
                     }))
-                    .sort((a, b) => b.importo - a.importo)}
+                    .sort((a, b) => {
+                      if (ordinamentoGrafico === 'cronologico') {
+                        return a.rawDate.localeCompare(b.rawDate);
+                      }
+                      return b.importo - a.importo;
+                    })}
                 >
                   <XAxis 
                     dataKey="data" 
