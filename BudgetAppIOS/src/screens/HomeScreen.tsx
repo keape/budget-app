@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -26,6 +27,18 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalitaTransazione, setModalitaTransazione] = useState<'una_tantum' | 'periodica'>('una_tantum');
+
+  // Stati per transazioni periodiche
+  const [tipoRipetizione, setTipoRipetizione] = useState('mensile');
+  const [dataInizio, setDataInizio] = useState(new Date().toISOString().split('T')[0]);
+  const [dataFine, setDataFine] = useState('');
+  const [isInfinito, setIsInfinito] = useState(true);
+
+  const tipiRipetizione = [
+    { value: 'mensile', label: 'Mensile' },
+    { value: 'settimanale', label: 'Settimanale' },
+    { value: 'annuale', label: 'Annuale' },
+  ];
 
   useEffect(() => {
     checkAuthAndLoadCategories();
@@ -51,13 +64,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       const response = await fetch(`${BASE_URL}/api/categorie`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data && data.categorie) {
           setCategorieSpese(data.categorie.spese || []);
           setCategorieEntrate(data.categorie.entrate || []);
-          
+
           // Imposta categoria predefinita
           if (tipo === 'spesa' && data.categorie.spese?.length > 0) {
             setCategoria(data.categorie.spese[0]);
@@ -80,31 +93,84 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setIsLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-      const dataTransazione = new Date().toISOString().split('T')[0];
 
-      const response = await fetch(`${BASE_URL}/api/${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          descrizione,
+      if (modalitaTransazione === 'una_tantum') {
+        // Transazione Spesa/Entrata standard
+        const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
+        const dataTransazione = new Date().toISOString().split('T')[0];
+
+        const response = await fetch(`${BASE_URL}/api/${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            descrizione,
+            importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
+            categoria,
+            data: dataTransazione
+          }),
+        });
+
+        if (response.ok) {
+          Alert.alert('Successo', `${tipo === 'spesa' ? 'Spesa' : 'Entrata'} inserita con successo!`);
+          resetForm();
+        } else {
+          try {
+            const errorData = await response.json();
+            Alert.alert('Errore', errorData.message || 'Impossibile inserire la transazione');
+          } catch (e) {
+            Alert.alert('Errore', 'Impossibile inserire la transazione');
+          }
+        }
+
+      } else {
+        // Transazione Periodica
+        const configurazioneDefault = {
+          giorno: 1,
+          gestione_giorno_mancante: 'ultimo_disponibile',
+          ogni_n_mesi: 1,
+          mese: 1,
+          giorni_settimana: [],
+          giorno_settimana: 1,
+          ogni_n_giorni: 30
+        };
+
+        const abbonamento = {
           importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
           categoria,
-          data: dataTransazione
-        }),
-      });
+          descrizione: descrizione || `Recurrence ${categoria}`,
+          tipo_ripetizione: tipoRipetizione,
+          configurazione: configurazioneDefault,
+          data_inizio: dataInizio,
+          data_fine: isInfinito ? null : dataFine,
+          attiva: true
+        };
 
-      if (response.ok) {
-        Alert.alert('Successo', `${tipo === 'spesa' ? 'Spesa' : 'Entrata'} inserita con successo!`);
-        // Reset form
-        setDescrizione('');
-        setImporto('');
-        setCategoria('');
-      } else {
-        Alert.alert('Errore', 'Impossibile inserire la transazione');
+        const response = await fetch(`${BASE_URL}/api/transazioni-periodiche`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(abbonamento),
+        });
+
+        if (response.ok) {
+          Alert.alert('Successo', 'Ricorrenza creata con successo!');
+
+          // Triggera generazione movimenti mancanti (come da web app)
+          fetch(`${BASE_URL}/api/transazioni-periodiche/genera`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).catch(err => console.error("Error generating transactions:", err));
+
+          resetForm();
+        } else {
+          const errorData = await response.json();
+          Alert.alert('Errore', errorData.message || 'Impossibile creare la ricorrenza');
+        }
       }
     } catch (error) {
       console.error('Errore nell\'inserimento:', error);
@@ -112,6 +178,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setDescrizione('');
+    setImporto('');
+    setCategoria('');
+    setDataFine('');
+    setIsInfinito(true);
+    setDataInizio(new Date().toISOString().split('T')[0]);
   };
 
   const handleTipoChange = (nuovoTipo: 'spesa' | 'entrata') => {
@@ -141,7 +216,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             📅 Una tantum
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.modalityButton,
@@ -176,7 +251,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               Spesa
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[
               styles.tipoButton,
@@ -198,7 +273,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Importo"
+            placeholder="Importo (es. 12.50)"
             value={importo}
             onChangeText={setImporto}
             keyboardType="numeric"
@@ -240,6 +315,68 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             placeholderTextColor="#9CA3AF"
           />
         </View>
+
+        {/* CAMPI AGGIUNTIVI PER TRANS. PERIODICA */}
+        {modalitaTransazione === 'periodica' ? (
+          <View style={styles.periodicaContainer}>
+            <Text style={styles.sectionTitle}>Opzioni Ricorrenza</Text>
+
+            {/* Tipo Ripetizione */}
+            <Text style={styles.label}>Frequenza</Text>
+            <View style={styles.chipContainer}>
+              {tipiRipetizione.map((rep) => (
+                <TouchableOpacity
+                  key={rep.value}
+                  style={[
+                    styles.chip,
+                    tipoRipetizione === rep.value && styles.chipActive
+                  ]}
+                  onPress={() => setTipoRipetizione(rep.value)}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    tipoRipetizione === rep.value && styles.chipTextActive
+                  ]}>{rep.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Data Inizio */}
+            <Text style={styles.label}>Data Inizio (YYYY-MM-DD)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD"
+              value={dataInizio}
+              onChangeText={setDataInizio}
+              placeholderTextColor="#9CA3AF"
+            />
+
+            {/* Infinito Switch */}
+            <View style={styles.switchContainer}>
+              <Text style={styles.label}>Ricorrenza infinita</Text>
+              <Switch
+                value={isInfinito}
+                onValueChange={setIsInfinito}
+                trackColor={{ false: "#767577", true: "#4F46E5" }}
+                thumbColor={isInfinito ? "#FFFFFF" : "#f4f3f4"}
+              />
+            </View>
+
+            {/* Data Fine (se non infinito) */}
+            {!isInfinito && (
+              <View>
+                <Text style={styles.label}>Data Fine (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={dataFine}
+                  onChangeText={setDataFine}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+            )}
+          </View>
+        ) : null}
 
         {/* Bottone Aggiungi */}
         <TouchableOpacity
@@ -399,6 +536,51 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  periodicaContainer: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 15,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    marginBottom: 15,
+  },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  chipActive: {
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
+  },
+  chipText: {
+    color: '#374151',
+    fontWeight: '500',
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+    marginTop: 5,
   },
 });
 
