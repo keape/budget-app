@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 import { API_URL } from '../config';
 
@@ -28,27 +29,27 @@ interface TransactionsScreenProps {
 }
 
 const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) => {
+  const { userToken } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadTransactions();
-  }, []);
+    if (userToken) {
+      loadTransactions();
+    }
+  }, [userToken]);
 
   const loadTransactions = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        navigation.navigate('Login');
-        return;
-      }
+      if (!userToken) return;
+
 
       const [speseResponse, entrateResponse] = await Promise.all([
         fetch(`${BASE_URL}/api/spese?page=1&limit=100`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${userToken}` }
         }),
         fetch(`${BASE_URL}/api/entrate?page=1&limit=100`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${userToken}` }
         })
       ]);
 
@@ -82,12 +83,12 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
           style: 'destructive',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('token');
+              if (!userToken) return;
               const endpoint = tipo === 'entrata' ? 'entrate' : 'spese';
 
               const response = await fetch(`${BASE_URL}/api/${endpoint}/${id}`, {
                 method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${userToken}` }
               });
 
               if (response.ok) {

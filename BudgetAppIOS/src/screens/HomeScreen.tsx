@@ -11,7 +11,7 @@ import {
   Switch,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -21,6 +21,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const { userToken, logout } = useAuth();
   const [tipo, setTipo] = useState<'spesa' | 'entrata'>('spesa');
   const [importo, setImporto] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -43,28 +44,27 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   ];
 
   useEffect(() => {
-    checkAuthAndLoadCategories();
-  }, []);
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={logout} style={{ marginRight: 15 }}>
+          <Text style={{ color: 'white', fontWeight: 'bold' }}>Esci</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, logout]);
 
-  const checkAuthAndLoadCategories = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        navigation.navigate('Login');
-        return;
-      }
-      await fetchCategorie();
-    } catch (error) {
-      console.error('Error checking auth:', error);
-      navigation.navigate('Login');
+  useEffect(() => {
+    if (userToken) {
+      fetchCategorie();
     }
-  };
+  }, [userToken]);
 
   const fetchCategorie = async () => {
+    if (!userToken) return;
+
     try {
-      const token = await AsyncStorage.getItem('token');
       const response = await fetch(`${BASE_URL}/api/categorie`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${userToken}` }
       });
 
       if (response.ok) {
@@ -92,10 +92,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       return;
     }
 
+    if (!userToken) {
+      Alert.alert('Errore', 'Utente non autenticato');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-
       if (modalitaTransazione === 'una_tantum') {
         // Transazione Spesa/Entrata standard
         const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
@@ -104,7 +107,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const response = await fetch(`${BASE_URL}/api/${endpoint}`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${userToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -153,7 +156,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const response = await fetch(`${BASE_URL}/api/transazioni-periodiche`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${userToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(abbonamento),
@@ -165,7 +168,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           // Triggera generazione movimenti mancanti (come da web app)
           fetch(`${BASE_URL}/api/transazioni-periodiche/genera`, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 'Authorization': `Bearer ${userToken}` }
           }).catch(err => console.error("Error generating transactions:", err));
 
           resetForm();

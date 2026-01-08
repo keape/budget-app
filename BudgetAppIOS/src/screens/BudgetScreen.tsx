@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 import { API_URL } from '../config';
 
@@ -26,21 +27,21 @@ interface BudgetScreenProps {
 }
 
 const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
+  const { userToken } = useAuth();
   const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'mensile' | 'annuale'>('mensile');
 
   useEffect(() => {
-    loadBudgetData();
-  }, [selectedPeriod]);
+    if (userToken) {
+      loadBudgetData();
+    }
+  }, [selectedPeriod, userToken]);
 
   const loadBudgetData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        navigation.navigate('Login');
-        return;
-      }
+      if (!userToken) return;
+
 
       setIsLoading(true);
 
@@ -58,10 +59,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
       const [speseResponse, entrateResponse] = await Promise.all([
         fetch(`${BASE_URL}/api/spese?dataInizio=${startDate.toISOString().split('T')[0]}&dataFine=${endDate.toISOString().split('T')[0]}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${userToken}` }
         }),
         fetch(`${BASE_URL}/api/entrate?dataInizio=${startDate.toISOString().split('T')[0]}&dataFine=${endDate.toISOString().split('T')[0]}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${userToken}` }
         })
       ]);
 
