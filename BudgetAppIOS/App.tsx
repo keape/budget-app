@@ -8,6 +8,7 @@ import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
+import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
 import BudgetScreen from './src/screens/BudgetScreen';
 
@@ -41,7 +42,7 @@ const MainTabs = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Inserisci transazione',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>💰</Text>
@@ -94,7 +95,19 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen
+              name="AddTransaction"
+              component={AddTransactionScreen}
+              options={{
+                headerShown: true,
+                title: 'Nuova Transazione',
+                headerStyle: { backgroundColor: '#4F46E5' },
+                headerTintColor: '#fff'
+              }}
+            />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
