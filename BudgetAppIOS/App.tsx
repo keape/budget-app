@@ -37,8 +37,8 @@ const MainTabs = () => {
         },
       }}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Tab.Screen
+        name="Home"
         component={HomeScreen}
         options={{
           title: 'Inserisci transazione',
@@ -49,8 +49,8 @@ const MainTabs = () => {
           ),
         }}
       />
-      <Tab.Screen 
-        name="Transactions" 
+      <Tab.Screen
+        name="Transactions"
         component={TransactionsScreen}
         options={{
           title: 'Transazioni',
@@ -61,8 +61,8 @@ const MainTabs = () => {
           ),
         }}
       />
-      <Tab.Screen 
-        name="Budget" 
+      <Tab.Screen
+        name="Budget"
         component={BudgetScreen}
         options={{
           title: 'Budget',
@@ -77,25 +77,10 @@ const MainTabs = () => {
   );
 };
 
-const App = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      setIsAuthenticated(!!token);
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const AppNavigator = () => {
+  const { isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
@@ -118,6 +103,14 @@ const App = () => {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
   );
 };
 

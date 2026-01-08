@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 import { API_URL } from '../config';
 
@@ -23,6 +24,7 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -44,9 +46,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok && data.token) {
-        await AsyncStorage.setItem('token', data.token);
-        await AsyncStorage.setItem('username', username);
-        navigation.navigate('Main');
+        await login(data.token, username);
+        // Navigation is handled automatically by AppNavigator based on isAuthenticated state
       } else {
         Alert.alert('Errore', data.message || 'Credenziali non valide');
       }
