@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://budget-app-cd5o.onrender.com';
+import { API_URL } from '../config';
+
+const BASE_URL = API_URL;
 
 interface BudgetItem {
   categoria: string;
@@ -41,7 +43,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       }
 
       setIsLoading(true);
-      
+
       const currentDate = new Date();
       let startDate: Date;
       let endDate: Date;
@@ -109,11 +111,11 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     const totaleEntrate = budgetData
       .filter(item => item.tipo === 'entrata')
       .reduce((sum, item) => sum + item.importo, 0);
-    
+
     const totaleUscite = budgetData
       .filter(item => item.tipo === 'uscita')
       .reduce((sum, item) => sum + item.importo, 0);
-    
+
     return {
       entrate: totaleEntrate,
       uscite: totaleUscite,
@@ -123,7 +125,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
   const renderBudgetItem = ({ item }: { item: BudgetItem }) => {
     const isEntrata = item.tipo === 'entrata';
-    
+
     return (
       <View style={styles.budgetCard}>
         <View style={styles.budgetHeader}>
@@ -140,7 +142,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
             </Text>
           </View>
         </View>
-        
+
         <Text style={[
           styles.importo,
           isEntrata ? styles.importoEntrata : styles.importoUscita
@@ -166,7 +168,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Budget</Text>
-        
+
         <View style={styles.periodSelector}>
           <TouchableOpacity
             style={[
@@ -182,7 +184,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
               Mensile
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[
               styles.periodButton,
@@ -207,12 +209,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
             <Text style={styles.summaryLabel}>Entrate Totali</Text>
             <Text style={styles.summaryValueEntrata}>+{totals.entrate.toFixed(2)} €</Text>
           </View>
-          
+
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Uscite Totali</Text>
             <Text style={styles.summaryValueUscita}>-{totals.uscite.toFixed(2)} €</Text>
           </View>
-          
+
           <View style={[
             styles.summaryCard,
             styles.summaryCardBilancio,
@@ -231,7 +233,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         {/* Lista Budget per Categoria */}
         <View style={styles.categoriesSection}>
           <Text style={styles.sectionTitle}>Dettaglio per Categoria</Text>
-          
+
           {budgetData.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>Nessun dato disponibile</Text>

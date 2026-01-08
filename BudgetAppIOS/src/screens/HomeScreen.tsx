@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://budget-app-cd5o.onrender.com';
+import { API_URL } from '../config';
+
+const BASE_URL = API_URL;
 
 interface HomeScreenProps {
   navigation: any;

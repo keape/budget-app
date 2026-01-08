@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://budget-app-cd5o.onrender.com';
+import { API_URL } from '../config';
+
+const BASE_URL = API_URL;
 
 interface LoginScreenProps {
   navigation: any;
@@ -57,7 +59,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >

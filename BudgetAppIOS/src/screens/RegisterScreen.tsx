@@ -11,7 +11,9 @@ import {
   Platform,
 } from 'react-native';
 
-const BASE_URL = 'https://budget-app-cd5o.onrender.com';
+import { API_URL } from '../config';
+
+const BASE_URL = API_URL;
 
 interface RegisterScreenProps {
   navigation: any;
@@ -53,7 +55,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
       if (response.ok) {
         Alert.alert(
-          'Successo', 
+          'Successo',
           'Account creato con successo! Ora puoi effettuare il login.',
           [
             {
@@ -74,7 +76,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >

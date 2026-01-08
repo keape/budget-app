@@ -10,7 +10,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'https://budget-app-cd5o.onrender.com';
+import { API_URL } from '../config';
+
+const BASE_URL = API_URL;
 
 interface Transaction {
   _id: string;
@@ -56,7 +58,7 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
       const spese = (speseData.spese || []).map((spesa: any) => ({ ...spesa, tipo: 'uscita' }));
       const entrate = (entrateData.entrate || []).map((entrata: any) => ({ ...entrata, tipo: 'entrata' }));
 
-      const allTransactions = [...spese, ...entrate].sort((a, b) => 
+      const allTransactions = [...spese, ...entrate].sort((a, b) =>
         new Date(b.data).getTime() - new Date(a.data).getTime()
       );
 
@@ -82,7 +84,7 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
             try {
               const token = await AsyncStorage.getItem('token');
               const endpoint = tipo === 'entrata' ? 'entrate' : 'spese';
-              
+
               const response = await fetch(`${BASE_URL}/api/${endpoint}/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -127,21 +129,21 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
               </Text>
             </View>
           </View>
-          
+
           <Text style={[
             styles.importo,
             isEntrata ? styles.importoEntrata : styles.importoUscita
           ]}>
             {segno}{importo.toFixed(2)} €
           </Text>
-          
+
           {item.descrizione && (
             <Text style={styles.descrizione}>{item.descrizione}</Text>
           )}
-          
+
           <Text style={styles.data}>{date}</Text>
         </View>
-        
+
         <TouchableOpacity
           style={styles.deleteButton}
           onPress={() => deleteTransaction(item._id, item.tipo)}
@@ -169,7 +171,7 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
           <Text style={styles.refreshButtonText}>🔄</Text>
         </TouchableOpacity>
       </View>
-      
+
       {transactions.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>Nessuna transazione</Text>
