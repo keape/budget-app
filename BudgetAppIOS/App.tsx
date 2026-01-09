@@ -11,6 +11,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
 import BudgetScreen from './src/screens/BudgetScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -54,10 +55,10 @@ const MainTabs = () => {
         name="Transactions"
         component={TransactionsScreen}
         options={{
-          title: 'Transazioni',
+          title: 'Search & Filter',
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 18, color }}>📊</Text>
+              <Text style={{ fontSize: 18, color }}>🔍</Text>
             </View>
           ),
         }}
@@ -102,7 +103,18 @@ const AppNavigator = () => {
               component={AddTransactionScreen}
               options={{
                 headerShown: true,
-                title: 'Nuova Transazione',
+                title: 'New Transaction',
+                headerStyle: { backgroundColor: '#4F46E5' },
+                headerTintColor: '#fff'
+              }}
+            />
+
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{
+                headerShown: true,
+                title: 'Settings',
                 headerStyle: { backgroundColor: '#4F46E5' },
                 headerTintColor: '#fff'
               }}

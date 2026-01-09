@@ -27,17 +27,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   const handleRegister = async () => {
     if (!username || !password || !confirmPassword) {
-      Alert.alert('Errore', 'Compila tutti i campi');
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Errore', 'Le password non coincidono');
+      Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Errore', 'La password deve essere di almeno 6 caratteri');
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
 
@@ -55,8 +55,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
       if (response.ok) {
         Alert.alert(
-          'Successo',
-          'Account creato con successo! Ora puoi effettuare il login.',
+          'Success',
+          'Account created successfully! You can now log in.',
           [
             {
               text: 'OK',
@@ -65,11 +65,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           ]
         );
       } else {
-        Alert.alert('Errore', data.message || 'Errore durante la registrazione');
+        Alert.alert('Error', data.message || 'Error during registration');
       }
     } catch (error) {
-      console.error('Errore di registrazione:', error);
-      Alert.alert('Errore', 'Errore di rete. Riprova più tardi.');
+      console.error('Registration error:', error);
+      Alert.alert('Error', 'Network error. Please try again later.');
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +83,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Budget App</Text>
-          <Text style={styles.subtitle}>Crea il tuo account</Text>
+          <Text style={styles.subtitle}>Create your account</Text>
         </View>
 
         <View style={styles.form}>
@@ -115,7 +115,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Conferma Password"
+              placeholder="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -133,7 +133,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.registerButtonText}>Registrati</Text>
+              <Text style={styles.registerButtonText}>Register</Text>
             )}
           </TouchableOpacity>
 
@@ -142,7 +142,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.loginLinkText}>
-              Hai già un account? Accedi
+              Already have an account? Login
             </Text>
           </TouchableOpacity>
         </View>

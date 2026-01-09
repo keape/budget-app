@@ -29,7 +29,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Errore', 'Inserisci username e password');
+      Alert.alert('Error', 'Enter username and password');
       return;
     }
 
@@ -49,11 +49,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         await login(data.token, username);
         // Navigation is handled automatically by AppNavigator based on isAuthenticated state
       } else {
-        Alert.alert('Errore', data.message || 'Credenziali non valide');
+        Alert.alert('Error', data.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('Errore di login:', error);
-      Alert.alert('Errore', 'Errore di rete. Riprova più tardi.');
+      console.error('Login error:', error);
+      Alert.alert('Error', 'Network error. Please try again later.');
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +67,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Budget App</Text>
-          <Text style={styles.subtitle}>Accedi al tuo account</Text>
+          <Text style={styles.subtitle}>Log in to your account</Text>
         </View>
 
         <View style={styles.form}>
@@ -104,7 +104,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.loginButtonText}>Accedi</Text>
+              <Text style={styles.loginButtonText}>Login</Text>
             )}
           </TouchableOpacity>
 
@@ -113,12 +113,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerLinkText}>
-              Non hai un account? Registrati
+              Don't have an account? Register
             </Text>
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingView >
   );
 };
 

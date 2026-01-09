@@ -102,7 +102,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       setBudgetData(budgetArray);
     } catch (error) {
       console.error('Errore nel caricamento del budget:', error);
-      Alert.alert('Errore', 'Impossibile caricare i dati del budget');
+      Alert.alert('Error', 'Unable to load budget data');
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +139,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
               styles.tipoBadgeText,
               isEntrata ? styles.tipoBadgeTextEntrata : styles.tipoBadgeTextUscita
             ]}>
-              {isEntrata ? 'Entrata' : 'Uscita'}
+              {isEntrata ? 'Income' : 'Expense'}
             </Text>
           </View>
         </View>
@@ -160,7 +160,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Caricamento budget...</Text>
+        <Text style={styles.loadingText}>Loading budget...</Text>
       </View>
     );
   }
@@ -182,7 +182,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
               styles.periodButtonText,
               selectedPeriod === 'mensile' && styles.periodButtonTextActive
             ]}>
-              Mensile
+              Monthly
             </Text>
           </TouchableOpacity>
 
@@ -197,7 +197,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
               styles.periodButtonText,
               selectedPeriod === 'annuale' && styles.periodButtonTextActive
             ]}>
-              Annuale
+              Yearly
             </Text>
           </TouchableOpacity>
         </View>
@@ -207,12 +207,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         {/* Riepilogo Totali */}
         <View style={styles.summaryContainer}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Entrate Totali</Text>
+            <Text style={styles.summaryLabel}>Total Income</Text>
             <Text style={styles.summaryValueEntrata}>+{totals.entrate.toFixed(2)} €</Text>
           </View>
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Uscite Totali</Text>
+            <Text style={styles.summaryLabel}>Total Expenses</Text>
             <Text style={styles.summaryValueUscita}>-{totals.uscite.toFixed(2)} €</Text>
           </View>
 
@@ -221,7 +221,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
             styles.summaryCardBilancio,
             totals.bilancio >= 0 ? styles.summaryCardPositivo : styles.summaryCardNegativo
           ]}>
-            <Text style={styles.summaryLabel}>Bilancio</Text>
+            <Text style={styles.summaryLabel}>Balance</Text>
             <Text style={[
               styles.summaryValueBilancio,
               totals.bilancio >= 0 ? styles.bilancioPositivo : styles.bilancioNegativo
@@ -233,13 +233,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
         {/* Lista Budget per Categoria */}
         <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>Dettaglio per Categoria</Text>
+          <Text style={styles.sectionTitle}>Category Details</Text>
 
           {budgetData.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>Nessun dato disponibile</Text>
+              <Text style={styles.emptyTitle}>No data available</Text>
               <Text style={styles.emptySubtitle}>
-                Aggiungi delle transazioni per vedere il budget
+                Add transactions to see the budget
               </Text>
             </View>
           ) : (

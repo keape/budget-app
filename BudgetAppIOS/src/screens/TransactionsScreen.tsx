@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Modal,
+  ScrollView
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -24,62 +26,132 @@ interface Transaction {
   tipo: 'entrata' | 'uscita';
 }
 
-interface TransactionsScreenProps {
-  navigation: any;
-}
-
-const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) => {
+const TransactionsScreen: React.FC = () => {
   const { userToken } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  // Data State
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'tutte' | 'entrata' | 'uscita'>('tutte');
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Categories State
+  const [categorieSpese, setCategorieSpese] = useState<string[]>([]);
+  const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken) {
+        loadData();
+      }
+    }, [userToken])
+  );
+
   useEffect(() => {
-    if (userToken) {
-      loadTransactions();
-    }
-  }, [userToken]);
+    applyFilters();
+  }, [allTransactions, searchQuery, filterType, filterCategory, startDate, endDate]);
 
-  const loadTransactions = async () => {
+  const loadData = async () => {
+    setIsLoading(true);
     try {
-      if (!userToken) return;
+      // Fetch Categories
+      const catRes = await fetch(`${BASE_URL}/api/categorie`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      if (catRes.ok) {
+        const data = await catRes.json();
+        setCategorieSpese(data.categorie.spese || []);
+        setCategorieEntrate(data.categorie.entrate || []);
+      }
 
-
-      const [speseResponse, entrateResponse] = await Promise.all([
-        fetch(`${BASE_URL}/api/spese?page=1&limit=100`, {
-          headers: { 'Authorization': `Bearer ${userToken}` }
-        }),
-        fetch(`${BASE_URL}/api/entrate?page=1&limit=100`, {
-          headers: { 'Authorization': `Bearer ${userToken}` }
-        })
+      // Fetch All Transactions
+      // Using limit=2000 to get a good history without overkilling the mobile device
+      const [speseRes, entrateRes] = await Promise.all([
+        fetch(`${BASE_URL}/api/spese?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` } }),
+        fetch(`${BASE_URL}/api/entrate?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` } })
       ]);
 
-      const speseData = await speseResponse.json();
-      const entrateData = await entrateResponse.json();
+      const speseData = await speseRes.json();
+      const entrateData = await entrateRes.json();
 
-      const spese = (speseData.spese || []).map((spesa: any) => ({ ...spesa, tipo: 'uscita' }));
-      const entrate = (entrateData.entrate || []).map((entrata: any) => ({ ...entrata, tipo: 'entrata' }));
+      const spese = (speseData.spese || []).map((s: any) => ({ ...s, tipo: 'uscita' }));
+      const entrate = (entrateData.entrate || []).map((e: any) => ({ ...e, tipo: 'entrata' }));
 
-      const allTransactions = [...spese, ...entrate].sort((a, b) =>
+      const all = [...spese, ...entrate].sort((a, b) =>
         new Date(b.data).getTime() - new Date(a.data).getTime()
       );
 
-      setTransactions(allTransactions);
+      setAllTransactions(all);
     } catch (error) {
-      console.error('Errore nel caricamento delle transazioni:', error);
-      Alert.alert('Errore', 'Impossibile caricare le transazioni');
+      console.error("Error loading data:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const applyFilters = () => {
+    let result = [...allTransactions];
+
+    // 1. Filter by Type
+    if (filterType !== 'tutte') {
+      result = result.filter(t => t.tipo === filterType);
+    }
+
+    // 2. Filter by Search Query (Description)
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase();
+      result = result.filter(t =>
+        (t.descrizione?.toLowerCase() || '').includes(lowerQuery)
+      );
+    }
+
+    // 3. Filter by Category
+    if (filterCategory) {
+      result = result.filter(t => t.categoria === filterCategory);
+    }
+
+    // 4. Filter by Date
+    if (startDate) {
+      // Basic string comparison works for YYYY-MM-DD
+      result = result.filter(t => t.data.split('T')[0] >= startDate);
+    }
+    if (endDate) {
+      result = result.filter(t => t.data.split('T')[0] <= endDate);
+    }
+
+    setFilteredTransactions(result);
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setFilterType('tutte');
+    setFilterCategory('');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const calculateTotal = () => {
+    return filteredTransactions.reduce((acc, t) => {
+      const val = t.tipo === 'entrata' ? Math.abs(t.importo) : -Math.abs(t.importo);
+      return acc + val;
+    }, 0);
+  };
+
   const deleteTransaction = async (id: string, tipo: string) => {
     Alert.alert(
-      'Conferma eliminazione',
-      'Sei sicuro di voler eliminare questa transazione?',
+      'Confirm deletion',
+      'Are you sure you want to delete this transaction?',
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Elimina',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -92,14 +164,14 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
               });
 
               if (response.ok) {
-                loadTransactions(); // Ricarica la lista
-                Alert.alert('Successo', 'Transazione eliminata');
+                // Remove from local state immediately for responsiveness
+                setAllTransactions(prev => prev.filter(t => t._id !== id));
+                Alert.alert('Success', 'Transaction deleted');
               } else {
-                Alert.alert('Errore', 'Impossibile eliminare la transazione');
+                Alert.alert('Error', 'Unable to delete transaction');
               }
             } catch (error) {
-              console.error('Errore nell\'eliminazione:', error);
-              Alert.alert('Errore', 'Errore di rete');
+              console.error('Error deleting:', error);
             }
           }
         }
@@ -109,84 +181,151 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
 
   const renderTransaction = ({ item }: { item: Transaction }) => {
     const isEntrata = item.tipo === 'entrata';
-    const importo = Math.abs(Number(item.importo));
-    const segno = isEntrata ? '+' : '-';
-    const date = new Date(item.data).toLocaleDateString('it-IT');
-
     return (
-      <View style={styles.transactionCard}>
-        <View style={styles.transactionContent}>
-          <View style={styles.transactionHeader}>
-            <Text style={styles.categoria}>{item.categoria}</Text>
-            <View style={[
-              styles.tipoBadge,
-              isEntrata ? styles.tipoBadgeEntrata : styles.tipoBadgeUscita
-            ]}>
-              <Text style={[
-                styles.tipoBadgeText,
-                isEntrata ? styles.tipoBadgeTextEntrata : styles.tipoBadgeTextUscita
-              ]}>
-                {isEntrata ? 'Entrata' : 'Uscita'}
+      <View style={styles.card}>
+        <View style={{ flex: 1 }}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.catText}>{item.categoria}</Text>
+            <View style={[styles.badge, isEntrata ? styles.badgeEntrata : styles.badgeUscita]}>
+              <Text style={[styles.badgeText, isEntrata ? styles.badgeTextEntrata : styles.badgeTextUscita]}>
+                {isEntrata ? 'Income' : 'Expense'}
               </Text>
             </View>
           </View>
 
-          <Text style={[
-            styles.importo,
-            isEntrata ? styles.importoEntrata : styles.importoUscita
-          ]}>
-            {segno}{importo.toFixed(2)} €
+          <Text style={[styles.amountText, isEntrata ? styles.amountEntrata : styles.amountUscita]}>
+            {isEntrata ? '+' : '-'}€{Math.abs(item.importo).toFixed(2)}
           </Text>
 
-          {item.descrizione && (
-            <Text style={styles.descrizione}>{item.descrizione}</Text>
-          )}
+          {item.descrizione ? (
+            <Text style={styles.descText}>{item.descrizione}</Text>
+          ) : null}
 
-          <Text style={styles.data}>{date}</Text>
+          <Text style={styles.dateText}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
         </View>
 
         <TouchableOpacity
-          style={styles.deleteButton}
+          style={styles.deleteBtn}
           onPress={() => deleteTransaction(item._id, item.tipo)}
         >
-          <Text style={styles.deleteButtonText}>🗑️</Text>
+          <Text>🗑️</Text>
         </TouchableOpacity>
       </View>
     );
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Caricamento transazioni...</Text>
-      </View>
-    );
-  }
+  const currentCategories = filterType === 'entrata' ? categorieEntrate :
+    filterType === 'uscita' ? categorieSpese :
+      [...new Set([...categorieSpese, ...categorieEntrate])].sort();
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Le tue Transazioni</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadTransactions}>
-          <Text style={styles.refreshButtonText}>🔄</Text>
+      {/* Header & Search */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="🔍 Search in descriptions..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#9CA3AF"
+        />
+        <TouchableOpacity style={styles.filterToggleBtn} onPress={() => setShowFilters(!showFilters)}>
+          <Text style={styles.filterToggleText}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
         </TouchableOpacity>
       </View>
 
-      {transactions.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>Nessuna transazione</Text>
-          <Text style={styles.emptySubtitle}>
-            Inizia aggiungendo la tua prima transazione
+      {/* Filters Section */}
+      {showFilters && (
+        <View style={styles.filtersSection}>
+          <Text style={styles.filterLabel}>Transaction Type:</Text>
+          <View style={styles.typeRow}>
+            {(['tutte', 'entrata', 'uscita'] as const).map(t => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.typeBtn, filterType === t && styles.typeBtnActive]}
+                onPress={() => {
+                  setFilterType(t);
+                  setFilterCategory(''); // Reset cat on type change
+                }}
+              >
+                <Text style={[styles.typeBtnText, filterType === t && styles.typeBtnTextActive]}>
+                  {t === 'tutte' ? 'All' : t === 'entrata' ? 'Income' : 'Expense'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.filterLabel}>Category:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+            <TouchableOpacity
+              style={[styles.catBtn, filterCategory === '' && styles.catBtnActive]}
+              onPress={() => setFilterCategory('')}
+            >
+              <Text style={[styles.catBtnText, filterCategory === '' && styles.catBtnTextActive]}>All</Text>
+            </TouchableOpacity>
+            {currentCategories.map(cat => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.catBtn, filterCategory === cat && styles.catBtnActive]}
+                onPress={() => setFilterCategory(cat)}
+              >
+                <Text style={[styles.catBtnText, filterCategory === cat && styles.catBtnTextActive]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterLabel}>Date Range (YYYY-MM-DD):</Text>
+          <View style={styles.dateRow}>
+            <TextInput
+              style={styles.dateInput}
+              placeholder="From (e.g. 2024-01-01)"
+              value={startDate}
+              onChangeText={setStartDate}
+              placeholderTextColor="#9CA3AF"
+            />
+            <TextInput
+              style={styles.dateInput}
+              placeholder="To (e.g. 2024-12-31)"
+              value={endDate}
+              onChangeText={setEndDate}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
+            <Text style={styles.resetBtnText}>Reset Filters</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Summary */}
+      <View style={styles.summaryBar}>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Found</Text>
+          <Text style={styles.summaryValue}>{filteredTransactions.length}</Text>
+        </View>
+        <View style={styles.summaryItem}>
+          <Text style={styles.summaryLabel}>Total</Text>
+          <Text style={[styles.summaryValue, { color: calculateTotal() >= 0 ? '#059669' : '#DC2626' }]}>
+            {calculateTotal() >= 0 ? '+' : ''}€{calculateTotal().toFixed(2)}
           </Text>
+        </View>
+      </View>
+
+      {/* List */}
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color="#4F46E5" />
         </View>
       ) : (
         <FlatList
-          data={transactions}
-          keyExtractor={(item) => item._id}
+          data={filteredTransactions}
+          keyExtractor={item => item._id}
           renderItem={renderTransaction}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No transactions found.</Text>
+          }
         />
       )}
     </View>
@@ -194,138 +333,115 @@ const TransactionsScreen: React.FC<TransactionsScreenProps> = ({ navigation }) =
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  searchContainer: {
+    padding: 16,
+    backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  searchInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 8,
     color: '#111827',
   },
-  refreshButton: {
-    padding: 8,
+  filterToggleBtn: { alignSelf: 'center' },
+  filterToggleText: { color: '#4F46E5', fontWeight: 'bold' },
+
+  filtersSection: {
+    padding: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  refreshButtonText: {
-    fontSize: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#374151',
     marginBottom: 8,
   },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
+  typeRow: { flexDirection: 'row', marginBottom: 16 },
+  typeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
   },
-  listContent: {
-    padding: 16,
+  typeBtnActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+  typeBtnText: { color: '#374151' },
+  typeBtnTextActive: { color: 'white' },
+
+  catBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    marginRight: 8,
   },
-  transactionCard: {
-    backgroundColor: '#FFFFFF',
+  catBtnActive: { backgroundColor: '#4F46E5' },
+  catBtnText: { color: '#374151', fontSize: 13 },
+  catBtnTextActive: { color: 'white' },
+
+  dateRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  dateInput: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    color: '#111827',
+  },
+
+  resetBtn: {
+    backgroundColor: '#E5E7EB',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  resetBtnText: { color: '#374151', fontWeight: 'bold' },
+
+  summaryBar: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E7FF',
+  },
+  summaryItem: { alignItems: 'center' },
+  summaryLabel: { fontSize: 12, color: '#6B7280' },
+  summaryValue: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+
+  card: {
+    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
-  transactionContent: {
-    flex: 1,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  categoria: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
-  tipoBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  tipoBadgeEntrata: {
-    backgroundColor: '#D1FAE5',
-  },
-  tipoBadgeUscita: {
-    backgroundColor: '#FEE2E2',
-  },
-  tipoBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  tipoBadgeTextEntrata: {
-    color: '#065F46',
-  },
-  tipoBadgeTextUscita: {
-    color: '#991B1B',
-  },
-  importo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  importoEntrata: {
-    color: '#059669',
-  },
-  importoUscita: {
-    color: '#DC2626',
-  },
-  descrizione: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontStyle: 'italic',
-    marginBottom: 4,
-  },
-  data: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  deleteButton: {
-    marginLeft: 12,
-    padding: 8,
-  },
-  deleteButtonText: {
-    fontSize: 18,
-  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginRight: 8 },
+  catText: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  badgeEntrata: { backgroundColor: '#D1FAE5' },
+  badgeUscita: { backgroundColor: '#FEE2E2' },
+  badgeText: { fontSize: 10, fontWeight: 'bold' },
+  badgeTextEntrata: { color: '#065F46' },
+  badgeTextUscita: { color: '#991B1B' },
+  amountText: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
+  amountEntrata: { color: '#059669' },
+  amountUscita: { color: '#DC2626' },
+  descText: { fontSize: 14, color: '#6B7280', fontStyle: 'italic', marginBottom: 4 },
+  dateText: { fontSize: 12, color: '#9CA3AF' },
+  deleteBtn: { padding: 8 },
+  emptyText: { textAlign: 'center', marginTop: 40, color: '#6B7280' },
 });
 
 export default TransactionsScreen;
