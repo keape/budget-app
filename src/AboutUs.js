@@ -11,6 +11,7 @@ function AboutUs() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -22,7 +23,7 @@ function AboutUs() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.nome || !formData.email || !formData.messaggio) {
       setSubmitError('Per favore compila tutti i campi');
       return;
@@ -34,10 +35,10 @@ function AboutUs() {
 
     try {
       const token = localStorage.getItem('token');
-      
+
       // Simula invio messaggio (sostituire con endpoint reale se necessario)
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       setSubmitMessage('Messaggio inviato con successo! Ti risponderemo al più presto.');
       setFormData({ nome: '', email: '', messaggio: '' });
     } catch (error) {
@@ -60,11 +61,11 @@ function AboutUs() {
           <span className="mr-3">💰</span>
           Cos'è Budget App?
         </h2>
-        
+
         <div className="prose dark:prose-invert max-w-none">
           <p className="text-lg text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
-            Budget App è la tua soluzione completa per la gestione delle finanze personali. 
-            Progettata per essere semplice ma potente, ti aiuta a tenere traccia delle tue 
+            Budget App è la tua soluzione completa per la gestione delle finanze personali.
+            Progettata per essere semplice ma potente, ti aiuta a tenere traccia delle tue
             entrate e spese in modo intuitivo e organizzato.
           </p>
 
@@ -75,7 +76,7 @@ function AboutUs() {
                 Dashboard Completa
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Visualizza immediatamente il tuo bilancio giornaliero, settimanale e mensile. 
+                Visualizza immediatamente il tuo bilancio giornaliero, settimanale e mensile.
                 Analizza le tue categorie di spesa più utilizzate e monitora le ultime transazioni.
               </p>
             </div>
@@ -86,7 +87,7 @@ function AboutUs() {
                 Gestione Transazioni
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Inserisci facilmente spese ed entrate con categorie personalizzabili. 
+                Inserisci facilmente spese ed entrate con categorie personalizzabili.
                 Crea transazioni ricorrenti per abbonamenti e pagamenti periodici.
               </p>
             </div>
@@ -97,7 +98,7 @@ function AboutUs() {
                 Filtri e Ricerche
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Trova rapidamente le transazioni che cerchi con filtri avanzati per data, 
+                Trova rapidamente le transazioni che cerchi con filtri avanzati per data,
                 categoria, importo e descrizione. Esporta i dati per ulteriori analisi.
               </p>
             </div>
@@ -108,7 +109,7 @@ function AboutUs() {
                 Budget e Categorie
               </h3>
               <p className="text-gray-700 dark:text-gray-300">
-                Imposta budget mensili per ogni categoria di spesa. Crea e personalizza 
+                Imposta budget mensili per ogni categoria di spesa. Crea e personalizza
                 le tue categorie per adattarle al tuo stile di vita.
               </p>
             </div>
@@ -141,15 +142,76 @@ function AboutUs() {
         </div>
       </div>
 
+      {/* Sezione Privacy Policy */}
+      <div
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 cursor-pointer transition-all duration-300 hover:shadow-xl"
+        onClick={() => setShowPrivacy(!showPrivacy)}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center">
+            <span className="mr-3">🔒</span>
+            Informativa Privacy
+          </h2>
+          <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-medium">
+            <span className="mr-2">{showPrivacy ? 'Nascondi' : 'Leggi informativa'}</span>
+            <span className={`transform transition-transform duration-300 ${showPrivacy ? 'rotate-180' : ''}`}>▼</span>
+          </div>
+        </div>
+
+        {showPrivacy && (
+          <div className="mt-6 text-gray-700 dark:text-gray-300 space-y-4 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Informativa Privacy per Budget365</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Ultimo aggiornamento: 08/01/2026</p>
+
+              <h4 className="font-bold text-gray-900 dark:text-white mt-4">1. Titolare del Trattamento</h4>
+              <p>L'applicazione è sviluppata e gestita da Alessandro Capobianco. Per qualsiasi richiesta relativa alla privacy o per esercitare i propri diritti, contattare: <a href="mailto:keape@me.com" className="text-indigo-600 hover:underline">keape@me.com</a></p>
+
+              <h4 className="font-bold text-gray-900 dark:text-white mt-4">2. Tipologia di Dati Raccolti</h4>
+              <p>L'applicazione raccoglie le seguenti categorie di dati per permettere il funzionamento del servizio di personal budgeting:</p>
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li><strong>Dati dell'Account:</strong> Username e password (quest'ultima conservata in forma crittografata).</li>
+                <li><strong>Dati Finanziari:</strong> Storico delle transazioni inserite volontariamente dall'utente (data, importo, categoria, descrizione).</li>
+                <li><strong>Identificativi Tecnici:</strong> ID utente univoco generato al server al momento della registrazione per associare i dati.</li>
+              </ul>
+
+              <h4 className="font-bold text-gray-900 dark:text-white mt-4">3. Finalità del Trattamento</h4>
+              <p>I dati vengono raccolti esclusivamente per:</p>
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li>Fornire il servizio di gestione del budget (salvataggio, calcolo totali e visualizzazione storico spese).</li>
+                <li>Gestire l'autenticazione e garantire l'accesso sicuro e privato al proprio account.</li>
+              </ul>
+              <p className="mt-2">L'applicazione non utilizza i dati per scopi di marketing, profilazione o cessione a terzi per fini pubblicitari.</p>
+
+              <h4 className="font-bold text-gray-900 dark:text-white mt-4">4. Servizi di Terze Parti e Trasferimento Dati</h4>
+              <p>L'architettura dell'applicazione si basa su servizi cloud per garantire la persistenza dei dati. I dati inseriti non risiedono permanentemente sul dispositivo ma vengono trasmessi tramite connessione sicura (HTTPS) a:</p>
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li><strong>MongoDB Atlas:</strong> Database per la conservazione sicura delle transazioni e dei dati utente.</li>
+                <li><strong>Vercel / Render:</strong> Piattaforme di hosting serverless che gestiscono le API e la logica di backend dell'applicazione. Questi fornitori agiscono come responsabili dell'infrastruttura e operano nel rispetto degli standard di sicurezza internazionali.</li>
+              </ul>
+
+              <h4 className="font-bold text-gray-900 dark:text-white mt-4">5. Permessi del Dispositivo</h4>
+              <p>L'applicazione richiede l'accesso ad alcune funzionalità del dispositivo mobile solo se strettamente necessario:</p>
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li><strong>Accesso alla Rete (Network):</strong> Necessario per comunicare con il database e salvare le transazioni.</li>
+              </ul>
+
+              <h4 className="font-bold text-gray-900 dark:text-white mt-4">6. Cancellazione dei Dati (Diritto all'Oblio)</h4>
+              <p>L'utente ha il pieno controllo sui propri dati. È possibile richiedere la cancellazione completa dell'account e di tutte le transazioni associate direttamente dall'applicazione tramite la funzione "Elimina Account" presente nelle impostazioni. Questa azione è irreversibile e comporta la rimozione dei dati dai server (MongoDB). In alternativa, è possibile inviare una richiesta formale all'indirizzo email indicato al punto 1.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Sezione Form Contatti */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-6 text-indigo-600 dark:text-indigo-400 flex items-center">
           <span className="mr-3">✉️</span>
           Contattaci
         </h2>
-        
+
         <p className="text-gray-700 dark:text-gray-300 mb-6">
-          Hai domande, suggerimenti o hai riscontrato problemi? Scrivici! 
+          Hai domande, suggerimenti o hai riscontrato problemi? Scrivici!
           Il tuo feedback è prezioso per migliorare continuamente Budget App.
         </p>
 
@@ -220,11 +282,10 @@ function AboutUs() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-8 py-3 text-lg font-semibold text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 ${
-                isSubmitting 
-                  ? 'bg-gray-400 cursor-not-allowed' 
+              className={`px-8 py-3 text-lg font-semibold text-white rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 ${isSubmitting
+                  ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
+                }`}
             >
               {isSubmitting ? (
                 <span className="flex items-center">
