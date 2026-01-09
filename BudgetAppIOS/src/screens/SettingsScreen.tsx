@@ -25,6 +25,7 @@ const SettingsScreen: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+
     const handleChangePassword = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
             Alert.alert('Error', 'Please fill in all fields');
@@ -187,9 +188,9 @@ const SettingsScreen: React.FC = () => {
 
     const renderAbout = () => (
         <ScrollView style={styles.contentContainer}>
-            <Text style={styles.title}>About Budget App</Text>
+            <Text style={styles.title}>About Budget365</Text>
             <Text style={styles.description}>
-                Budget App is your complete solution for personal finance management.
+                Budget365 is your complete solution for personal finance management.
                 Designed to be simple yet powerful, it helps you track your income and expenses intuitively.
             </Text>
 
@@ -199,6 +200,17 @@ const SettingsScreen: React.FC = () => {
                 <Text style={styles.listItem}>✓ Powerful tools without complexity</Text>
                 <Text style={styles.listItem}>✓ Guaranteed security and privacy</Text>
             </View>
+
+            <TouchableOpacity
+                style={styles.section}
+                onPress={() => Linking.openURL('https://various-sushi-3f4.notion.site/Budget365-Privacy-Policy-2e372b8820f88038a92ef83fedfd03d7')}
+                activeOpacity={0.8}
+            >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.sectionHeader}>🔒 Privacy Policy</Text>
+                    <Text style={{ fontSize: 18, color: '#4F46E5', fontWeight: 'bold' }}>↗️</Text>
+                </View>
+            </TouchableOpacity>
 
             <View style={styles.section}>
                 <Text style={styles.sectionHeader}>✉️ Contact Us</Text>
