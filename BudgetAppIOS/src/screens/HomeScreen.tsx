@@ -39,8 +39,8 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => (
-                <TouchableOpacity onPress={logout} style={{ marginRight: 15 }}>
-                    <Text style={{ color: 'white', fontWeight: 'bold' }}>Esci</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ marginRight: 15 }}>
+                    <Text style={{ fontSize: 22 }}>⚙️</Text>
                 </TouchableOpacity>
             ),
         });
@@ -163,7 +163,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
             <View style={styles.header}>
-                <Text style={styles.title}>📊 Dashboard Budget</Text>
+                <Text style={styles.title}>📊 Budget Dashboard</Text>
             </View>
 
             {/* Quick Actions */}
@@ -172,70 +172,70 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     style={[styles.actionButton, { backgroundColor: '#4F46E5' }]}
                     onPress={() => navigation.navigate('AddTransaction')}
                 >
-                    <Text style={styles.actionButtonText}>💸 Aggiungi Spesa</Text>
+                    <Text style={styles.actionButtonText}>💸 Add Expense</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: '#059669' }]}
                     onPress={() => navigation.navigate('Budget')} // Go to filter/budget tab? Or Settings? Use Budget for now.
                 >
-                    <Text style={styles.actionButtonText}>⚙️ Gestisci</Text>
+                    <Text style={styles.actionButtonText}>⚙️ Manage</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Cards Riepilogo */}
             <View style={styles.cardsGrid}>
                 <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Entrate Mese</Text>
+                    <Text style={styles.cardLabel}>Income</Text>
                     <Text style={[styles.cardValue, { color: '#059669' }]}>+€{riepilogoData.totaleEntrateMese.toFixed(2)}</Text>
                 </View>
                 <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Spese Mese</Text>
+                    <Text style={styles.cardLabel}>Expenses</Text>
                     <Text style={[styles.cardValue, { color: '#DC2626' }]}>-€{riepilogoData.totaleSpeseMese.toFixed(2)}</Text>
                 </View>
                 <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Bilancio</Text>
+                    <Text style={styles.cardLabel}>Balance</Text>
                     <Text style={[styles.cardValue, { color: riepilogoData.bilancioMese >= 0 ? '#059669' : '#DC2626' }]}>
                         {riepilogoData.bilancioMese >= 0 ? '+' : ''}€{riepilogoData.bilancioMese.toFixed(2)}
                     </Text>
                 </View>
                 <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Transazioni</Text>
+                    <Text style={styles.cardLabel}>Transactions</Text>
                     <Text style={[styles.cardValue, { color: '#3B82F6' }]}>{riepilogoData.numeroTransazioniMese}</Text>
                 </View>
             </View>
 
             {/* Budget Summary Charts */}
             <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>📉 Andamento vs Budget</Text>
+                <Text style={styles.sectionTitle}>📉 Performance vs Budget</Text>
                 <View style={styles.sectionContent}>
                     <SimpleBarChart
-                        label="Spese vs Budget"
+                        label="Expenses vs Budget"
                         value={riepilogoData.totaleSpeseMese}
                         max={budgetData.budgetSpeseMese || riepilogoData.totaleSpeseMese * 1.2}
                         color="#DC2626"
                     />
-                    <Text style={styles.subText}>Budget Spesa: €{budgetData.budgetSpeseMese.toFixed(2)}</Text>
+                    <Text style={styles.subText}>Expense Budget: €{budgetData.budgetSpeseMese.toFixed(2)}</Text>
 
                     <View style={{ height: 16 }} />
 
                     <SimpleBarChart
-                        label="Entrate vs Budget"
+                        label="Income vs Budget"
                         value={riepilogoData.totaleEntrateMese}
                         max={budgetData.budgetEntrateMese || riepilogoData.totaleEntrateMese * 1.2}
                         color="#059669"
                     />
-                    <Text style={styles.subText}>Budget Entrata: €{budgetData.budgetEntrateMese.toFixed(2)}</Text>
+                    <Text style={styles.subText}>Income Budget: €{budgetData.budgetEntrateMese.toFixed(2)}</Text>
                 </View>
             </View>
 
             {/* Categorie Top */}
             <View style={styles.row}>
                 <View style={[styles.sectionContainer, { flex: 1, marginRight: 8 }]}>
-                    <Text style={styles.sectionTitle}>Top Spese</Text>
+                    <Text style={styles.sectionTitle}>Top Expenses</Text>
                     <View style={styles.sectionContent}>
                         {riepilogoData.dettagliCategorie.spese.length === 0 ? (
-                            <Text style={styles.emptyText}>Nessuna spesa</Text>
+                            <Text style={styles.emptyText}>No expenses</Text>
                         ) : (
                             riepilogoData.dettagliCategorie.spese.map(([cat, val], idx) => (
                                 <View key={idx} style={styles.catRow}>
@@ -248,10 +248,10 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 </View>
 
                 <View style={[styles.sectionContainer, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.sectionTitle}>Top Entrate</Text>
+                    <Text style={styles.sectionTitle}>Top Income</Text>
                     <View style={styles.sectionContent}>
                         {riepilogoData.dettagliCategorie.entrate.length === 0 ? (
-                            <Text style={styles.emptyText}>Nessuna entrata</Text>
+                            <Text style={styles.emptyText}>No income</Text>
                         ) : (
                             riepilogoData.dettagliCategorie.entrate.map(([cat, val], idx) => (
                                 <View key={idx} style={styles.catRow}>
@@ -266,7 +266,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
             {/* Ultime Transazioni */}
             <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>🕐 Ultime attività</Text>
+                <Text style={styles.sectionTitle}>🕐 Recent Activity</Text>
                 <View style={styles.sectionContent}>
                     {riepilogoData.ultime5Transazioni.map((t, i) => (
                         <View key={i} style={styles.transactionRow}>

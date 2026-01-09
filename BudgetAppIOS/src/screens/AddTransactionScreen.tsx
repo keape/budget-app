@@ -38,9 +38,9 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [isInfinito, setIsInfinito] = useState(true);
 
   const tipiRipetizione = [
-    { value: 'mensile', label: 'Mensile' },
-    { value: 'settimanale', label: 'Settimanale' },
-    { value: 'annuale', label: 'Annuale' },
+    { value: 'mensile', label: 'Monthly' },
+    { value: 'settimanale', label: 'Weekly' },
+    { value: 'annuale', label: 'Yearly' },
   ];
 
 
@@ -80,12 +80,12 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const aggiungiTransazione = async () => {
     if (!importo || !categoria) {
-      Alert.alert('Errore', 'Inserisci tutti i campi obbligatori');
+      Alert.alert('Error', 'Please fill in all mandatory fields');
       return;
     }
 
     if (!userToken) {
-      Alert.alert('Errore', 'Utente non autenticato');
+      Alert.alert('Error', 'User not authenticated');
       return;
     }
 
@@ -111,14 +111,14 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         });
 
         if (response.ok) {
-          Alert.alert('Successo', `${tipo === 'spesa' ? 'Spesa' : 'Entrata'} inserita con successo!`);
+          Alert.alert('Success', `${tipo === 'spesa' ? 'Expense' : 'Income'} added successfully!`);
           resetForm();
         } else {
           try {
             const errorData = await response.json();
-            Alert.alert('Errore', errorData.message || 'Impossibile inserire la transazione');
+            Alert.alert('Error', errorData.message || 'Unable to insertion transaction');
           } catch (e) {
-            Alert.alert('Errore', 'Impossibile inserire la transazione');
+            Alert.alert('Error', 'Unable to insert transaction');
           }
         }
 
@@ -155,7 +155,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         });
 
         if (response.ok) {
-          Alert.alert('Successo', 'Ricorrenza creata con successo!');
+          Alert.alert('Success', 'Recurring transaction created successfully!');
 
           // Triggera generazione movimenti mancanti (come da web app)
           fetch(`${BASE_URL}/api/transazioni-periodiche/genera`, {
@@ -166,12 +166,12 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           resetForm();
         } else {
           const errorData = await response.json();
-          Alert.alert('Errore', errorData.message || 'Impossibile creare la ricorrenza');
+          Alert.alert('Error', errorData.message || 'Unable to create recurring transaction');
         }
       }
     } catch (error) {
       console.error('Errore nell\'inserimento:', error);
-      Alert.alert('Errore', 'Errore di rete. Riprova più tardi.');
+      Alert.alert('Error', 'Network error. Please try again later.');
     } finally {
       setIsLoading(false);
     }
@@ -194,7 +194,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Gestione Transazioni</Text>
+        <Text style={styles.title}>Manage Transactions</Text>
       </View>
 
       {/* Selettore Modalità */}
@@ -210,7 +210,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             styles.modalityButtonText,
             modalitaTransazione === 'una_tantum' && styles.modalityButtonTextActive
           ]}>
-            📅 Una tantum
+            📅 One-time
           </Text>
         </TouchableOpacity>
 
@@ -225,7 +225,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             styles.modalityButtonText,
             modalitaTransazione === 'periodica' && styles.modalityButtonTextActive
           ]}>
-            🔄 Periodica
+            🔄 Periodic
           </Text>
         </TouchableOpacity>
       </View>
@@ -245,7 +245,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               styles.tipoButtonText,
               tipo === 'spesa' && styles.tipoButtonTextActive
             ]}>
-              Spesa
+              Expense
             </Text>
           </TouchableOpacity>
 
@@ -261,7 +261,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               styles.tipoButtonText,
               tipo === 'entrata' && styles.tipoButtonTextActive
             ]}>
-              Entrata
+              Income
             </Text>
           </TouchableOpacity>
         </View>
@@ -270,7 +270,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Importo (es. 12.50)"
+            placeholder="Amount (e.g. 12.50)"
             value={importo}
             onChangeText={setImporto}
             keyboardType="numeric"
@@ -306,7 +306,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Descrizione (facoltativa)"
+            placeholder="Description (optional)"
             value={descrizione}
             onChangeText={setDescrizione}
             placeholderTextColor="#9CA3AF"
@@ -316,10 +316,10 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         {/* CAMPI AGGIUNTIVI PER TRANS. PERIODICA */}
         {modalitaTransazione === 'periodica' ? (
           <View style={styles.periodicaContainer}>
-            <Text style={styles.sectionTitle}>Opzioni Ricorrenza</Text>
+            <Text style={styles.sectionTitle}>Recurring Options</Text>
 
             {/* Tipo Ripetizione */}
-            <Text style={styles.label}>Frequenza</Text>
+            <Text style={styles.label}>Frequency</Text>
             <View style={styles.chipContainer}>
               {tipiRipetizione.map((rep) => (
                 <TouchableOpacity
@@ -339,7 +339,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             </View>
 
             {/* Data Inizio */}
-            <Text style={styles.label}>Data Inizio (YYYY-MM-DD)</Text>
+            <Text style={styles.label}>Start Date (YYYY-MM-DD)</Text>
             <TextInput
               style={styles.input}
               placeholder="YYYY-MM-DD"
@@ -350,7 +350,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
             {/* Infinito Switch */}
             <View style={styles.switchContainer}>
-              <Text style={styles.label}>Ricorrenza infinita</Text>
+              <Text style={styles.label}>Infinite Recurrence</Text>
               <Switch
                 value={isInfinito}
                 onValueChange={setIsInfinito}
@@ -362,7 +362,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {/* Data Fine (se non infinito) */}
             {!isInfinito && (
               <View>
-                <Text style={styles.label}>Data Fine (YYYY-MM-DD)</Text>
+                <Text style={styles.label}>End Date (YYYY-MM-DD)</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="YYYY-MM-DD"
@@ -385,7 +385,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.addButtonText}>
-              {modalitaTransazione === 'periodica' ? 'Crea ricorrenza periodica' : 'Aggiungi'}
+              {modalitaTransazione === 'periodica' ? 'Create Recurring Transaction' : 'Add'}
             </Text>
           )}
         </TouchableOpacity>
