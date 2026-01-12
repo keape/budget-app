@@ -11,19 +11,19 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		813A59AFB08ED4660C1DDF93 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		AA03F10B0B879117791687E8 /* libPods-BudgetAppIOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C55AE8A23FB54404064CE99 /* libPods-BudgetAppIOS.a */; };
+		AA03F10B0B879117791687E8 /* libPods-Budget365.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C55AE8A23FB54404064CE99 /* libPods-Budget365.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* BudgetAppIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BudgetAppIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BudgetAppIOS/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BudgetAppIOS/Info.plist; sourceTree = "<group>"; };
-		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = BudgetAppIOS/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		4C55AE8A23FB54404064CE99 /* libPods-BudgetAppIOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-BudgetAppIOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		736231217E08A51D8E09B7ED /* Pods-BudgetAppIOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BudgetAppIOS.debug.xcconfig"; path = "Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS.debug.xcconfig"; sourceTree = "<group>"; };
-		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = BudgetAppIOS/AppDelegate.swift; sourceTree = "<group>"; };
-		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = BudgetAppIOS/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		A4AF84F6D0DBC15038A48D29 /* Pods-BudgetAppIOS.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BudgetAppIOS.release.xcconfig"; path = "Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS.release.xcconfig"; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* Budget365.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Budget365.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Budget365/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Budget365/Info.plist; sourceTree = "<group>"; };
+		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = Budget365/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		4C55AE8A23FB54404064CE99 /* libPods-Budget365.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Budget365.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		736231217E08A51D8E09B7ED /* Pods-Budget365.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Budget365.debug.xcconfig"; path = "Target Support Files/Pods-Budget365/Pods-Budget365.debug.xcconfig"; sourceTree = "<group>"; };
+		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Budget365/AppDelegate.swift; sourceTree = "<group>"; };
+		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Budget365/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A4AF84F6D0DBC15038A48D29 /* Pods-Budget365.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Budget365.release.xcconfig"; path = "Target Support Files/Pods-Budget365/Pods-Budget365.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -32,14 +32,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA03F10B0B879117791687E8 /* libPods-BudgetAppIOS.a in Frameworks */,
+				AA03F10B0B879117791687E8 /* libPods-Budget365.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* BudgetAppIOS */ = {
+		13B07FAE1A68108700A75B9A /* Budget365 */ = {
 			isa = PBXGroup;
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
@@ -48,14 +48,14 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 			);
-			name = BudgetAppIOS;
+			name = Budget365;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				4C55AE8A23FB54404064CE99 /* libPods-BudgetAppIOS.a */,
+				4C55AE8A23FB54404064CE99 /* libPods-Budget365.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -70,7 +70,7 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* BudgetAppIOS */,
+				13B07FAE1A68108700A75B9A /* Budget365 */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
@@ -84,7 +84,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* BudgetAppIOS.app */,
+				13B07F961A680F5B00A75B9A /* Budget365.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,8 +92,8 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				736231217E08A51D8E09B7ED /* Pods-BudgetAppIOS.debug.xcconfig */,
-				A4AF84F6D0DBC15038A48D29 /* Pods-BudgetAppIOS.release.xcconfig */,
+				736231217E08A51D8E09B7ED /* Pods-Budget365.debug.xcconfig */,
+				A4AF84F6D0DBC15038A48D29 /* Pods-Budget365.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -101,25 +101,25 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* BudgetAppIOS */ = {
+		13B07F861A680F5B00A75B9A /* Budget365 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BudgetAppIOS" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Budget365" */;
 			buildPhases = (
 				9B08DB60076CA7691BE0B9D2 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				7DCC84444B40F8BC790BB385 /* [CP] Embed Pods Frameworks */,
 				33B6030526681B0CAC5D4A91 /* [CP] Copy Pods Resources */,
+				4E2DDE7FD2026BA91BA45B80 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = BudgetAppIOS;
-			productName = BudgetAppIOS;
-			productReference = 13B07F961A680F5B00A75B9A /* BudgetAppIOS.app */;
+			name = Budget365;
+			productName = Budget365;
+			productReference = 13B07F961A680F5B00A75B9A /* Budget365.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -135,7 +135,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "BudgetAppIOS" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Budget365" */;
 			compatibilityVersion = "Xcode 12.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -148,7 +148,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* BudgetAppIOS */,
+				13B07F861A680F5B00A75B9A /* Budget365 */,
 			);
 		};
 /* End PBXProject section */
@@ -189,32 +189,32 @@
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS-resources-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Budget365/Pods-Budget365-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS-resources-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Budget365/Pods-Budget365-resources-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Budget365/Pods-Budget365-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		7DCC84444B40F8BC790BB385 /* [CP] Embed Pods Frameworks */ = {
+		4E2DDE7FD2026BA91BA45B80 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Budget365/Pods-Budget365-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-Budget365/Pods-Budget365-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BudgetAppIOS/Pods-BudgetAppIOS-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Budget365/Pods-Budget365-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		9B08DB60076CA7691BE0B9D2 /* [CP] Check Pods Manifest.lock */ = {
@@ -232,7 +232,7 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-BudgetAppIOS-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-Budget365-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -255,14 +255,14 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 736231217E08A51D8E09B7ED /* Pods-BudgetAppIOS.debug.xcconfig */;
+			baseConfigurationReference = 736231217E08A51D8E09B7ED /* Pods-Budget365.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 4A5H2U7Q42;
 				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = BudgetAppIOS/Info.plist;
+				INFOPLIST_FILE = Budget365/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -275,23 +275,24 @@
 					"-lc++",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = BudgetAppIOS;
+				PRODUCT_NAME = Budget365;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A4AF84F6D0DBC15038A48D29 /* Pods-BudgetAppIOS.release.xcconfig */;
+			baseConfigurationReference = A4AF84F6D0DBC15038A48D29 /* Pods-Budget365.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 4A5H2U7Q42;
-				INFOPLIST_FILE = BudgetAppIOS/Info.plist;
+				INFOPLIST_FILE = Budget365/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -304,8 +305,9 @@
 					"-lc++",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = BudgetAppIOS;
+				PRODUCT_NAME = Budget365;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -386,6 +388,7 @@
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				USE_HERMES = true;
 			};
 			name = Debug;
@@ -458,6 +461,7 @@
 				);
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -466,7 +470,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BudgetAppIOS" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Budget365" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
@@ -475,7 +479,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "BudgetAppIOS" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Budget365" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,

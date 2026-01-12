@@ -215,7 +215,7 @@ const SettingsScreen: React.FC = () => {
             <View style={styles.section}>
                 <Text style={styles.sectionHeader}>✉️ Contact Us</Text>
                 <Text style={styles.description}>
-                    Have questions or suggestions? Email us at support@budgetapp.com
+                    Have questions or suggestions? Email us at support@budget365.com
                 </Text>
             </View>
 
