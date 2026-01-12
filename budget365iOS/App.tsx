@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View, StyleSheet, Text } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -12,6 +12,7 @@ import AddTransactionScreen from './src/screens/AddTransactionScreen';
 import TransactionsScreen from './src/screens/TransactionsScreen';
 import BudgetScreen from './src/screens/BudgetScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,8 +80,6 @@ const MainTabs = () => {
   );
 };
 
-import { AuthProvider, useAuth } from './src/context/AuthContext';
-
 const AppNavigator = () => {
   const { isLoading, isAuthenticated } = useAuth();
 
@@ -133,9 +132,11 @@ const AppNavigator = () => {
 
 const App = () => {
   return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 };
 
