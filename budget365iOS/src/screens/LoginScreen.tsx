@@ -10,7 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useAuth } from '../context/AuthContext';
 
 import { API_URL } from '../config';
@@ -34,29 +34,47 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
 
     setIsLoading(true);
-    try {
-      const response = await fetch(`${BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+    let attempts = 0;
+    const maxAttempts = 3;
 
-      const data = await response.json();
+    const attemptLogin = async () => {
+      try {
+        console.log(`Login attempt ${attempts + 1} for user: ${username}`);
+        const response = await fetch(`${BASE_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
 
-      if (response.ok && data.token) {
-        await login(data.token, username);
-        // Navigation is handled automatically by AppNavigator based on isAuthenticated state
-      } else {
-        Alert.alert('Error', data.message || 'Invalid credentials');
+        const data = await response.json();
+
+        if (response.ok && data.token) {
+          await login(data.token, username);
+          return true;
+        } else {
+          Alert.alert('Login Failed', data.message || 'Invalid credentials');
+          return true; // Don't retry on invalid credentials
+        }
+      } catch (error) {
+        console.error(`Login attempt ${attempts + 1} error:`, error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          // Wait 2 seconds before retrying
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return await attemptLogin();
+        }
+        Alert.alert(
+          'Network Error',
+          'The app could not connect to the server. Please check your internet connection and try again.'
+        );
+        return false;
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert('Error', 'Network error. Please try again later.');
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    await attemptLogin();
+    setIsLoading(false);
   };
 
   return (
@@ -66,7 +84,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Budget365</Text>
+          <Text style={styles.title}>Budget 365</Text>
           <Text style={styles.subtitle}>Log in to your account</Text>
         </View>
 

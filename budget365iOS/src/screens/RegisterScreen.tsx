@@ -82,7 +82,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Budget365</Text>
+          <Text style={styles.title}>Budget 365</Text>
           <Text style={styles.subtitle}>Create your account</Text>
         </View>
 
