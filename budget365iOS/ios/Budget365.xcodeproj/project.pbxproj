@@ -274,7 +274,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.example.BudgetAppIOS;
+				PRODUCT_BUNDLE_IDENTIFIER = com.budget365.app;
 				PRODUCT_NAME = Budget365;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -304,7 +304,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.reactjs.native.example.BudgetAppIOS;
+				PRODUCT_BUNDLE_IDENTIFIER = com.budget365.app;
 				PRODUCT_NAME = Budget365;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

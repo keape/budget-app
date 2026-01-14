@@ -188,9 +188,9 @@ const SettingsScreen: React.FC = () => {
 
     const renderAbout = () => (
         <ScrollView style={styles.contentContainer}>
-            <Text style={styles.title}>About Budget365</Text>
+            <Text style={styles.title}>About Budget 365</Text>
             <Text style={styles.description}>
-                Budget365 is your complete solution for personal finance management.
+                Budget 365 is your complete solution for personal finance management.
                 Designed to be simple yet powerful, it helps you track your income and expenses intuitively.
             </Text>
 

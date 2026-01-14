@@ -1,4 +1,4 @@
-package com.budgetappios
+package com.budget365
 
 import android.app.Application
 import com.facebook.react.PackageList
