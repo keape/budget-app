@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -41,6 +42,46 @@ router.post('/register', async (req, res) => {
     console.log('🔍 DEBUG: Salvataggio utente nel database...');
     await user.save();
     console.log('✅ DEBUG: Utente salvato con successo, ID:', user._id);
+
+    // CREATE DEFAULT BUDGET SETTINGS
+    try {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-11
+
+      console.log(`✨ CREATING DEFAULT BUDGET for ${username} (${currentMonth}/${currentYear})`);
+
+      const defaultSpese = {
+        "Home": 0,
+        "Vacation": 0,
+        "Car": 0,
+        "Mortgage": 0 // Corrected 'Mortage' to 'Mortgage'
+      };
+
+      const defaultEntrate = {
+        "Salary": 0,
+        "MBO": 0,
+        "Welfare": 0
+      };
+
+      const defaultBudget = {
+        userId: user._id,
+        anno: currentYear,
+        mese: currentMonth,
+        spese: defaultSpese,
+        entrate: defaultEntrate,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      // Use budgetsettings_new directly to match the rest of the app
+      await mongoose.connection.db.collection('budgetsettings_new').insertOne(defaultBudget);
+      console.log('✅ DEBUG: Default budget settings created successfully');
+
+    } catch (budgetError) {
+      console.error('⚠️ Warning: Failed to create default budget:', budgetError);
+      // We don't fail registration if this fails, just log it
+    }
 
     res.status(201).json({ message: "Utente registrato con successo" });
   } catch (error) {
