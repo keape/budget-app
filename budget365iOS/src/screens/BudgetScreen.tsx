@@ -1,259 +1,429 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Modal
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
-
-interface BudgetItem {
-  categoria: string;
-  importo: number;
-  tipo: 'entrata' | 'uscita';
-}
 
 interface BudgetScreenProps {
   navigation: any;
 }
 
 const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
-  const { userToken } = useAuth();
-  const [budgetData, setBudgetData] = useState<BudgetItem[]>([]);
+  const { userToken, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'mensile' | 'annuale'>('mensile');
+  // isSaving used for loading indicators if needed, though we want "automatic" feel
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
 
-  useEffect(() => {
-    if (userToken) {
-      loadBudgetData();
-    }
-  }, [selectedPeriod, userToken]);
+  // Data State
+  const [categories, setCategories] = useState<string[]>([]);
+  const [budgetSettings, setBudgetSettings] = useState<Record<string, number>>({});
+  const [actualSpending, setActualSpending] = useState<Record<string, number>>({});
 
-  const loadBudgetData = async () => {
+  // Dirty State (changes made by user)
+  const [localBudget, setLocalBudget] = useState<Record<string, string>>({}); // Store as string for TextInput
+
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken) {
+        loadData();
+      }
+    }, [userToken, activeTab])
+  );
+
+  const loadData = async () => {
     try {
-      if (!userToken) return;
-
-
       setIsLoading(true);
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
 
-      const currentDate = new Date();
-      let startDate: Date;
-      let endDate: Date;
+      // 1. Fetch Categories
+      const catRes = await fetch(`${BASE_URL}/api/categorie`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      const catData = await catRes.json();
 
-      if (selectedPeriod === 'mensile') {
-        startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      } else {
-        startDate = new Date(currentDate.getFullYear(), 0, 1);
-        endDate = new Date(currentDate.getFullYear(), 11, 31);
+      const targetCategories = activeTab === 'expenses'
+        ? (catData.categorie?.spese || [])
+        : (catData.categorie?.entrate || []);
+
+      setCategories(targetCategories);
+
+      // 1.5. Clean up duplicates to avoid sync issues
+      try {
+        await fetch(`${BASE_URL}/api/budget-settings/emergency-fix`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+      } catch (err) {
+        console.log("Cleanup failed", err);
       }
 
-      const [speseResponse, entrateResponse] = await Promise.all([
-        fetch(`${BASE_URL}/api/spese?dataInizio=${startDate.toISOString().split('T')[0]}&dataFine=${endDate.toISOString().split('T')[0]}`, {
-          headers: { 'Authorization': `Bearer ${userToken}` }
-        }),
-        fetch(`${BASE_URL}/api/entrate?dataInizio=${startDate.toISOString().split('T')[0]}&dataFine=${endDate.toISOString().split('T')[0]}`, {
-          headers: { 'Authorization': `Bearer ${userToken}` }
-        })
-      ]);
-
-      const speseData = await speseResponse.json();
-      const entrateData = await entrateResponse.json();
-
-      const spese = speseData.spese || [];
-      const entrate = entrateData.entrate || [];
-
-      // Raggruppa per categoria
-      const budgetMap = new Map<string, { importo: number; tipo: 'entrata' | 'uscita' }>();
-
-      spese.forEach((spesa: any) => {
-        const key = `uscita-${spesa.categoria}`;
-        const existing = budgetMap.get(key) || { importo: 0, tipo: 'uscita' as const };
-        budgetMap.set(key, {
-          ...existing,
-          importo: existing.importo + Math.abs(spesa.importo)
-        });
+      // 2. Fetch Current Budget Settings (Limits)
+      const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${year}&mese=${month}`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
       });
+      const settingsData = settingsRes.ok ? await settingsRes.json() : { spese: {}, entrate: {} };
 
-      entrate.forEach((entrata: any) => {
-        const key = `entrata-${entrata.categoria}`;
-        const existing = budgetMap.get(key) || { importo: 0, tipo: 'entrata' as const };
-        budgetMap.set(key, {
-          ...existing,
-          importo: existing.importo + Math.abs(entrata.importo)
-        });
+      const currentLimits = activeTab === 'expenses'
+        ? (settingsData.spese || {})
+        : (settingsData.entrate || {});
+
+      setBudgetSettings(currentLimits);
+
+      // Initialize local inputs
+      const initialLocal: Record<string, string> = {};
+      targetCategories.forEach((cat: string) => {
+        initialLocal[cat] = currentLimits[cat] ? String(currentLimits[cat]) : '0';
       });
+      setLocalBudget(initialLocal);
 
-      const budgetArray: BudgetItem[] = Array.from(budgetMap.entries()).map(([key, value]) => ({
-        categoria: key.split('-')[1],
-        importo: value.importo,
-        tipo: value.tipo
-      }));
+      // 3. Fetch Actual Spending (Transactions)
+      const endpoint = activeTab === 'expenses' ? 'spese' : 'entrate';
+      const txRes = await fetch(`${BASE_URL}/api/${endpoint}?limit=1000`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      const txData = await txRes.json();
+      const transactions = activeTab === 'expenses' ? (txData.spese || []) : (txData.entrate || []);
 
-      setBudgetData(budgetArray);
+      // Filter for current month and aggregate
+      const startOfMonth = new Date(year, month, 1).getTime();
+      const endOfMonth = new Date(year, month + 1, 0).getTime();
+
+      const aggregated: Record<string, number> = {};
+      transactions.forEach((t: any) => {
+        const tDate = new Date(t.data).getTime();
+        if (tDate >= startOfMonth && tDate <= endOfMonth) {
+          aggregated[t.categoria] = (aggregated[t.categoria] || 0) + Math.abs(t.importo);
+        }
+      });
+      setActualSpending(aggregated);
+
     } catch (error) {
-      console.error('Errore nel caricamento del budget:', error);
-      Alert.alert('Error', 'Unable to load budget data');
+      console.error("Error loading budget planner:", error);
+      Alert.alert("Error", "Failed to load budget data.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const calculateTotals = () => {
-    const totaleEntrate = budgetData
-      .filter(item => item.tipo === 'entrata')
-      .reduce((sum, item) => sum + item.importo, 0);
+  const persistBudget = async (
+    budgetToSave: Record<string, string>,
+    tab: 'expenses' | 'income'
+  ) => {
+    try {
+      // Background save, no blocking UI
+      // We could set isSaving(true) if we wanted to show a small indicator
 
-    const totaleUscite = budgetData
-      .filter(item => item.tipo === 'uscita')
-      .reduce((sum, item) => sum + item.importo, 0);
+      const today = new Date();
 
-    return {
-      entrate: totaleEntrate,
-      uscite: totaleUscite,
-      bilancio: totaleEntrate - totaleUscite
-    };
+      // We need to fetch current full settings first to preserve the OTHER tab's data
+      const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${today.getFullYear()}&mese=${today.getMonth()}`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      const currentRemote = settingsRes.ok ? await settingsRes.json() : { spese: {}, entrate: {} };
+
+      // Prepare new numbers with safety checks
+      const newValues: Record<string, number> = {};
+      Object.entries(budgetToSave).forEach(([cat, valStr]) => {
+        const normalized = valStr.replace(',', '.');
+        const val = parseFloat(normalized);
+        if (!isNaN(val) && isFinite(val) && val >= 0) {
+          newValues[cat] = val;
+        }
+      });
+
+      // Construct payload matching backend expectation
+      const payload = {
+        anno: today.getFullYear(),
+        mese: today.getMonth(),
+        isYearly: false,
+        settings: {
+          spese: tab === 'expenses' ? newValues : (currentRemote.spese || {}),
+          entrate: tab === 'income' ? newValues : (currentRemote.entrate || {})
+        }
+      };
+
+      const saveRes = await fetch(`${BASE_URL}/api/budget-settings`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (saveRes.ok) {
+        // Silent success. 
+        // We DO NOT reload data here to avoid race conditions (ghost categories reappearing).
+        // The local state is already up to date.
+        console.log("Autosave success");
+      } else {
+        if (saveRes.status === 401 || saveRes.status === 403) {
+          Alert.alert("Session Expired", "Your session is invalid. Please login again.");
+          logout();
+          return;
+        }
+        console.log("Autosave failed", await saveRes.json());
+      }
+
+    } catch (e) {
+      console.error("Autosave error", e);
+    }
   };
 
-  const renderBudgetItem = ({ item }: { item: BudgetItem }) => {
-    const isEntrata = item.tipo === 'entrata';
+  const renderScrubber = (value: number, limit: number, color: string) => {
+    let percentage = 0;
+    if (limit > 0) {
+      percentage = (value / limit) * 100;
+      percentage = Math.min(percentage, 100);
+    } else if (value > 0) {
+      percentage = 100;
+    }
+
+    if (isNaN(percentage) || !isFinite(percentage)) {
+      percentage = 0;
+    }
+
+    const isOverBudget = limit > 0 && value > limit;
 
     return (
-      <View style={styles.budgetCard}>
-        <View style={styles.budgetHeader}>
-          <Text style={styles.categoria}>{item.categoria}</Text>
-          <View style={[
-            styles.tipoBadge,
-            isEntrata ? styles.tipoBadgeEntrata : styles.tipoBadgeUscita
-          ]}>
-            <Text style={[
-              styles.tipoBadgeText,
-              isEntrata ? styles.tipoBadgeTextEntrata : styles.tipoBadgeTextUscita
-            ]}>
-              {isEntrata ? 'Income' : 'Expense'}
-            </Text>
-          </View>
+      <View style={styles.scrubberContainer}>
+        <View style={styles.scrubberTrack}>
+          <View
+            style={[
+              styles.scrubberFill,
+              {
+                width: `${percentage}%`,
+                backgroundColor: isOverBudget ? '#EF4444' : color
+              }
+            ]}
+          />
         </View>
-
-        <Text style={[
-          styles.importo,
-          isEntrata ? styles.importoEntrata : styles.importoUscita
-        ]}>
-          {isEntrata ? '+' : '-'}{item.importo.toFixed(2)} €
+        <Text style={styles.scrubberText}>
+          {percentage.toFixed(0)}%
         </Text>
       </View>
     );
   };
 
-  const totals = calculateTotals();
+  // Add Category State
+  const [isAddCatModalVisible, setIsAddCatModalVisible] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      Alert.alert('Error', 'Please enter a category name');
+      return;
+    }
+
+    if (categories.includes(newCategoryName.trim())) {
+      Alert.alert('Error', 'Category already exists');
+      return;
+    }
+
+    const name = newCategoryName.trim();
+    const newCats = [...categories, name];
+    const newLocal = { ...localBudget, [name]: '0' };
+
+    setCategories(newCats);
+    setLocalBudget(newLocal);
+    setIsAddCatModalVisible(false);
+    setNewCategoryName('');
+
+    // Autosave immediately
+    persistBudget(newLocal, activeTab);
+  };
+
+  const handleDeleteCategory = (catName: string) => {
+    Alert.alert(
+      'Delete Category',
+      `Are you sure you want to delete "${catName}"? This will remove it from ALL history.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Everywhere', style: 'destructive', onPress: async () => {
+            try {
+              // Optimistic UI Update
+              const newCats = categories.filter(c => c !== catName);
+              const newLocal = { ...localBudget };
+              delete newLocal[catName];
+
+              setCategories(newCats);
+              setLocalBudget(newLocal);
+
+              // Call Global Delete Endpoint (POST for body reliability)
+              const type = activeTab === 'expenses' ? 'spese' : 'entrate';
+              await fetch(`${BASE_URL}/api/categorie/delete`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${userToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: catName, type })
+              });
+
+            } catch (error) {
+              console.error("Delete failed", error);
+              Alert.alert("Error", "Could not delete category globally.");
+            }
+          }
+        }
+      ]
+    );
+  };
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Loading budget...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Budget</Text>
-
-        <View style={styles.periodSelector}>
-          <TouchableOpacity
-            style={[
-              styles.periodButton,
-              selectedPeriod === 'mensile' && styles.periodButtonActive
-            ]}
-            onPress={() => setSelectedPeriod('mensile')}
-          >
-            <Text style={[
-              styles.periodButtonText,
-              selectedPeriod === 'mensile' && styles.periodButtonTextActive
-            ]}>
-              Monthly
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.periodButton,
-              selectedPeriod === 'annuale' && styles.periodButtonActive
-            ]}
-            onPress={() => setSelectedPeriod('annuale')}
-          >
-            <Text style={[
-              styles.periodButtonText,
-              selectedPeriod === 'annuale' && styles.periodButtonTextActive
-            ]}>
-              Yearly
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.title}>Budget Planner</Text>
+        <Text style={styles.subtitle}>Set your monthly limits</Text>
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Riepilogo Totali */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Income</Text>
-            <Text style={styles.summaryValueEntrata}>+{totals.entrate.toFixed(2)} €</Text>
-          </View>
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'expenses' && styles.activeTab]}
+          onPress={() => setActiveTab('expenses')}
+        >
+          <Text style={[styles.tabText, activeTab === 'expenses' && styles.activeTabText]}>Expenses</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'income' && styles.activeTab]}
+          onPress={() => setActiveTab('income')}
+        >
+          <Text style={[styles.tabText, activeTab === 'income' && styles.activeTabText]}>Income (Goals)</Text>
+        </TouchableOpacity>
+      </View>
 
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Total Expenses</Text>
-            <Text style={styles.summaryValueUscita}>-{totals.uscite.toFixed(2)} €</Text>
-          </View>
+      <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Add Category Button */}
+        <TouchableOpacity
+          style={styles.addCategoryButton}
+          onPress={() => setIsAddCatModalVisible(true)}
+        >
+          <Text style={styles.addCategoryText}>+ Add New Category</Text>
+        </TouchableOpacity>
 
-          <View style={[
-            styles.summaryCard,
-            styles.summaryCardBilancio,
-            totals.bilancio >= 0 ? styles.summaryCardPositivo : styles.summaryCardNegativo
-          ]}>
-            <Text style={styles.summaryLabel}>Balance</Text>
-            <Text style={[
-              styles.summaryValueBilancio,
-              totals.bilancio >= 0 ? styles.bilancioPositivo : styles.bilancioNegativo
-            ]}>
-              {totals.bilancio >= 0 ? '+' : ''}{totals.bilancio.toFixed(2)} €
-            </Text>
-          </View>
-        </View>
+        {categories.map((cat) => {
+          const spending = actualSpending[cat] || 0;
+          const limitStr = localBudget[cat] || '0';
+          const limit = parseFloat(limitStr.replace(',', '.')) || 0;
 
-        {/* Lista Budget per Categoria */}
-        <View style={styles.categoriesSection}>
-          <Text style={styles.sectionTitle}>Category Details</Text>
+          return (
+            <View key={cat} style={styles.budgetCard}>
+              <View style={styles.cardHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteCategory(cat)}
+                    style={{
+                      marginRight: 8,
+                      backgroundColor: '#FEF2F2',
+                      padding: 6,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: '#FECACA'
+                    }}
+                  >
+                    <Text style={{ fontSize: 16 }}>🗑️</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.catName, { flex: 1 }]} numberOfLines={1}>{cat}</Text>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.currency}>€</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={limitStr}
+                    onChangeText={(text) => setLocalBudget(prev => ({ ...prev, [cat]: text }))}
+                    onEndEditing={() => persistBudget(localBudget, activeTab)}
+                    placeholder="0"
+                  />
+                </View>
+              </View>
 
-          {budgetData.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>No data available</Text>
-              <Text style={styles.emptySubtitle}>
-                Add transactions to see the budget
-              </Text>
+              <View style={styles.statsRow}>
+                <Text style={styles.spentText}>
+                  Actual: <Text style={{ fontWeight: 'bold' }}>€{spending.toFixed(2)}</Text>
+                </Text>
+              </View>
+
+              {renderScrubber(spending, limit, activeTab === 'expenses' ? '#DC2626' : '#059669')}
             </View>
-          ) : (
-            <FlatList
-              data={budgetData}
-              keyExtractor={(item, index) => `${item.tipo}-${item.categoria}-${index}`}
-              renderItem={renderBudgetItem}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </View>
+          );
+        })}
+
+        {categories.length === 0 && (
+          <Text style={styles.emptyText}>No categories found.</Text>
+        )}
       </ScrollView>
-    </View>
+
+      {/* Add Category Modal */}
+      <Modal
+        visible={isAddCatModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsAddCatModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>New Category</Text>
+            <Text style={styles.modalSubtitle}>Enter category name for {activeTab}</Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Vacation, Hobbies"
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              autoFocus
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setIsAddCatModalVisible(false)}
+              >
+                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave]}
+                onPress={handleAddCategory}
+              >
+                <Text style={styles.modalBtnTextSave}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+    </KeyboardAvoidingView>
   );
 };
 
@@ -266,179 +436,196 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6B7280',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    padding: 20,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 16,
-    textAlign: 'center',
   },
-  periodSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 4,
-  },
-  periodButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  periodButtonActive: {
-    backgroundColor: '#4F46E5',
-  },
-  periodButtonText: {
+  subtitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    color: '#6B7280',
+    marginTop: 4,
   },
-  periodButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-  },
-  summaryContainer: {
+  tabContainer: {
+    flexDirection: 'row',
     padding: 16,
     gap: 12,
   },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    backgroundColor: '#E5E7EB',
+  },
+  activeTab: {
+    backgroundColor: '#4F46E5',
+    alignItems: 'center',
+  },
+  tabText: {
+    fontWeight: '600',
+    color: '#374151',
+  },
+  activeTabText: {
+    color: '#ffffff',
+  },
+  scrollContent: {
+    flex: 1,
     padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  summaryCardBilancio: {
-    borderWidth: 2,
-  },
-  summaryCardPositivo: {
-    borderColor: '#059669',
-  },
-  summaryCardNegativo: {
-    borderColor: '#DC2626',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  summaryValueEntrata: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#059669',
-  },
-  summaryValueUscita: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#DC2626',
-  },
-  summaryValueBilancio: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  bilancioPositivo: {
-    color: '#059669',
-  },
-  bilancioNegativo: {
-    color: '#DC2626',
-  },
-  categoriesSection: {
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
   },
   budgetCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
-  budgetHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  categoria: {
+  catName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#111827',
     flex: 1,
   },
-  tipoBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  tipoBadgeEntrata: {
-    backgroundColor: '#D1FAE5',
-  },
-  tipoBadgeUscita: {
-    backgroundColor: '#FEE2E2',
-  },
-  tipoBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  tipoBadgeTextEntrata: {
-    color: '#065F46',
-  },
-  tipoBadgeTextUscita: {
-    color: '#991B1B',
-  },
-  importo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  importoEntrata: {
-    color: '#059669',
-  },
-  importoUscita: {
-    color: '#DC2626',
-  },
-  emptyContainer: {
+  inputContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 40,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    width: 100,
+    height: 40,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#374151',
+  currency: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginRight: 4,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  emptySubtitle: {
+  spentText: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  scrubberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scrubberTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  scrubberFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  scrubberText: {
+    fontSize: 12,
+    color: '#6B7280',
+    width: 40,
+    textAlign: 'right',
+  },
+  emptyText: {
     textAlign: 'center',
+    marginTop: 20,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+  },
+  addCategoryButton: {
+    backgroundColor: '#E0E7FF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  addCategoryText: {
+    color: '#4F46E5',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: '#F3F4F6',
+  },
+  modalBtnSave: {
+    backgroundColor: '#4F46E5',
+  },
+  modalBtnTextCancel: {
+    color: '#374151',
+    fontWeight: '600',
+  },
+  modalBtnTextSave: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
 

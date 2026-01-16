@@ -16,11 +16,12 @@ import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
 
-interface HomeScreenProps {
+interface AddTransactionScreenProps {
   navigation: any;
+  route?: any;
 }
 
-const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation, route }) => {
   const { userToken, logout } = useAuth();
   const [tipo, setTipo] = useState<'spesa' | 'entrata'>('spesa');
   const [importo, setImporto] = useState('');
@@ -30,6 +31,27 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalitaTransazione, setModalitaTransazione] = useState<'una_tantum' | 'periodica'>('una_tantum');
+
+  // Edit Mode State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (route?.params?.transactionToEdit) {
+      const tx = route.params.transactionToEdit;
+      setIsEditing(true);
+      setEditingId(tx._id);
+      setTipo(tx.tipo);
+      setImporto(String(Math.abs(tx.importo)));
+      setCategoria(tx.categoria);
+      setDescrizione(tx.descrizione || '');
+      setModalitaTransazione('una_tantum');
+      navigation.setOptions({ title: 'Edit Transaction' });
+    } else if (route?.params?.type) {
+      // Handle direct type navigation (e.g. Add Income button)
+      setTipo(route.params.type);
+    }
+  }, [route?.params?.transactionToEdit, route?.params?.type]);
 
   // Stati per transazioni periodiche
   const [tipoRipetizione, setTipoRipetizione] = useState('mensile');
@@ -96,8 +118,14 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
         const dataTransazione = new Date().toISOString().split('T')[0];
 
-        const response = await fetch(`${BASE_URL}/api/${endpoint}`, {
-          method: 'POST',
+        const url = isEditing
+          ? `${BASE_URL}/api/${endpoint}/${editingId}`
+          : `${BASE_URL}/api/${endpoint}`;
+
+        const method = isEditing ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method: method,
           headers: {
             'Authorization': `Bearer ${userToken}`,
             'Content-Type': 'application/json',
@@ -111,8 +139,9 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         });
 
         if (response.ok) {
-          Alert.alert('Success', `${tipo === 'spesa' ? 'Expense' : 'Income'} added successfully!`);
-          resetForm();
+          Alert.alert('Success', `${tipo === 'spesa' ? 'Expense' : 'Income'} ${isEditing ? 'updated' : 'added'} successfully!`, [
+            { text: 'OK', onPress: () => isEditing ? navigation.goBack() : resetForm() }
+          ]);
         } else {
           try {
             const errorData = await response.json();
@@ -194,41 +223,43 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Manage Transactions</Text>
+        <Text style={styles.title}>{isEditing ? 'Edit Transaction' : 'Manage Transactions'}</Text>
       </View>
 
-      {/* Selettore Modalità */}
-      <View style={styles.modalitySelector}>
-        <TouchableOpacity
-          style={[
-            styles.modalityButton,
-            modalitaTransazione === 'una_tantum' && styles.modalityButtonActive
-          ]}
-          onPress={() => setModalitaTransazione('una_tantum')}
-        >
-          <Text style={[
-            styles.modalityButtonText,
-            modalitaTransazione === 'una_tantum' && styles.modalityButtonTextActive
-          ]}>
-            📅 One-time
-          </Text>
-        </TouchableOpacity>
+      {/* Selettore Modalità - Disable in Edit Mode */}
+      {!isEditing && (
+        <View style={styles.modalitySelector}>
+          <TouchableOpacity
+            style={[
+              styles.modalityButton,
+              modalitaTransazione === 'una_tantum' && styles.modalityButtonActive
+            ]}
+            onPress={() => setModalitaTransazione('una_tantum')}
+          >
+            <Text style={[
+              styles.modalityButtonText,
+              modalitaTransazione === 'una_tantum' && styles.modalityButtonTextActive
+            ]}>
+              📅 One-time
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.modalityButton,
-            modalitaTransazione === 'periodica' && styles.modalityButtonActive
-          ]}
-          onPress={() => setModalitaTransazione('periodica')}
-        >
-          <Text style={[
-            styles.modalityButtonText,
-            modalitaTransazione === 'periodica' && styles.modalityButtonTextActive
-          ]}>
-            🔄 Periodic
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[
+              styles.modalityButton,
+              modalitaTransazione === 'periodica' && styles.modalityButtonActive
+            ]}
+            onPress={() => setModalitaTransazione('periodica')}
+          >
+            <Text style={[
+              styles.modalityButtonText,
+              modalitaTransazione === 'periodica' && styles.modalityButtonTextActive
+            ]}>
+              🔄 Periodic
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.form}>
         {/* Tipo Transazione */}
@@ -385,7 +416,7 @@ const AddTransactionScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.addButtonText}>
-              {modalitaTransazione === 'periodica' ? 'Create Recurring Transaction' : 'Add'}
+              {isEditing ? 'Update Transaction' : (modalitaTransazione === 'periodica' ? 'Create Recurring Transaction' : 'Add')}
             </Text>
           )}
         </TouchableOpacity>

@@ -177,9 +177,9 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
                 <TouchableOpacity
                     style={[styles.actionButton, { backgroundColor: '#059669' }]}
-                    onPress={() => navigation.navigate('Budget')} // Go to filter/budget tab? Or Settings? Use Budget for now.
+                    onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
                 >
-                    <Text style={styles.actionButtonText}>⚙️ Manage</Text>
+                    <Text style={styles.actionButtonText}>💰 Add Income</Text>
                 </TouchableOpacity>
             </View>
 
