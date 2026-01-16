@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const { authenticateToken } = require('./auth');
+const BudgetSettings = require('../models/BudgetSettings');
 const router = express.Router();
 
 // NEW APPROACH: Use direct MongoDB collection without any indexes or constraints
@@ -13,7 +14,7 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 GET BUDGET SETTINGS - User:', req.user.username, 'ID:', req.user.userId);
     const { anno, mese } = req.query;
-    
+
     if (!anno) {
       return res.status(400).json({ message: "Anno è richiesto" });
     }
@@ -27,10 +28,10 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log('🔍 Query GET:', query);
     const collection = getBudgetCollection();
     const settings = await collection.findOne(query);
-    
+
     if (!settings) {
       console.log('🔍 Nessuna impostazione trovata, restituisco oggetto vuoto');
-      return res.json({ spese: {}, entrate: {} }); 
+      return res.json({ spese: {}, entrate: {} });
     }
 
     const result = {
@@ -54,20 +55,20 @@ router.post('/', authenticateToken, async (req, res) => {
     console.log('🔍 User:', req.user.username, 'ID:', req.user.userId);
     console.log('🔍 Request body keys:', Object.keys(req.body));
     console.log('🔍 Full request body:', JSON.stringify(req.body, null, 2));
-    
+
     const { anno, mese, isYearly, settings } = req.body;
-    
+
     // Validazione base
     if (!anno || !settings) {
       console.log('❌ Dati mancanti - anno:', anno, 'settings:', !!settings);
       return res.status(400).json({ message: "Anno e settings sono richiesti" });
     }
-    
+
     if (!settings.spese || !settings.entrate) {
       console.log('❌ Struttura settings non valida');
       return res.status(400).json({ message: "La struttura dei dati (settings.spese/entrate) non è corretta" });
     }
-    
+
     // Determina il valore del mese
     let meseValue = null;
     if (!isYearly) {
@@ -82,36 +83,36 @@ router.post('/', authenticateToken, async (req, res) => {
       }
       meseValue = meseInt;
     }
-    
+
     console.log('✅ Validazione completata - Anno:', anno, 'Mese:', meseValue, 'isYearly:', isYearly);
-    
+
     // Converti e valida i dati
     const spese = new Map();
     const entrate = new Map();
-    
+
     Object.entries(settings.spese).forEach(([key, value]) => {
       if (value !== null && value !== undefined && !isNaN(value)) {
         spese.set(key, Number(value));
       }
     });
-    
+
     Object.entries(settings.entrate).forEach(([key, value]) => {
       if (value !== null && value !== undefined && !isNaN(value)) {
         entrate.set(key, Number(value));
       }
     });
-    
+
     console.log('✅ Dati convertiti - Spese count:', spese.size, 'Entrate count:', entrate.size);
-    
+
     // Query per trovare documento esistente
     const query = {
       userId: req.user.userId,
       anno: parseInt(anno),
       mese: meseValue
     };
-    
+
     console.log('🔍 Query documento:', query);
-    
+
     // Dati da salvare
     const updateData = {
       userId: req.user.userId,
@@ -120,10 +121,10 @@ router.post('/', authenticateToken, async (req, res) => {
       spese,
       entrate
     };
-    
+
     console.log('🔍 Usando nuova collezione senza indici...');
     const collection = getBudgetCollection();
-    
+
     // Convert Maps to plain objects for MongoDB
     const dataToSave = {
       userId: req.user.userId,
@@ -133,30 +134,30 @@ router.post('/', authenticateToken, async (req, res) => {
       entrate: Object.fromEntries(entrate),
       updatedAt: new Date()
     };
-    
+
     console.log('📝 Salvando direttamente in collezione nuova...');
     await collection.replaceOne(query, dataToSave, { upsert: true });
-    
+
     const result = dataToSave;
-    
+
     console.log('✅ Operazione completata con successo per user:', req.user.username);
-    
+
     // Risposta
     const response = {
       spese: result.spese || {},
       entrate: result.entrate || {}
     };
-    
+
     res.json(response);
-    
+
   } catch (error) {
     console.error('❌ POST Error for user', req.user?.username || 'UNKNOWN', ':', error);
     console.error('❌ Error stack:', error.stack);
-    
+
     // RIMOSSO: Check per errore 11000 che causava 409
     // Ora tutti gli errori vengono gestiti come 500 generici
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: "Errore nel salvataggio delle impostazioni del budget",
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -167,7 +168,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.post('/remove-unique-index', authenticateToken, async (req, res) => {
   try {
     console.log('🚨 REMOVING UNIQUE INDEX - User:', req.user.username);
-    
+
     // Drop the unique index
     try {
       await BudgetSettings.collection.dropIndex({ userId: 1, anno: 1, mese: 1 });
@@ -175,16 +176,16 @@ router.post('/remove-unique-index', authenticateToken, async (req, res) => {
     } catch (indexError) {
       console.log('⚠️ Index may not exist or already dropped:', indexError.message);
     }
-    
+
     // List remaining indexes for verification
     const indexes = await BudgetSettings.collection.listIndexes().toArray();
     console.log('📋 Remaining indexes:', indexes.map(idx => ({ name: idx.name, key: idx.key })));
-    
+
     res.json({
       message: 'Unique index removal completed',
       remainingIndexes: indexes.map(idx => ({ name: idx.name, key: idx.key }))
     });
-    
+
   } catch (error) {
     console.error('❌ Index removal error:', error);
     res.status(500).json({ message: 'Index removal failed', error: error.message });
@@ -195,11 +196,11 @@ router.post('/remove-unique-index', authenticateToken, async (req, res) => {
 router.post('/emergency-fix', authenticateToken, async (req, res) => {
   try {
     console.log('🚨 EMERGENCY FIX - User:', req.user.username);
-    
+
     // Find all documents for this user
     const userDocs = await BudgetSettings.find({ userId: req.user.userId });
     console.log('🔍 Found', userDocs.length, 'documents for user');
-    
+
     // Group by anno/mese
     const grouped = {};
     userDocs.forEach(doc => {
@@ -207,9 +208,9 @@ router.post('/emergency-fix', authenticateToken, async (req, res) => {
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(doc);
     });
-    
+
     let deletedCount = 0;
-    
+
     // For each group, keep only the most recent
     for (const [key, docs] of Object.entries(grouped)) {
       if (docs.length > 1) {
@@ -217,7 +218,7 @@ router.post('/emergency-fix', authenticateToken, async (req, res) => {
         // Sort by creation date, keep the newest
         docs.sort((a, b) => b.createdAt - a.createdAt);
         const toDelete = docs.slice(1);
-        
+
         for (const doc of toDelete) {
           await BudgetSettings.deleteOne({ _id: doc._id });
           deletedCount++;
@@ -225,13 +226,13 @@ router.post('/emergency-fix', authenticateToken, async (req, res) => {
         }
       }
     }
-    
+
     res.json({
       message: 'Emergency fix completed',
       deletedDuplicates: deletedCount,
       remainingDocuments: userDocs.length - deletedCount
     });
-    
+
   } catch (error) {
     console.error('❌ Emergency fix error:', error);
     res.status(500).json({ message: 'Emergency fix failed', error: error.message });
