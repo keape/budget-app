@@ -65,7 +65,7 @@ router.post('/register', async (req, res) => {
       };
 
       const defaultBudget = {
-        userId: user._id,
+        userId: user._id.toString(), // Store as string for consistency with native driver usage
         anno: currentYear,
         mese: currentMonth,
         spese: defaultSpese,

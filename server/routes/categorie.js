@@ -12,8 +12,19 @@ router.get('/', authenticateToken, async (req, res) => {
     const collection = mongoose.connection.db.collection('budgetsettings_new');
 
     // Find all budget settings for this user
-    const userBudgets = await collection.find({ userId: req.user.userId }).toArray();
-    console.log(`📋 Found ${userBudgets.length} budget documents for user`);
+    // Be robust: search for both string and ObjectId versions of the ID
+    const userIdStr = req.user.userId.toString();
+    const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
+
+    const query = {
+      $or: [
+        { userId: userIdStr },
+        ...(userIdObj ? [{ userId: userIdObj }] : [])
+      ]
+    };
+
+    const userBudgets = await collection.find(query).toArray();
+    console.log(`📋 Found ${userBudgets.length} budget documents for user (using robust query)`);
 
     // Extract unique categories from all budget settings
     const speseSet = new Set();
@@ -87,7 +98,18 @@ router.post('/delete', authenticateToken, async (req, res) => {
     const collection = mongoose.connection.db.collection('budgetsettings_new');
 
     // ROBUST DELETE: Find exact key match (ignoring whitespace and invisible chars)
-    const userBudgets = await collection.find({ userId: req.user.userId }).toArray();
+    // Be robust: search for both string and ObjectId versions of the ID
+    const userIdStr = req.user.userId.toString();
+    const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
+
+    const query = {
+      $or: [
+        { userId: userIdStr },
+        ...(userIdObj ? [{ userId: userIdObj }] : [])
+      ]
+    };
+
+    const userBudgets = await collection.find(query).toArray();
     let totalModified = 0;
     const debugLogs = [];
 

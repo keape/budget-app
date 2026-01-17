@@ -19,8 +19,15 @@ router.get('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: "Anno è richiesto" });
     }
 
+    // Be robust: search for both string and ObjectId versions of the ID
+    const userIdStr = req.user.userId.toString();
+    const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
+
     const query = {
-      userId: req.user.userId,
+      $or: [
+        { userId: userIdStr },
+        ...(userIdObj ? [{ userId: userIdObj }] : [])
+      ],
       anno: parseInt(anno),
       mese: mese && !isNaN(mese) ? parseInt(mese) : null
     };
@@ -104,9 +111,16 @@ router.post('/', authenticateToken, async (req, res) => {
 
     console.log('✅ Dati convertiti - Spese count:', spese.size, 'Entrate count:', entrate.size);
 
-    // Query per trovare documento esistente
+    // Be robust: search for both string and ObjectId versions of the ID
+    const userIdStr = req.user.userId.toString();
+    const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
+
+    // Query per trovare documento esistente (usiamo stringa come standard per i nuovi salvataggi)
     const query = {
-      userId: req.user.userId,
+      $or: [
+        { userId: userIdStr },
+        ...(userIdObj ? [{ userId: userIdObj }] : [])
+      ],
       anno: parseInt(anno),
       mese: meseValue
     };
@@ -197,8 +211,21 @@ router.post('/emergency-fix', authenticateToken, async (req, res) => {
   try {
     console.log('🚨 EMERGENCY FIX - User:', req.user.username);
 
-    // Find all documents for this user
-    const userDocs = await BudgetSettings.find({ userId: req.user.userId });
+    const collection = getBudgetCollection();
+
+    // Be robust: search for both string and ObjectId versions of the ID
+    const userIdStr = req.user.userId.toString();
+    const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
+
+    const query = {
+      $or: [
+        { userId: userIdStr },
+        ...(userIdObj ? [{ userId: userIdObj }] : [])
+      ]
+    };
+
+    // Find all documents for this user in budgetsettings_new
+    const userDocs = await collection.find(query).toArray();
     console.log('🔍 Found', userDocs.length, 'documents for user');
 
     // Group by anno/mese
@@ -220,7 +247,7 @@ router.post('/emergency-fix', authenticateToken, async (req, res) => {
         const toDelete = docs.slice(1);
 
         for (const doc of toDelete) {
-          await BudgetSettings.deleteOne({ _id: doc._id });
+          await collection.deleteOne({ _id: doc._id });
           deletedCount++;
           console.log('🗑️ Deleted duplicate:', doc._id);
         }
