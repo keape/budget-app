@@ -30,21 +30,8 @@ router.get('/', authenticateToken, async (req, res) => {
     const speseSet = new Set();
     const entrateSet = new Set();
 
-    // Base categories
-    const categorieSpeseDiBase = [
-      "Abbigliamento", "Abbonamenti", "Acqua", "Alimentari", "Altre spese", "Bar",
-      "Cinema Mostre Cultura", "Elettricità", "Giardinaggio/Agricoltura/Falegnameria",
-      "Manutenzione/Arredamento casa", "Mutuo", "Regali", "Ristorante", "Salute",
-      "Sport/Attrezzatura sportiva", "Tecnologia", "Vacanza", "Vela"
-    ];
-
-    const categorieEntrateDiBase = [
-      "Altra entrata", "Consulenze", "Interessi", "MBO", "Stipendio", "Ticket", "Welfare"
-    ];
-
-    // Add base categories
-    categorieSpeseDiBase.forEach(cat => speseSet.add(cat));
-    categorieEntrateDiBase.forEach(cat => entrateSet.add(cat));
+    // REMOVED HARDCODED BASE CATEGORIES
+    // The user wants control over their categories via BudgetSettings.
 
     // Add custom categories from budget settings
     userBudgets.forEach(budget => {
