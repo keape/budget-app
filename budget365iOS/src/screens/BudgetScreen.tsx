@@ -32,8 +32,8 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
   const months = [
-    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
   const years = [2024, 2025, 2026, 2027];
@@ -273,10 +273,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       // Persist the entire new budget state for this month
       await persistBudget(newLocal, activeTab);
 
-      Alert.alert("Successo", `Valori copiati da ${months[prevMonth]} ${prevYear}`);
+      Alert.alert("Success", `Values copied from ${months[prevMonth]} ${prevYear}`);
     } catch (error) {
       console.error(error);
-      Alert.alert("Errore", "Impossibile copiare i valori dal mese precedente");
+      Alert.alert("Error", "Unable to copy values from the previous month");
     } finally {
       setIsLoading(false);
     }
@@ -286,7 +286,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     <Modal visible={isMonthModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
         <View style={styles.pickerModalContent}>
-          <Text style={styles.modalTitlePicker}>Seleziona Mese</Text>
+          <Text style={styles.modalTitlePicker}>Select Month</Text>
           <ScrollView>
             {months.map((m, idx) => (
               <TouchableOpacity
@@ -302,7 +302,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
             ))}
           </ScrollView>
           <TouchableOpacity style={styles.closeButtonPicker} onPress={() => setIsMonthModalVisible(false)}>
-            <Text style={styles.closeButtonTextPicker}>Chiudi</Text>
+            <Text style={styles.closeButtonTextPicker}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -313,7 +313,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     <Modal visible={isYearModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
         <View style={styles.pickerModalContent}>
-          <Text style={styles.modalTitlePicker}>Seleziona Anno</Text>
+          <Text style={styles.modalTitlePicker}>Select Year</Text>
           <ScrollView>
             {years.map(y => (
               <TouchableOpacity
@@ -329,7 +329,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
             ))}
           </ScrollView>
           <TouchableOpacity style={styles.closeButtonPicker} onPress={() => setIsYearModalVisible(false)}>
-            <Text style={styles.closeButtonTextPicker}>Chiudi</Text>
+            <Text style={styles.closeButtonTextPicker}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -475,7 +475,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     >
       <View style={styles.header}>
         <Text style={styles.title}>Budget Planner</Text>
-        <Text style={styles.subtitle}>Gestisci i tuoi limiti mensili</Text>
+        <Text style={styles.subtitle}>Manage your monthly limits</Text>
       </View>
 
       {/* Period Selection */}
@@ -490,7 +490,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
       <TouchableOpacity style={styles.copyButton} onPress={handleCopyFromPrevious}>
         <Text style={styles.copyButtonText}>
-          Copia valori da {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
+          Copy values from {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
         </Text>
       </TouchableOpacity>
 
@@ -598,12 +598,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Modifica Categoria</Text>
-            <Text style={styles.modalSubtitle}>Rinomina "{categoryToRename}" in:</Text>
+            <Text style={styles.modalTitle}>Modify Category</Text>
+            <Text style={styles.modalSubtitle}>Rename "{categoryToRename}" to:</Text>
 
             <TextInput
               style={styles.modalInput}
-              placeholder="Nuovo nome..."
+              placeholder="New name..."
               value={renamedCategoryName}
               onChangeText={setRenamedCategoryName}
             />
@@ -613,13 +613,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                 style={[styles.modalBtn, styles.modalBtnCancel]}
                 onPress={() => setIsRenameModalVisible(false)}
               >
-                <Text style={styles.modalBtnTextCancel}>Annulla</Text>
+                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}
                 onPress={handleRenameCategory}
               >
-                <Text style={styles.modalBtnTextSave}>Rinomina</Text>
+                <Text style={styles.modalBtnTextSave}>Rename</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -666,7 +666,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       {isSaving && (
         <View style={styles.savingIndicator}>
           <ActivityIndicator size="small" color="#6366F1" />
-          <Text style={styles.savingText}>Salvataggio...</Text>
+          <Text style={styles.savingText}>Saving...</Text>
         </View>
       )}
 

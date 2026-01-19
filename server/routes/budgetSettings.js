@@ -9,7 +9,7 @@ const getBudgetCollection = () => {
   return mongoose.connection.db.collection('budgetsettings_new');
 };
 
-// GET Budget Settings - SEMPLIFICATO
+// GET Budget Settings
 router.get('/', authenticateToken, async (req, res) => {
   try {
     console.log('🔍 GET BUDGET SETTINGS - User:', req.user.username, 'ID:', req.user.userId);
@@ -23,31 +23,56 @@ router.get('/', authenticateToken, async (req, res) => {
     const userIdStr = req.user.userId.toString();
     const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
 
+    const hasMonth = mese !== undefined && mese !== null && mese !== '';
+
     const query = {
       $or: [
         { userId: userIdStr },
         ...(userIdObj ? [{ userId: userIdObj }] : [])
       ],
-      anno: parseInt(anno),
-      mese: mese && !isNaN(mese) ? parseInt(mese) : null
+      anno: parseInt(anno)
     };
+
+    if (hasMonth) {
+      query.mese = parseInt(mese);
+    }
 
     console.log('🔍 Query GET:', query);
     const collection = getBudgetCollection();
-    const settings = await collection.findOne(query);
 
-    if (!settings) {
-      console.log('🔍 Nessuna impostazione trovata, restituisco oggetto vuoto');
-      return res.json({ spese: {}, entrate: {} });
+    if (hasMonth) {
+      // Single month or yearly document (if mese: null was explicitly sent)
+      const settings = await collection.findOne(query);
+      if (!settings) {
+        return res.json({ spese: {}, entrate: {} });
+      }
+      return res.json({
+        spese: settings.spese || {},
+        entrate: settings.entrate || {}
+      });
+    } else {
+      // "Full Year" aggregation: find all documents for this year
+      const allSettings = await collection.find(query).toArray();
+
+      const aggregated = {
+        spese: {},
+        entrate: {}
+      };
+
+      allSettings.forEach(doc => {
+        // Aggregate Spese
+        Object.entries(doc.spese || {}).forEach(([cat, val]) => {
+          aggregated.spese[cat] = (aggregated.spese[cat] || 0) + (Number(val) || 0);
+        });
+        // Aggregate Entrate
+        Object.entries(doc.entrate || {}).forEach(([cat, val]) => {
+          aggregated.entrate[cat] = (aggregated.entrate[cat] || 0) + (Number(val) || 0);
+        });
+      });
+
+      console.log(`✅ Aggregated ${allSettings.length} months for user ${req.user.username}`);
+      return res.json(aggregated);
     }
-
-    const result = {
-      spese: settings.spese || {},
-      entrate: settings.entrate || {}
-    };
-
-    console.log('✅ GET risultato inviato per', req.user.username);
-    res.json(result);
 
   } catch (error) {
     console.error('❌ GET Error for user', req.user.username, ':', error);
