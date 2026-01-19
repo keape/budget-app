@@ -31,6 +31,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
   const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modalitaTransazione, setModalitaTransazione] = useState<'una_tantum' | 'periodica'>('una_tantum');
+  const [data, setData] = useState(new Date().toISOString().split('T')[0]);
 
   // Edit Mode State
   const [isEditing, setIsEditing] = useState(false);
@@ -45,6 +46,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
       setImporto(String(Math.abs(tx.importo)));
       setCategoria(tx.categoria);
       setDescrizione(tx.descrizione || '');
+      setData(tx.data ? tx.data.split('T')[0] : new Date().toISOString().split('T')[0]);
       setModalitaTransazione('una_tantum');
       navigation.setOptions({ title: 'Edit Transaction' });
     } else if (route?.params?.type) {
@@ -116,7 +118,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
       if (modalitaTransazione === 'una_tantum') {
         // Transazione Spesa/Entrata standard
         const endpoint = tipo === 'spesa' ? 'spese' : 'entrate';
-        const dataTransazione = new Date().toISOString().split('T')[0];
+        const dataTransazione = data;
 
         const url = isEditing
           ? `${BASE_URL}/api/${endpoint}/${editingId}`
@@ -212,7 +214,9 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
     setCategoria('');
     setDataFine('');
     setIsInfinito(true);
-    setDataInizio(new Date().toISOString().split('T')[0]);
+    const today = new Date().toISOString().split('T')[0];
+    setData(today);
+    setDataInizio(today);
   };
 
   const handleTipoChange = (nuovoTipo: 'spesa' | 'entrata') => {
@@ -343,6 +347,20 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             placeholderTextColor="#9CA3AF"
           />
         </View>
+
+        {/* Data - Solo per una_tantum */}
+        {modalitaTransazione === 'una_tantum' && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD"
+              value={data}
+              onChangeText={setData}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        )}
 
         {/* CAMPI AGGIUNTIVI PER TRANS. PERIODICA */}
         {modalitaTransazione === 'periodica' ? (
