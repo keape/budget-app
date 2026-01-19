@@ -143,4 +143,80 @@ router.post('/delete', authenticateToken, async (req, res) => {
   }
 });
 
+// POST Rename Category - Global renaming across all budget settings
+router.post('/rename', authenticateToken, async (req, res) => {
+  try {
+    const { oldName, newName, type } = req.body;
+
+    if (!oldName || !newName || !type) {
+      return res.status(400).json({ message: "Nome vecchio, nome nuovo e tipo richiesti" });
+    }
+
+    console.log(`🚨 GLOBAL RENAME: Changing "${oldName}" to "${newName}" in ${type} for user ${req.user.username}`);
+
+    const collection = mongoose.connection.db.collection('budgetsettings_new');
+
+    // Be robust: search for both string and ObjectId versions of the ID
+    const userIdStr = req.user.userId.toString();
+    const userIdObj = mongoose.Types.ObjectId.isValid(userIdStr) ? new mongoose.Types.ObjectId(userIdStr) : null;
+
+    const query = {
+      $or: [
+        { userId: userIdStr },
+        ...(userIdObj ? [{ userId: userIdObj }] : [])
+      ]
+    };
+
+    const userBudgets = await collection.find(query).toArray();
+    let totalModified = 0;
+    const debugLogs = [];
+
+    // Helper to normalize string for comparison
+    const normalize = (str) => String(str).replace(/[^a-zA-Z0-9\u00C0-\u017F]/g, "").toLowerCase();
+    const targetNorm = normalize(oldName);
+
+    for (const doc of userBudgets) {
+      if (!doc[type]) continue;
+
+      const keys = Object.keys(doc[type]);
+      const matchedKeys = keys.filter(k => normalize(k) === targetNorm);
+
+      if (matchedKeys.length > 0) {
+        const updateDoc = { $unset: {}, $set: {} };
+        let modified = false;
+
+        matchedKeys.forEach(k => {
+          const value = doc[type][k];
+          debugLogs.push(`Renaming in doc ${doc._id} (Month: ${doc.mese}): "${k}" -> "${newName}"`);
+
+          // Remove old key and set new key
+          updateDoc.$unset[`${type}.${k}`] = "";
+          updateDoc.$set[`${type}.${newName}`] = value;
+          modified = true;
+        });
+
+        if (modified) {
+          const upRes = await collection.updateOne(
+            { _id: doc._id },
+            updateDoc
+          );
+          totalModified += upRes.modifiedCount;
+        }
+      }
+    }
+
+    console.log(`✅ Global Rename: Modified ${totalModified} documents.`);
+
+    res.json({
+      message: "Categoria rinominata globalmente",
+      documentsUpdated: totalModified,
+      debug: debugLogs
+    });
+
+  } catch (error) {
+    console.error('❌ Global Rename Error:', error);
+    res.status(500).json({ message: "Errore durante la rinomina globale" });
+  }
+});
+
 module.exports = router;
