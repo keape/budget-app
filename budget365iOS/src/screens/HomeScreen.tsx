@@ -10,6 +10,7 @@ import {
     Dimensions,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -17,6 +18,7 @@ const BASE_URL = API_URL;
 
 const HomeScreen = ({ navigation }: { navigation: any }) => {
     const { userToken, logout } = useAuth();
+    const { currency, showBalance, isDarkMode } = useSettings();
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [riepilogoData, setRiepilogoData] = useState({
@@ -139,10 +141,12 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         return (
             <View style={{ marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151' }}>{label}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: color }}>€{value.toFixed(2)}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: isDarkMode ? '#E5E7EB' : '#374151' }}>{label}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: color }}>
+                        {showBalance ? `${currency}${value.toFixed(2)}` : '****'}
+                    </Text>
                 </View>
-                <View style={{ height: 10, backgroundColor: '#E5E7EB', borderRadius: 5, overflow: 'hidden' }}>
+                <View style={{ height: 10, backgroundColor: isDarkMode ? '#374151' : '#E5E7EB', borderRadius: 5, overflow: 'hidden' }}>
                     <View style={{ height: '100%', width: `${Math.min(widthPercentage, 100)}%`, backgroundColor: color, borderRadius: 5 }} />
                 </View>
             </View>
@@ -159,11 +163,11 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
     return (
         <ScrollView
-            style={styles.container}
+            style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-            <View style={styles.header}>
-                <Text style={styles.title}>📊 Budget Dashboard</Text>
+            <View style={[styles.header, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
+                <Text style={[styles.title, isDarkMode && { color: '#F9FAFB' }]}>📊 Budget Dashboard</Text>
             </View>
 
             {/* Quick Actions */}
@@ -185,29 +189,33 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
             {/* Cards Riepilogo */}
             <View style={styles.cardsGrid}>
-                <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Income</Text>
-                    <Text style={[styles.cardValue, { color: '#059669' }]}>+€{riepilogoData.totaleEntrateMese.toFixed(2)}</Text>
-                </View>
-                <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Expenses</Text>
-                    <Text style={[styles.cardValue, { color: '#DC2626' }]}>-€{riepilogoData.totaleSpeseMese.toFixed(2)}</Text>
-                </View>
-                <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Balance</Text>
-                    <Text style={[styles.cardValue, { color: riepilogoData.bilancioMese >= 0 ? '#059669' : '#DC2626' }]}>
-                        {riepilogoData.bilancioMese >= 0 ? '+' : ''}€{riepilogoData.bilancioMese.toFixed(2)}
+                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Income</Text>
+                    <Text style={[styles.cardValue, { color: '#059669' }]}>
+                        {showBalance ? `+${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
                     </Text>
                 </View>
-                <View style={styles.card}>
-                    <Text style={styles.cardLabel}>Transactions</Text>
+                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Expenses</Text>
+                    <Text style={[styles.cardValue, { color: '#DC2626' }]}>
+                        {showBalance ? `-${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
+                    </Text>
+                </View>
+                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Balance</Text>
+                    <Text style={[styles.cardValue, { color: riepilogoData.bilancioMese >= 0 ? '#059669' : '#DC2626' }]}>
+                        {showBalance ? `${riepilogoData.bilancioMese >= 0 ? '+' : ''}${currency}${riepilogoData.bilancioMese.toFixed(2)}` : '****'}
+                    </Text>
+                </View>
+                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Transactions</Text>
                     <Text style={[styles.cardValue, { color: '#3B82F6' }]}>{riepilogoData.numeroTransazioniMese}</Text>
                 </View>
             </View>
 
             {/* Budget Summary Charts */}
-            <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>📉 Performance vs Budget</Text>
+            <View style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>📉 Performance vs Budget</Text>
                 <View style={styles.sectionContent}>
                     <SimpleBarChart
                         label="Expenses vs Budget"
@@ -215,7 +223,9 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         max={budgetData.budgetSpeseMese || riepilogoData.totaleSpeseMese * 1.2}
                         color="#DC2626"
                     />
-                    <Text style={styles.subText}>Expense Budget: €{budgetData.budgetSpeseMese.toFixed(2)}</Text>
+                    <Text style={styles.subText}>
+                        Expense Budget: {showBalance ? `${currency}${budgetData.budgetSpeseMese.toFixed(2)}` : '****'}
+                    </Text>
 
                     <View style={{ height: 16 }} />
 
@@ -225,38 +235,44 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         max={budgetData.budgetEntrateMese || riepilogoData.totaleEntrateMese * 1.2}
                         color="#059669"
                     />
-                    <Text style={styles.subText}>Income Budget: €{budgetData.budgetEntrateMese.toFixed(2)}</Text>
+                    <Text style={styles.subText}>
+                        Income Budget: {showBalance ? `${currency}${budgetData.budgetEntrateMese.toFixed(2)}` : '****'}
+                    </Text>
                 </View>
             </View>
 
             {/* Categorie Top */}
             <View style={styles.row}>
-                <View style={[styles.sectionContainer, { flex: 1, marginRight: 8 }]}>
-                    <Text style={styles.sectionTitle}>Top Expenses</Text>
+                <View style={[styles.sectionContainer, { flex: 1, marginRight: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Expenses</Text>
                     <View style={styles.sectionContent}>
                         {riepilogoData.dettagliCategorie.spese.length === 0 ? (
                             <Text style={styles.emptyText}>No expenses</Text>
                         ) : (
                             riepilogoData.dettagliCategorie.spese.map(([cat, val], idx) => (
-                                <View key={idx} style={styles.catRow}>
-                                    <Text style={styles.catName} numberOfLines={1}>{cat}</Text>
-                                    <Text style={styles.catValueSpesa}>€{val.toFixed(0)}</Text>
+                                <View key={idx} style={[styles.catRow, isDarkMode && { borderBottomColor: '#374151' }]}>
+                                    <Text style={[styles.catName, isDarkMode && { color: '#E5E7EB' }]} numberOfLines={1}>{cat}</Text>
+                                    <Text style={styles.catValueSpesa}>
+                                        {showBalance ? `${currency}${val.toFixed(0)}` : '****'}
+                                    </Text>
                                 </View>
                             ))
                         )}
                     </View>
                 </View>
 
-                <View style={[styles.sectionContainer, { flex: 1, marginLeft: 8 }]}>
-                    <Text style={styles.sectionTitle}>Top Income</Text>
+                <View style={[styles.sectionContainer, { flex: 1, marginLeft: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Income</Text>
                     <View style={styles.sectionContent}>
                         {riepilogoData.dettagliCategorie.entrate.length === 0 ? (
                             <Text style={styles.emptyText}>No income</Text>
                         ) : (
                             riepilogoData.dettagliCategorie.entrate.map(([cat, val], idx) => (
-                                <View key={idx} style={styles.catRow}>
-                                    <Text style={styles.catName} numberOfLines={1}>{cat}</Text>
-                                    <Text style={styles.catValueEntrata}>€{val.toFixed(0)}</Text>
+                                <View key={idx} style={[styles.catRow, isDarkMode && { borderBottomColor: '#374151' }]}>
+                                    <Text style={[styles.catName, isDarkMode && { color: '#E5E7EB' }]} numberOfLines={1}>{cat}</Text>
+                                    <Text style={styles.catValueEntrata}>
+                                        {showBalance ? `${currency}${val.toFixed(0)}` : '****'}
+                                    </Text>
                                 </View>
                             ))
                         )}
@@ -265,17 +281,17 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             </View>
 
             {/* Ultime Transazioni */}
-            <View style={styles.sectionContainer}>
-                <Text style={styles.sectionTitle}>🕐 Recent Activity</Text>
+            <View style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>🕐 Recent Activity</Text>
                 <View style={styles.sectionContent}>
                     {riepilogoData.ultime5Transazioni.map((t, i) => (
-                        <View key={i} style={styles.transactionRow}>
+                        <View key={i} style={[styles.transactionRow, isDarkMode && { borderBottomColor: '#374151' }]}>
                             <View>
-                                <Text style={styles.transDesc}>{t.descrizione || t.categoria}</Text>
-                                <Text style={styles.transDate}>{new Date(t.data).toLocaleDateString('it-IT')}</Text>
+                                <Text style={[styles.transDesc, isDarkMode && { color: '#F9FAFB' }]}>{t.descrizione || t.categoria}</Text>
+                                <Text style={[styles.transDate, isDarkMode && { color: '#9CA3AF' }]}>{new Date(t.data).toLocaleDateString('it-IT')}</Text>
                             </View>
                             <Text style={[styles.transAmount, { color: t.importo >= 0 ? '#059669' : '#DC2626' }]}>
-                                {t.importo >= 0 ? '+' : ''}€{Math.abs(t.importo).toFixed(2)}
+                                {showBalance ? `${t.importo >= 0 ? '+' : ''}${currency}${Math.abs(t.importo).toFixed(2)}` : '****'}
                             </Text>
                         </View>
                     ))}

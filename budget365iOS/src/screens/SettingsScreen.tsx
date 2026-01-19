@@ -11,13 +11,18 @@ import {
     Linking
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
 
 const SettingsScreen: React.FC = () => {
     const { logout, userToken } = useAuth();
-    const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about'>('menu');
+    const { theme, setTheme, currency, setCurrency, showBalance, setShowBalance, isDarkMode } = useSettings();
+    const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about' | 'customization' | 'email'>('menu');
+
+    // Profile Settings State
+    const [email, setEmail] = useState('');
 
     // Password Change State
     const [currentPassword, setCurrentPassword] = useState('');
@@ -116,56 +121,69 @@ const SettingsScreen: React.FC = () => {
 
     const renderMenu = () => (
         <View style={styles.menuContainer}>
-            <TouchableOpacity style={styles.menuItem} onPress={() => setActiveTab('password')}>
-                <Text style={styles.menuItemText}>🔒 Change Password</Text>
+            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('email')}>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>📧 Link Email</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem} onPress={() => setActiveTab('about')}>
-                <Text style={styles.menuItemText}>ℹ️ About Us</Text>
+            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('password')}>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🔒 Change Password</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('customization')}>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🎨 App Customization</Text>
+                <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('about')}>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>ℹ️ About Us</Text>
+                <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={handleDeleteAccount}>
                 <Text style={[styles.menuItemText, { color: '#DC2626' }]}>🗑️ Delete Account</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={logout}>
-                <Text style={[styles.menuItemText, styles.logoutText]}>🚪 Logout</Text>
+            <TouchableOpacity style={[styles.menuItem, styles.logoutButton, isDarkMode && { backgroundColor: '#450a0a', borderColor: '#7f1d1d' }]} onPress={logout}>
+                <Text style={[styles.menuItemText, styles.logoutText, isDarkMode && { color: '#ef4444' }]}>🚪 Logout</Text>
             </TouchableOpacity>
         </View>
     );
 
     const renderPasswordChange = () => (
-        <View style={styles.contentContainer}>
-            <Text style={styles.title}>Change Password</Text>
+        <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Change Password</Text>
 
-            <Text style={styles.label}>Current Password</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Current Password</Text>
             <TextInput
-                style={styles.input}
+                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                 secureTextEntry
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 placeholder="Enter current password"
+                placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
             />
 
-            <Text style={styles.label}>New Password</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>New Password</Text>
             <TextInput
-                style={styles.input}
+                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                 secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
                 placeholder="Enter new password"
+                placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
             />
 
-            <Text style={styles.label}>Confirm New Password</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Confirm New Password</Text>
             <TextInput
-                style={styles.input}
+                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 placeholder="Confirm new password"
+                placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
             />
 
             <TouchableOpacity
@@ -187,34 +205,34 @@ const SettingsScreen: React.FC = () => {
     );
 
     const renderAbout = () => (
-        <ScrollView style={styles.contentContainer}>
-            <Text style={styles.title}>About Budget 365</Text>
-            <Text style={styles.description}>
+        <ScrollView style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>About Budget 365</Text>
+            <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
                 Budget 365 is your complete solution for personal finance management.
                 Designed to be simple yet powerful, it helps you track your income and expenses intuitively.
             </Text>
 
-            <View style={styles.section}>
-                <Text style={styles.sectionHeader}>🎯 Our Goals</Text>
-                <Text style={styles.listItem}>✓ Simple and accessible management</Text>
-                <Text style={styles.listItem}>✓ Powerful tools without complexity</Text>
-                <Text style={styles.listItem}>✓ Guaranteed security and privacy</Text>
+            <View style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🎯 Our Goals</Text>
+                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Simple and accessible management</Text>
+                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Powerful tools without complexity</Text>
+                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Guaranteed security and privacy</Text>
             </View>
 
             <TouchableOpacity
-                style={styles.section}
+                style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}
                 onPress={() => Linking.openURL('https://various-sushi-3f4.notion.site/Budget365-Privacy-Policy-2e372b8820f88038a92ef83fedfd03d7')}
                 activeOpacity={0.8}
             >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={styles.sectionHeader}>🔒 Privacy Policy</Text>
+                    <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🔒 Privacy Policy</Text>
                     <Text style={{ fontSize: 18, color: '#4F46E5', fontWeight: 'bold' }}>↗️</Text>
                 </View>
             </TouchableOpacity>
 
-            <View style={styles.section}>
-                <Text style={styles.sectionHeader}>✉️ Contact Us</Text>
-                <Text style={styles.description}>
+            <View style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>✉️ Contact Us</Text>
+                <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
                     Have questions or suggestions? Email us at support@budget365.com
                 </Text>
             </View>
@@ -225,11 +243,138 @@ const SettingsScreen: React.FC = () => {
         </ScrollView>
     );
 
+    const renderCustomization = () => (
+        <ScrollView style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>App Customization</Text>
+
+            {/* Theme Section */}
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🌓 Theme</Text>
+                <View style={styles.optionsRow}>
+                    {(['light', 'dark', 'system'] as const).map((t) => (
+                        <TouchableOpacity
+                            key={t}
+                            style={[styles.optionBtn, isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' }, theme === t && styles.activeOptionBtn]}
+                            onPress={() => setTheme(t)}
+                        >
+                            <Text style={[styles.optionBtnText, isDarkMode && { color: '#9CA3AF' }, theme === t && styles.activeOptionBtnText]}>
+                                {t.charAt(0) + t.slice(1)}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
+            {/* Currency Section */}
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>💰 Currency</Text>
+                <View style={styles.optionsRow}>
+                    {(['€', '$', '£'] as const).map((c) => (
+                        <TouchableOpacity
+                            key={c}
+                            style={[styles.optionBtn, isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' }, currency === c && styles.activeOptionBtn]}
+                            onPress={() => setCurrency(c)}
+                        >
+                            <Text style={[styles.optionBtnText, isDarkMode && { color: '#9CA3AF' }, currency === c && styles.activeOptionBtnText]}>{c}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
+            {/* Privacy Section */}
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🛡️ Privacy</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }, { marginBottom: 0 }]}>Show Balance on Dashboard</Text>
+                    <TouchableOpacity
+                        style={[styles.toggleBtn, showBalance && styles.activeToggleBtn, isDarkMode && !showBalance && { backgroundColor: '#4B5563' }]}
+                        onPress={() => setShowBalance(!showBalance)}
+                    >
+                        <View style={[styles.toggleCircle, showBalance && styles.activeToggleCircle]} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <TouchableOpacity style={[styles.secondaryButton, { marginBottom: 40 }]} onPress={() => setActiveTab('menu')}>
+                <Text style={styles.secondaryButtonText}>Back</Text>
+            </TouchableOpacity>
+        </ScrollView>
+    );
+
+    const handleUpdateEmail = async () => {
+        if (!email) {
+            Alert.alert('Error', 'Please enter an email address');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_URL}/api/auth/update-email`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                Alert.alert('Success', 'Email updated successfully');
+                setActiveTab('menu');
+            } else {
+                Alert.alert('Error', data.message || 'Failed to update email');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Connection error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const renderEmailUpdate = () => (
+        <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Email Settings</Text>
+            <Text style={[styles.description, isDarkMode && { color: '#9CA3AF' }]}>
+                Adding an email allows you to recover your account and log in more securely.
+            </Text>
+
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Email Address</Text>
+            <TextInput
+                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email"
+                placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
+            />
+
+            <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleUpdateEmail}
+                disabled={isLoading}
+            >
+                {isLoading ? (
+                    <ActivityIndicator color="white" />
+                ) : (
+                    <Text style={styles.primaryButtonText}>Save Email</Text>
+                )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('menu')}>
+                <Text style={styles.secondaryButtonText}>Back</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
             {activeTab === 'menu' && renderMenu()}
             {activeTab === 'password' && renderPasswordChange()}
             {activeTab === 'about' && renderAbout()}
+            {activeTab === 'customization' && renderCustomization()}
+            {activeTab === 'email' && renderEmailUpdate()}
         </View>
     );
 };
@@ -347,6 +492,50 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#4B5563',
         marginBottom: 8,
+    },
+    optionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    optionBtn: {
+        flex: 1,
+        paddingVertical: 10,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+    },
+    activeOptionBtn: {
+        backgroundColor: '#4F46E5',
+        borderColor: '#4F46E5',
+    },
+    optionBtnText: {
+        color: '#374151',
+        fontWeight: '600',
+    },
+    activeOptionBtnText: {
+        color: 'white',
+    },
+    toggleBtn: {
+        width: 50,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#D1D5DB',
+        padding: 2,
+    },
+    activeToggleBtn: {
+        backgroundColor: '#4F46E5',
+    },
+    toggleCircle: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'white',
+        transform: [{ translateX: 0 }],
+    },
+    activeToggleCircle: {
+        transform: [{ translateX: 22 }],
     },
 });
 

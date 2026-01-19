@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -21,12 +22,14 @@ interface RegisterScreenProps {
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!username || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -48,7 +51,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const data = await response.json();
@@ -77,23 +80,24 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Budget 365</Text>
-          <Text style={styles.subtitle}>Create your account</Text>
+          <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Budget 365</Text>
+          <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>Create your account</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
-              placeholder="Username"
-              value={username}
-              onChangeText={setUsername}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
               autoCapitalize="none"
+              keyboardType="email-address"
               autoCorrect={false}
               placeholderTextColor="#9CA3AF"
             />
@@ -101,7 +105,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
@@ -114,7 +118,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -141,7 +145,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             style={styles.loginLink}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.loginLinkText}>
+            <Text style={[styles.loginLinkText, isDarkMode && { color: '#818CF8' }]}>
               Already have an account? Login
             </Text>
           </TouchableOpacity>

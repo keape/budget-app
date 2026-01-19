@@ -14,26 +14,29 @@ import BudgetScreen from './src/screens/BudgetScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { SettingsProvider, useSettings } from './src/context/SettingsContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const MainTabs = () => {
+  const { isDarkMode } = useSettings();
+
   return (
     <Tab.Navigator
       screenOptions={{
         tabBarActiveTintColor: '#4F46E5',
-        tabBarInactiveTintColor: '#6B7280',
+        tabBarInactiveTintColor: isDarkMode ? '#9CA3AF' : '#6B7280',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',
           borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
+          borderTopColor: isDarkMode ? '#374151' : '#E5E7EB',
           paddingTop: 5,
           paddingBottom: 5,
           height: 60,
         },
         headerStyle: {
-          backgroundColor: '#4F46E5',
+          backgroundColor: isDarkMode ? '#111827' : '#4F46E5',
         },
         headerTintColor: '#FFFFFF',
         headerTitleStyle: {
@@ -95,10 +98,11 @@ const MainTabs = () => {
 
 const AppNavigator = () => {
   const { isLoading, isAuthenticated } = useAuth();
+  const { isDarkMode } = useSettings();
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, isDarkMode && { backgroundColor: '#111827' }]}>
         <ActivityIndicator size="large" color="#4F46E5" />
       </View>
     );
@@ -116,7 +120,7 @@ const AppNavigator = () => {
               options={{
                 headerShown: true,
                 title: 'New Transaction',
-                headerStyle: { backgroundColor: '#4F46E5' },
+                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
                 headerTintColor: '#fff'
               }}
             />
@@ -127,7 +131,7 @@ const AppNavigator = () => {
               options={{
                 headerShown: true,
                 title: 'Settings',
-                headerStyle: { backgroundColor: '#4F46E5' },
+                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
                 headerTintColor: '#fff'
               }}
             />
@@ -147,7 +151,9 @@ const App = () => {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <AppNavigator />
+        <SettingsProvider>
+          <AppNavigator />
+        </SettingsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

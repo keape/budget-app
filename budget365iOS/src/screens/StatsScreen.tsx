@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -23,6 +24,7 @@ interface CategoryStats {
 
 const StatsScreen: React.FC = () => {
     const { userToken } = useAuth();
+    const { currency, isDarkMode } = useSettings();
 
     // Selection State
     const [periodMode, setPeriodMode] = useState<'year' | 'month'>('year');
@@ -142,7 +144,7 @@ const StatsScreen: React.FC = () => {
         const CHART_MAX_HEIGHT = 150;
 
         return (
-            <View style={styles.chartContainer}>
+            <View style={[styles.chartContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={styles.chartInner}>
                         {statsData.map((d, i) => (
@@ -151,31 +153,31 @@ const StatsScreen: React.FC = () => {
                                     {/* Budget Bar */}
                                     <View style={[
                                         styles.bar,
-                                        { height: (d.budget / maxVal) * CHART_MAX_HEIGHT, backgroundColor: '#3B82F6' }
+                                        { height: (d.budget / maxVal) * CHART_MAX_HEIGHT, backgroundColor: isDarkMode ? '#60A5FA' : '#3B82F6' }
                                     ]} />
                                     {/* Actual Bar */}
                                     <View style={[
                                         styles.bar,
                                         {
                                             height: (d.actual / maxVal) * CHART_MAX_HEIGHT,
-                                            backgroundColor: typeMode === 'spese' ? '#EF4444' : '#10B981'
+                                            backgroundColor: isDarkMode ? '#A855F7' : '#6B21A8'
                                         }
                                     ]} />
                                 </View>
-                                <Text style={styles.barLabel} numberOfLines={1}>{d.category}</Text>
+                                <Text style={[styles.barLabel, isDarkMode && { color: '#9CA3AF' }]} numberOfLines={1}>{d.category}</Text>
                             </View>
                         ))}
                     </View>
                 </ScrollView>
                 {/* Legend */}
-                <View style={styles.legend}>
+                <View style={[styles.legend, isDarkMode && { borderTopColor: '#374151' }]}>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendColor, { backgroundColor: '#3B82F6' }]} />
-                        <Text style={styles.legendText}>Budget</Text>
+                        <View style={[styles.legendColor, { backgroundColor: isDarkMode ? '#60A5FA' : '#3B82F6' }]} />
+                        <Text style={[styles.legendText, isDarkMode && { color: '#D1D5DB' }]}>Budget</Text>
                     </View>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendColor, { backgroundColor: typeMode === 'spese' ? '#EF4444' : '#10B981' }]} />
-                        <Text style={styles.legendText}>{typeMode === 'spese' ? 'Expenses' : 'Income'}</Text>
+                        <View style={[styles.legendColor, { backgroundColor: isDarkMode ? '#A855F7' : '#6B21A8' }]} />
+                        <Text style={[styles.legendText, isDarkMode && { color: '#D1D5DB' }]}>{typeMode === 'spese' ? 'Expenses' : 'Income'}</Text>
                     </View>
                 </View>
             </View>
@@ -183,21 +185,21 @@ const StatsScreen: React.FC = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
             {/* Header Filters */}
-            <View style={styles.filterSection}>
+            <View style={[styles.filterSection, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
                 <View style={styles.filterRow}>
                     <TouchableOpacity
-                        style={[styles.smallBtn, periodMode === 'year' && styles.activeSmallBtn]}
+                        style={[styles.smallBtn, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, periodMode === 'year' && styles.activeSmallBtn]}
                         onPress={() => setPeriodMode('year')}
                     >
-                        <Text style={[styles.smallBtnText, periodMode === 'year' && styles.activeSmallBtnText]}>Full Year</Text>
+                        <Text style={[styles.smallBtnText, isDarkMode && { color: '#D1D5DB' }, periodMode === 'year' && styles.activeSmallBtnText]}>Full Year</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.smallBtn, periodMode === 'month' && styles.activeSmallBtn]}
+                        style={[styles.smallBtn, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, periodMode === 'month' && styles.activeSmallBtn]}
                         onPress={() => setPeriodMode('month')}
                     >
-                        <Text style={[styles.smallBtnText, periodMode === 'month' && styles.activeSmallBtnText]}>Month</Text>
+                        <Text style={[styles.smallBtnText, isDarkMode && { color: '#D1D5DB' }, periodMode === 'month' && styles.activeSmallBtnText]}>Month</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -206,10 +208,10 @@ const StatsScreen: React.FC = () => {
                         {years.map(y => (
                             <TouchableOpacity
                                 key={y}
-                                style={[styles.chip, selectedYear === y && styles.activeChip]}
+                                style={[styles.chip, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, selectedYear === y && styles.activeChip]}
                                 onPress={() => setSelectedYear(y)}
                             >
-                                <Text style={[styles.chipText, selectedYear === y && styles.activeChipText]}>{y}</Text>
+                                <Text style={[styles.chipText, isDarkMode && { color: '#D1D5DB' }, selectedYear === y && styles.activeChipText]}>{y}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -221,28 +223,28 @@ const StatsScreen: React.FC = () => {
                             {months.map((m, idx) => (
                                 <TouchableOpacity
                                     key={m}
-                                    style={[styles.chip, selectedMonth === idx && styles.activeChip]}
+                                    style={[styles.chip, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, selectedMonth === idx && styles.activeChip]}
                                     onPress={() => setSelectedMonth(idx)}
                                 >
-                                    <Text style={[styles.chipText, selectedMonth === idx && styles.activeChipText]}>{m}</Text>
+                                    <Text style={[styles.chipText, isDarkMode && { color: '#D1D5DB' }, selectedMonth === idx && styles.activeChipText]}>{m}</Text>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
                     </View>
                 )}
 
-                <View style={styles.typeSelector}>
+                <View style={[styles.typeSelector, isDarkMode && { borderColor: '#374151' }]}>
                     <TouchableOpacity
-                        style={[styles.typeBtn, typeMode === 'spese' && styles.activeTypeBtnUscite]}
+                        style={[styles.typeBtn, isDarkMode && { backgroundColor: '#1F2937' }, typeMode === 'spese' && styles.activeTypeBtnUscite]}
                         onPress={() => setTypeMode('spese')}
                     >
-                        <Text style={[styles.typeBtnText, typeMode === 'spese' && styles.activeTypeBtnText]}>Expenses</Text>
+                        <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, typeMode === 'spese' && styles.activeTypeBtnText]}>Expenses</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.typeBtn, typeMode === 'entrate' && styles.activeTypeBtnEntrate]}
+                        style={[styles.typeBtn, isDarkMode && { backgroundColor: '#1F2937' }, typeMode === 'entrate' && styles.activeTypeBtnEntrate]}
                         onPress={() => setTypeMode('entrate')}
                     >
-                        <Text style={[styles.typeBtnText, typeMode === 'entrate' && styles.activeTypeBtnText]}>Income</Text>
+                        <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, typeMode === 'entrate' && styles.activeTypeBtnText]}>Income</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -252,7 +254,7 @@ const StatsScreen: React.FC = () => {
                     <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
                 ) : (
                     <>
-                        <Text style={styles.sectionTitle}>
+                        <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
                             Budget {periodMode === 'year' ? `Full year ${selectedYear}` : `${months[selectedMonth]} ${selectedYear}`}
                         </Text>
 
@@ -260,11 +262,11 @@ const StatsScreen: React.FC = () => {
                         <View style={styles.summaryContainer}>
                             <View style={[styles.summaryCard, { backgroundColor: '#1E3A8A' }]}>
                                 <Text style={styles.cardLabel}>Planned Budget</Text>
-                                <Text style={styles.cardValue}>€{totals.budget.toFixed(2)}</Text>
+                                <Text style={styles.cardValue}>{currency}{totals.budget.toFixed(2)}</Text>
                             </View>
-                            <View style={[styles.summaryCard, { backgroundColor: '#064E3B' }]}>
+                            <View style={[styles.summaryCard, { backgroundColor: '#6B21A8' }]}>
                                 <Text style={styles.cardLabel}>{typeMode === 'spese' ? 'Actual Spending' : 'Actual Income'}</Text>
-                                <Text style={styles.cardValue}>€{totals.actual.toFixed(2)}</Text>
+                                <Text style={styles.cardValue}>{currency}{totals.actual.toFixed(2)}</Text>
                             </View>
                             <View style={[
                                 styles.summaryCard,
@@ -275,7 +277,7 @@ const StatsScreen: React.FC = () => {
                                 }
                             ]}>
                                 <Text style={styles.cardLabel}>Difference</Text>
-                                <Text style={styles.cardValue}>€{Math.abs(totals.diff).toFixed(2)}</Text>
+                                <Text style={styles.cardValue}>{currency}{Math.abs(totals.diff).toFixed(2)}</Text>
                                 <Text style={styles.cardInfo}>
                                     {typeMode === 'spese'
                                         ? (totals.diff >= 0 ? 'Savings' : 'Overbudget')
@@ -288,31 +290,31 @@ const StatsScreen: React.FC = () => {
                         {renderBarChart()}
 
                         {/* Table */}
-                        <View style={styles.tableContainer}>
-                            <View style={styles.tableHeader}>
-                                <Text style={[styles.tableHeaderText, { flex: 2 }]}>CATEGORY</Text>
-                                <Text style={styles.tableHeaderText}>BUDGET</Text>
-                                <Text style={styles.tableHeaderText}>ACTUAL</Text>
-                                <Text style={styles.tableHeaderText}>DIFF.</Text>
+                        <View style={[styles.tableContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                            <View style={[styles.tableHeader, isDarkMode && { backgroundColor: '#374151', borderBottomColor: '#4B5563' }]}>
+                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }, { flex: 2 }]}>CATEGORY</Text>
+                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }]}>BUDGET</Text>
+                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }]}>ACTUAL</Text>
+                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }]}>DIFF.</Text>
                             </View>
                             {statsData.map((item, idx) => {
                                 const diff = item.budget - item.actual;
                                 return (
-                                    <View key={idx} style={styles.tableRow}>
-                                        <Text style={[styles.tableCell, { flex: 2, fontWeight: 'bold' }]} numberOfLines={1}>
+                                    <View key={idx} style={[styles.tableRow, isDarkMode && { borderBottomColor: '#374151' }]}>
+                                        <Text style={[styles.tableCell, isDarkMode && { color: '#F9FAFB' }, { flex: 2, fontWeight: 'bold' }]} numberOfLines={1}>
                                             {item.category}
                                         </Text>
-                                        <Text style={styles.tableCell}>€{item.budget.toFixed(0)}</Text>
-                                        <Text style={styles.tableCell}>€{item.actual.toFixed(0)}</Text>
+                                        <Text style={[styles.tableCell, isDarkMode && { color: '#D1D5DB' }]}>{currency}{item.budget.toFixed(0)}</Text>
+                                        <Text style={[styles.tableCell, isDarkMode && { color: '#E5E7EB' }]}>{currency}{item.actual.toFixed(0)}</Text>
                                         <Text style={[
                                             styles.tableCell,
                                             {
                                                 color: typeMode === 'spese'
-                                                    ? (diff >= 0 ? '#059669' : '#DC2626')
-                                                    : (diff <= 0 ? '#059669' : '#DC2626')
+                                                    ? (diff >= 0 ? (isDarkMode ? '#34D399' : '#059669') : (isDarkMode ? '#F87171' : '#DC2626'))
+                                                    : (diff <= 0 ? (isDarkMode ? '#34D399' : '#059669') : (isDarkMode ? '#F87171' : '#DC2626'))
                                             }
                                         ]}>
-                                            €{Math.abs(diff).toFixed(0)}
+                                            {currency}{Math.abs(diff).toFixed(0)}
                                         </Text>
                                     </View>
                                 );

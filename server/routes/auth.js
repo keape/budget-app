@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const axios = require('axios');
 const User = require('../models/User');
 const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
@@ -19,17 +20,22 @@ router.post('/register', async (req, res) => {
     const { username, password, email } = req.body;
 
     // Validazione input
-    if (!username || !password) {
-      console.log('❌ DEBUG: Dati mancanti - username:', username, 'password:', !!password);
-      return res.status(400).json({ message: "Username e password sono richiesti" });
+    if (!username || !password || !email) {
+      console.log('❌ DEBUG: Dati mancanti - username:', username, 'email:', email, 'password:', !!password);
+      return res.status(400).json({ message: "Username, email e password sono richiesti" });
     }
 
-    console.log('🔍 DEBUG: Controllo utente esistente per username:', username);
-    const existingUser = await User.findOne({ username });
-
-    if (existingUser) {
+    console.log('🔍 DEBUG: Controllo utente esistente...');
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
       console.log('❌ DEBUG: Username già esistente:', username);
       return res.status(400).json({ message: "Username già in uso" });
+    }
+
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      console.log('❌ DEBUG: Email già esistente:', email);
+      return res.status(400).json({ message: "Email già in uso" });
     }
 
     console.log('🔍 DEBUG: Hashing password...');
@@ -96,12 +102,15 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
-    console.log('🔍 LOGIN tentativo per username:', username);
+    const { identifier, password } = req.body; // 'identifier' can be email or username
+    console.log('🔍 LOGIN tentativo per identifier:', identifier);
 
-    const user = await User.findOne({ username });
+    const user = await User.findOne({
+      $or: [{ username: identifier }, { email: identifier }]
+    });
+
     if (!user) {
-      console.log('❌ LOGIN: Utente non trovato:', username);
+      console.log('❌ LOGIN: Utente non trovato:', identifier);
       return res.status(401).json({ message: "Credenziali non valide" });
     }
 
@@ -208,6 +217,130 @@ router.post('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/auth/social-login
+router.post('/social-login', async (req, res) => {
+  try {
+    const { provider, token, idToken, user: socialUser } = req.body;
+    let socialId, email, name;
+
+    if (provider === 'facebook') {
+      const fbRes = await axios.get(`https://graph.facebook.com/me?access_token=${token}&fields=id,name,email`);
+      socialId = fbRes.data.id;
+      email = fbRes.data.email;
+      name = fbRes.data.name;
+    } else if (provider === 'apple') {
+      // NOTE: In production, verify idToken signature with Apple Public Keys
+      const decoded = jwt.decode(idToken);
+      socialId = decoded.sub;
+      email = decoded.email;
+      // Apple only sends name on the first login in the 'user' object from RN
+      name = socialUser?.name?.firstName ? `${socialUser.name.firstName} ${socialUser.name.lastName}` : email;
+    } else {
+      return res.status(400).json({ message: "Provider non supportato" });
+    }
+
+    if (!socialId) {
+      return res.status(400).json({ message: "Impossibile ottenere ID social" });
+    }
+
+    // Cerca utente per ID Social o Email
+    let user = await User.findOne({
+      $or: [
+        { facebookId: provider === 'facebook' ? socialId : undefined },
+        { appleId: provider === 'apple' ? socialId : undefined },
+        { email: email && email !== '' ? email : '___invalid_email___' }
+      ].filter(q => Object.values(q)[0] !== undefined)
+    });
+
+    if (!user) {
+      // Crea nuovo utente
+      const tempPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+      // Genera username univoco basato su email o nome
+      let baseUsername = email ? email.split('@')[0] : (name ? name.replace(/\s/g, '').toLowerCase() : 'user');
+      let username = baseUsername;
+      let counter = 1;
+      while (await User.findOne({ username })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
+      user = new User({
+        username,
+        email,
+        password: hashedPassword,
+        facebookId: provider === 'facebook' ? socialId : undefined,
+        appleId: provider === 'apple' ? socialId : undefined
+      });
+      await user.save();
+
+      // Crea budget di default
+      try {
+        const now = new Date();
+        const defaultBudget = {
+          userId: user._id.toString(),
+          anno: now.getFullYear(),
+          mese: now.getMonth(),
+          spese: { "Home": 0, "Vacation": 0, "Car": 0, "Mortgage": 0 },
+          entrate: { "Salary": 0, "MBO": 0, "Welfare": 0 },
+          createdAt: now,
+          updatedAt: now
+        };
+        await mongoose.connection.db.collection('budgetsettings_new').insertOne(defaultBudget);
+      } catch (e) { console.error('Default budget skip:', e); }
+
+    } else {
+      // Aggiorna ID social se non presente
+      if (provider === 'facebook' && !user.facebookId) {
+        user.facebookId = socialId;
+        await user.save();
+      } else if (provider === 'apple' && !user.appleId) {
+        user.appleId = socialId;
+        await user.save();
+      }
+    }
+
+    const jwtToken = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token: jwtToken });
+
+  } catch (error) {
+    console.error('❌ Social Login Error:', error.response?.data || error.message);
+    res.status(500).json({ message: "Errore durante il social login" });
+  }
+});
+
+// POST /api/auth/update-email
+router.post('/update-email', authenticateToken, async (req, res) => {
+  try {
+    const { email } = req.body;
+    const userId = req.user.userId;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email è richiesta" });
+    }
+
+    // Verifica se l'email è già in uso da un ALTRO utente
+    const existingUser = await User.findOne({ email, _id: { $ne: userId } });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email già in uso da un altro account" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Utente non trovato" });
+    }
+
+    user.email = email;
+    await user.save();
+
+    res.json({ message: "Email aggiornata con successo" });
+  } catch (error) {
+    console.error('❌ Errore durante l\'aggiornamento email:', error);
+    res.status(500).json({ message: "Errore durante l'aggiornamento dell'email" });
+  }
+});
+
 // DELETE /api/auth/delete-account
 router.delete('/delete-account', authenticateToken, async (req, res) => {
   try {
@@ -248,13 +381,15 @@ router.delete('/delete-account', authenticateToken, async (req, res) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { username } = req.body;
+    const { identifier } = req.body; // Can be username or email
 
-    if (!username) {
-      return res.status(400).json({ message: "Username è richiesto" });
+    if (!identifier) {
+      return res.status(400).json({ message: "Identificativo (Email o Username) è richiesto" });
     }
 
-    const user = await User.findOne({ username });
+    const user = await User.findOne({
+      $or: [{ username: identifier }, { email: identifier }]
+    });
     if (!user) {
       // Per sicurezza, non rivelare se l'utente esiste o meno
       return res.json({ message: "Se l'utente esiste, riceverai le istruzioni per il reset" });

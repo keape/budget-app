@@ -14,7 +14,9 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: false,
-    trim: true
+    unique: true,
+    trim: true,
+    sparse: true
   },
   resetPasswordToken: {
     type: String,
@@ -23,6 +25,18 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: {
     type: Date,
     required: false
+  },
+  facebookId: {
+    type: String,
+    required: false,
+    unique: true,
+    sparse: true
+  },
+  appleId: {
+    type: String,
+    required: false,
+    unique: true,
+    sparse: true
   }
 }, {
   timestamps: true
