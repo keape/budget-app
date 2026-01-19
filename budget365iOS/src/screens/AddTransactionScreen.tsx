@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -23,6 +24,7 @@ interface AddTransactionScreenProps {
 
 const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation, route }) => {
   const { userToken, logout } = useAuth();
+  const { currency, isDarkMode } = useSettings();
   const [tipo, setTipo] = useState<'spesa' | 'entrata'>('spesa');
   const [importo, setImporto] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -225,14 +227,14 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{isEditing ? 'Edit Transaction' : 'Manage Transactions'}</Text>
+        <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{isEditing ? 'Edit Transaction' : 'Manage Transactions'}</Text>
       </View>
 
       {/* Selettore Modalità - Disable in Edit Mode */}
       {!isEditing && (
-        <View style={styles.modalitySelector}>
+        <View style={[styles.modalitySelector, isDarkMode && { backgroundColor: '#374151' }]}>
           <TouchableOpacity
             style={[
               styles.modalityButton,
@@ -242,6 +244,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
           >
             <Text style={[
               styles.modalityButtonText,
+              isDarkMode && { color: '#D1D5DB' },
               modalitaTransazione === 'una_tantum' && styles.modalityButtonTextActive
             ]}>
               📅 One-time
@@ -257,6 +260,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
           >
             <Text style={[
               styles.modalityButtonText,
+              isDarkMode && { color: '#D1D5DB' },
               modalitaTransazione === 'periodica' && styles.modalityButtonTextActive
             ]}>
               🔄 Periodic
@@ -272,12 +276,14 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             style={[
               styles.tipoButton,
               styles.tipoButtonLeft,
+              isDarkMode && { backgroundColor: '#374151' },
               tipo === 'spesa' && styles.tipoButtonSpesaActive
             ]}
             onPress={() => handleTipoChange('spesa')}
           >
             <Text style={[
               styles.tipoButtonText,
+              isDarkMode && { color: '#D1D5DB' },
               tipo === 'spesa' && styles.tipoButtonTextActive
             ]}>
               Expense
@@ -288,12 +294,14 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             style={[
               styles.tipoButton,
               styles.tipoButtonRight,
+              isDarkMode && { backgroundColor: '#374151' },
               tipo === 'entrata' && styles.tipoButtonEntrataActive
             ]}
             onPress={() => handleTipoChange('entrata')}
           >
             <Text style={[
               styles.tipoButtonText,
+              isDarkMode && { color: '#D1D5DB' },
               tipo === 'entrata' && styles.tipoButtonTextActive
             ]}>
               Income
@@ -304,8 +312,8 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         {/* Importo */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
-            placeholder="Amount (e.g. 12.50)"
+            style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+            placeholder={`Amount (${currency} e.g. 12.50)`}
             value={importo}
             onChangeText={setImporto}
             keyboardType="numeric"
@@ -315,19 +323,21 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
 
         {/* Categoria */}
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Categoria</Text>
+          <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Categoria</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categorieContainer}>
             {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
               <TouchableOpacity
                 key={cat}
                 style={[
                   styles.categoriaButton,
+                  isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' },
                   categoria === cat && styles.categoriaButtonActive
                 ]}
                 onPress={() => setCategoria(cat)}
               >
                 <Text style={[
                   styles.categoriaButtonText,
+                  isDarkMode && { color: '#D1D5DB' },
                   categoria === cat && styles.categoriaButtonTextActive
                 ]}>
                   {cat}
@@ -340,7 +350,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         {/* Descrizione */}
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
             placeholder="Description (optional)"
             value={descrizione}
             onChangeText={setDescrizione}
@@ -351,9 +361,9 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         {/* Data - Solo per una_tantum */}
         {modalitaTransazione === 'una_tantum' && (
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Date (YYYY-MM-DD)</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Date (YYYY-MM-DD)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="YYYY-MM-DD"
               value={data}
               onChangeText={setData}
@@ -364,23 +374,25 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
 
         {/* CAMPI AGGIUNTIVI PER TRANS. PERIODICA */}
         {modalitaTransazione === 'periodica' ? (
-          <View style={styles.periodicaContainer}>
-            <Text style={styles.sectionTitle}>Recurring Options</Text>
+          <View style={[styles.periodicaContainer, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }]}>
+            <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>Recurring Options</Text>
 
             {/* Tipo Ripetizione */}
-            <Text style={styles.label}>Frequency</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Frequency</Text>
             <View style={styles.chipContainer}>
               {tipiRipetizione.map((rep) => (
                 <TouchableOpacity
                   key={rep.value}
                   style={[
                     styles.chip,
+                    isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' },
                     tipoRipetizione === rep.value && styles.chipActive
                   ]}
                   onPress={() => setTipoRipetizione(rep.value)}
                 >
                   <Text style={[
                     styles.chipText,
+                    isDarkMode && { color: '#D1D5DB' },
                     tipoRipetizione === rep.value && styles.chipTextActive
                   ]}>{rep.label}</Text>
                 </TouchableOpacity>
@@ -388,9 +400,9 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             </View>
 
             {/* Data Inizio */}
-            <Text style={styles.label}>Start Date (YYYY-MM-DD)</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Start Date (YYYY-MM-DD)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="YYYY-MM-DD"
               value={dataInizio}
               onChangeText={setDataInizio}
@@ -399,7 +411,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
 
             {/* Infinito Switch */}
             <View style={styles.switchContainer}>
-              <Text style={styles.label}>Infinite Recurrence</Text>
+              <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Infinite Recurrence</Text>
               <Switch
                 value={isInfinito}
                 onValueChange={setIsInfinito}
@@ -411,9 +423,9 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             {/* Data Fine (se non infinito) */}
             {!isInfinito && (
               <View>
-                <Text style={styles.label}>End Date (YYYY-MM-DD)</Text>
+                <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>End Date (YYYY-MM-DD)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                   placeholder="YYYY-MM-DD"
                   value={dataFine}
                   onChangeText={setDataFine}

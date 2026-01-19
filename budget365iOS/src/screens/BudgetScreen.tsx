@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -24,6 +25,7 @@ interface BudgetScreenProps {
 
 const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const { userToken, logout } = useAuth();
+  const { currency, isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -285,19 +287,19 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const renderMonthPicker = () => (
     <Modal visible={isMonthModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
-        <View style={styles.pickerModalContent}>
-          <Text style={styles.modalTitlePicker}>Select Month</Text>
+        <View style={[styles.pickerModalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
+          <Text style={[styles.modalTitlePicker, isDarkMode && { color: '#F9FAFB' }]}>Select Month</Text>
           <ScrollView>
             {months.map((m, idx) => (
               <TouchableOpacity
                 key={m}
-                style={[styles.pickerItem, selectedMonth === idx && styles.pickerItemActive]}
+                style={[styles.pickerItem, isDarkMode && { borderBottomColor: '#374151' }, selectedMonth === idx && (isDarkMode ? { backgroundColor: '#374151' } : styles.pickerItemActive)]}
                 onPress={() => {
                   setSelectedMonth(idx);
                   setIsMonthModalVisible(false);
                 }}
               >
-                <Text style={[styles.pickerItemText, selectedMonth === idx && styles.pickerItemTextActive]}>{m}</Text>
+                <Text style={[styles.pickerItemText, isDarkMode && { color: '#D1D5DB' }, selectedMonth === idx && styles.pickerItemTextActive]}>{m}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -312,19 +314,19 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const renderYearPicker = () => (
     <Modal visible={isYearModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
-        <View style={styles.pickerModalContent}>
-          <Text style={styles.modalTitlePicker}>Select Year</Text>
+        <View style={[styles.pickerModalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
+          <Text style={[styles.modalTitlePicker, isDarkMode && { color: '#F9FAFB' }]}>Select Year</Text>
           <ScrollView>
             {years.map(y => (
               <TouchableOpacity
                 key={y}
-                style={[styles.pickerItem, selectedYear === y && styles.pickerItemActive]}
+                style={[styles.pickerItem, isDarkMode && { borderBottomColor: '#374151' }, selectedYear === y && (isDarkMode ? { backgroundColor: '#374151' } : styles.pickerItemActive)]}
                 onPress={() => {
                   setSelectedYear(y);
                   setIsYearModalVisible(false);
                 }}
               >
-                <Text style={[styles.pickerItemText, selectedYear === y && styles.pickerItemTextActive]}>{y}</Text>
+                <Text style={[styles.pickerItemText, isDarkMode && { color: '#D1D5DB' }, selectedYear === y && styles.pickerItemTextActive]}>{y}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -469,22 +471,22 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Budget Planner</Text>
-        <Text style={styles.subtitle}>Manage your monthly limits</Text>
+      <View style={[styles.header, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
+        <Text style={[styles.title, isDarkMode && { color: '#F9FAFB' }]}>Budget Planner</Text>
+        <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>Manage your monthly limits</Text>
       </View>
 
       {/* Period Selection */}
       <View style={styles.periodContainer}>
-        <TouchableOpacity style={styles.periodButton} onPress={() => setIsMonthModalVisible(true)}>
-          <Text style={styles.periodButtonText}>{months[selectedMonth]}</Text>
+        <TouchableOpacity style={[styles.periodButton, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }]} onPress={() => setIsMonthModalVisible(true)}>
+          <Text style={[styles.periodButtonText, isDarkMode && { color: '#F9FAFB' }]}>{months[selectedMonth]}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.periodButton} onPress={() => setIsYearModalVisible(true)}>
-          <Text style={styles.periodButtonText}>{selectedYear}</Text>
+        <TouchableOpacity style={[styles.periodButton, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }]} onPress={() => setIsYearModalVisible(true)}>
+          <Text style={[styles.periodButtonText, isDarkMode && { color: '#F9FAFB' }]}>{selectedYear}</Text>
         </TouchableOpacity>
       </View>
 
@@ -497,26 +499,26 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'expenses' && styles.activeTab]}
+          style={[styles.tab, isDarkMode && { backgroundColor: '#374151' }, activeTab === 'expenses' && styles.activeTab]}
           onPress={() => setActiveTab('expenses')}
         >
-          <Text style={[styles.tabText, activeTab === 'expenses' && styles.activeTabText]}>Expenses</Text>
+          <Text style={[styles.tabText, isDarkMode && { color: '#D1D5DB' }, activeTab === 'expenses' && styles.activeTabText]}>Expenses</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'income' && styles.activeTab]}
+          style={[styles.tab, isDarkMode && { backgroundColor: '#374151' }, activeTab === 'income' && styles.activeTab]}
           onPress={() => setActiveTab('income')}
         >
-          <Text style={[styles.tabText, activeTab === 'income' && styles.activeTabText]}>Income (Goals)</Text>
+          <Text style={[styles.tabText, isDarkMode && { color: '#D1D5DB' }, activeTab === 'income' && styles.activeTabText]}>Income (Goals)</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Add Category Button */}
         <TouchableOpacity
-          style={styles.addCategoryButton}
+          style={[styles.addCategoryButton, isDarkMode && { backgroundColor: '#312e81', borderColor: '#4338ca' }]}
           onPress={() => setIsAddCatModalVisible(true)}
         >
-          <Text style={styles.addCategoryText}>+ Add New Category</Text>
+          <Text style={[styles.addCategoryText, isDarkMode && { color: '#e0e7ff' }]}>+ Add New Category</Text>
         </TouchableOpacity>
 
         {categories.map((cat) => {
@@ -525,7 +527,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
           const limit = parseFloat(limitStr.replace(',', '.')) || 0;
 
           return (
-            <View key={cat} style={styles.budgetCard}>
+            <View key={cat} style={[styles.budgetCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
               <View style={styles.cardHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <TouchableOpacity
@@ -536,11 +538,11 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                     }}
                     style={{
                       marginRight: 8,
-                      backgroundColor: '#EEF2FF',
+                      backgroundColor: isDarkMode ? '#1e1b4b' : '#EEF2FF',
                       padding: 6,
                       borderRadius: 6,
                       borderWidth: 1,
-                      borderColor: '#C7D2FE'
+                      borderColor: isDarkMode ? '#312e81' : '#C7D2FE'
                     }}
                   >
                     <Text style={{ fontSize: 16 }}>✏️</Text>
@@ -549,37 +551,53 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                     onPress={() => handleDeleteCategory(cat)}
                     style={{
                       marginRight: 8,
-                      backgroundColor: '#FEF2F2',
+                      backgroundColor: isDarkMode ? '#450a0a' : '#FEF2F2',
                       padding: 6,
                       borderRadius: 6,
                       borderWidth: 1,
-                      borderColor: '#FECACA'
+                      borderColor: isDarkMode ? '#7f1d1d' : '#FECACA'
                     }}
                   >
                     <Text style={{ fontSize: 16 }}>🗑️</Text>
                   </TouchableOpacity>
-                  <Text style={[styles.catName, { flex: 1 }]} numberOfLines={1}>{cat}</Text>
+                  <Text style={[styles.catName, isDarkMode && { color: '#E5E7EB' }]} numberOfLines={1}>{cat}</Text>
                 </View>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.currency}>€</Text>
+                <View style={[styles.inputContainer, isDarkMode && { backgroundColor: '#374151' }]}>
+                  <Text style={[styles.currency, isDarkMode && { color: '#9CA3AF' }]}>{currency}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, isDarkMode && { color: '#F9FAFB' }]}
                     keyboardType="numeric"
                     value={limitStr}
                     onChangeText={(text) => setLocalBudget(prev => ({ ...prev, [cat]: text }))}
                     onEndEditing={() => persistBudget(localBudget, activeTab)}
                     placeholder="0"
+                    placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
                   />
                 </View>
               </View>
 
               <View style={styles.statsRow}>
-                <Text style={styles.spentText}>
-                  Actual: <Text style={{ fontWeight: 'bold' }}>€{spending.toFixed(2)}</Text>
+                <Text style={[styles.spentText, isDarkMode && { color: '#9CA3AF' }]}>
+                  Actual: <Text style={{ fontWeight: 'bold' }}>{currency}{spending.toFixed(2)}</Text>
                 </Text>
               </View>
 
-              {renderScrubber(spending, limit, activeTab === 'expenses' ? '#DC2626' : '#059669')}
+              <View style={styles.scrubberContainer}>
+                <View style={[styles.scrubberTrack, isDarkMode && { backgroundColor: '#374151' }]}>
+                  <View
+                    style={[
+                      styles.scrubberFill,
+                      {
+                        width: `${Math.min((spending / (limit || 1)) * 100, 100)}%`,
+                        backgroundColor: (limit > 0 && spending > limit) ? '#EF4444' : (activeTab === 'expenses' ? '#DC2626' : '#059669')
+                      }
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.scrubberText, isDarkMode && { color: '#9CA3AF' }]}>
+                  {((spending / (limit || 1)) * 100).toFixed(0)}%
+                </Text>
+              </View>
             </View>
           );
         })}
@@ -597,23 +615,24 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         onRequestClose={() => setIsRenameModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Modify Category</Text>
-            <Text style={styles.modalSubtitle}>Rename "{categoryToRename}" to:</Text>
+          <View style={[styles.modalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
+            <Text style={[styles.modalTitle, isDarkMode && { color: '#F9FAFB' }]}>Modify Category</Text>
+            <Text style={[styles.modalSubtitle, isDarkMode && { color: '#9CA3AF' }]}>Rename "{categoryToRename}" to:</Text>
 
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
               placeholder="New name..."
+              placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               value={renamedCategoryName}
               onChangeText={setRenamedCategoryName}
             />
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnCancel]}
+                style={[styles.modalBtn, styles.modalBtnCancel, isDarkMode && { backgroundColor: '#374151' }]}
                 onPress={() => setIsRenameModalVisible(false)}
               >
-                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
+                <Text style={[styles.modalBtnTextCancel, isDarkMode && { color: '#D1D5DB' }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}
@@ -634,23 +653,24 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         onRequestClose={() => setIsAddCatModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>New Category</Text>
-            <Text style={styles.modalSubtitle}>Enter category name for {activeTab}</Text>
+          <View style={[styles.modalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
+            <Text style={[styles.modalTitle, isDarkMode && { color: '#F9FAFB' }]}>New Category</Text>
+            <Text style={[styles.modalSubtitle, isDarkMode && { color: '#9CA3AF' }]}>Enter category name for {activeTab}</Text>
 
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
               placeholder="e.g. Vacation, Hobbies"
+              placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               value={newCategoryName}
               onChangeText={setNewCategoryName}
             />
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnCancel]}
+                style={[styles.modalBtn, styles.modalBtnCancel, isDarkMode && { backgroundColor: '#374151' }]}
                 onPress={() => setIsAddCatModalVisible(false)}
               >
-                <Text style={styles.modalBtnTextCancel}>Cancel</Text>
+                <Text style={[styles.modalBtnTextCancel, isDarkMode && { color: '#D1D5DB' }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -28,6 +29,7 @@ interface Transaction {
 
 const TransactionsScreen: React.FC = () => {
   const { userToken } = useAuth();
+  const { currency, isDarkMode } = useSettings();
 
   // Data State
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -182,10 +184,10 @@ const TransactionsScreen: React.FC = () => {
   const renderTransaction = ({ item }: { item: Transaction }) => {
     const isEntrata = item.tipo === 'entrata';
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
         <View style={{ flex: 1 }}>
           <View style={styles.cardHeader}>
-            <Text style={styles.catText}>{item.categoria}</Text>
+            <Text style={[styles.catText, isDarkMode && { color: '#E5E7EB' }]}>{item.categoria}</Text>
             <View style={[styles.badge, isEntrata ? styles.badgeEntrata : styles.badgeUscita]}>
               <Text style={[styles.badgeText, isEntrata ? styles.badgeTextEntrata : styles.badgeTextUscita]}>
                 {isEntrata ? 'Income' : 'Expense'}
@@ -194,14 +196,14 @@ const TransactionsScreen: React.FC = () => {
           </View>
 
           <Text style={[styles.amountText, isEntrata ? styles.amountEntrata : styles.amountUscita]}>
-            {isEntrata ? '+' : '-'}€{Math.abs(item.importo).toFixed(2)}
+            {isEntrata ? '+' : '-'}{currency}{Math.abs(item.importo).toFixed(2)}
           </Text>
 
           {item.descrizione ? (
-            <Text style={styles.descText}>{item.descrizione}</Text>
+            <Text style={[styles.descText, isDarkMode && { color: '#9CA3AF' }]}>{item.descrizione}</Text>
           ) : null}
 
-          <Text style={styles.dateText}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
+          <Text style={[styles.dateText, isDarkMode && { color: '#6B7280' }]}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
         </View>
 
         <TouchableOpacity
@@ -219,72 +221,76 @@ const TransactionsScreen: React.FC = () => {
       [...new Set([...categorieSpese, ...categorieEntrate])].sort();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
       {/* Header & Search */}
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, isDarkMode && { backgroundColor: '#1F2937', color: '#F9FAFB' }]}
           placeholder="🔍 Search in descriptions..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor="#9CA3AF"
         />
         <TouchableOpacity style={styles.filterToggleBtn} onPress={() => setShowFilters(!showFilters)}>
-          <Text style={styles.filterToggleText}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
+          <Text style={[styles.filterToggleText, isDarkMode && { color: '#818CF8' }]}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Filters Section */}
       {showFilters && (
-        <View style={styles.filtersSection}>
-          <Text style={styles.filterLabel}>Transaction Type:</Text>
+        <View style={[styles.filtersSection, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
+          <Text style={[styles.filterLabel, isDarkMode && { color: '#E5E7EB' }]}>Transaction Type:</Text>
           <View style={styles.typeRow}>
             {(['tutte', 'entrata', 'uscita'] as const).map(t => (
               <TouchableOpacity
                 key={t}
-                style={[styles.typeBtn, filterType === t && styles.typeBtnActive]}
+                style={[
+                  styles.typeBtn,
+                  isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' },
+                  filterType === t && styles.typeBtnActive
+                ]}
                 onPress={() => {
                   setFilterType(t);
                   setFilterCategory(''); // Reset cat on type change
                 }}
               >
-                <Text style={[styles.typeBtnText, filterType === t && styles.typeBtnTextActive]}>
+                <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, filterType === t && styles.typeBtnTextActive]}>
                   {t === 'tutte' ? 'All' : t === 'entrata' ? 'Income' : 'Expense'}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={styles.filterLabel}>Category:</Text>
+          <Text style={[styles.filterLabel, isDarkMode && { color: '#E5E7EB' }]}>Category:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
             <TouchableOpacity
-              style={[styles.catBtn, filterCategory === '' && styles.catBtnActive]}
+              style={[styles.catBtn, isDarkMode && { backgroundColor: '#374151' }, filterCategory === '' && styles.catBtnActive]}
               onPress={() => setFilterCategory('')}
             >
-              <Text style={[styles.catBtnText, filterCategory === '' && styles.catBtnTextActive]}>All</Text>
+              <Text style={[styles.catBtnText, isDarkMode && { color: '#D1D5DB' }, filterCategory === '' && styles.catBtnTextActive]}>All</Text>
             </TouchableOpacity>
             {currentCategories.map(cat => (
               <TouchableOpacity
                 key={cat}
-                style={[styles.catBtn, filterCategory === cat && styles.catBtnActive]}
+                style={[styles.catBtn, isDarkMode && { backgroundColor: '#374151' }, filterCategory === cat && styles.catBtnActive]}
                 onPress={() => setFilterCategory(cat)}
               >
-                <Text style={[styles.catBtnText, filterCategory === cat && styles.catBtnTextActive]}>{cat}</Text>
+                <Text style={[styles.catBtnText, isDarkMode && { color: '#D1D5DB' }, filterCategory === cat && styles.catBtnTextActive]}>{cat}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          <Text style={styles.filterLabel}>Date Range (YYYY-MM-DD):</Text>
+          <Text style={[styles.filterLabel, isDarkMode && { color: '#E5E7EB' }]}>Date Range (YYYY-MM-DD):</Text>
           <View style={styles.dateRow}>
             <TextInput
-              style={styles.dateInput}
+              style={[styles.dateInput, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="From (e.g. 2024-01-01)"
               value={startDate}
               onChangeText={setStartDate}
               placeholderTextColor="#9CA3AF"
             />
             <TextInput
-              style={styles.dateInput}
+              style={[styles.dateInput, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="To (e.g. 2024-12-31)"
               value={endDate}
               onChangeText={setEndDate}
@@ -292,22 +298,22 @@ const TransactionsScreen: React.FC = () => {
             />
           </View>
 
-          <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
-            <Text style={styles.resetBtnText}>Reset Filters</Text>
+          <TouchableOpacity style={[styles.resetBtn, isDarkMode && { backgroundColor: '#374151' }]} onPress={resetFilters}>
+            <Text style={[styles.resetBtnText, isDarkMode && { color: '#D1D5DB' }]}>Reset Filters</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {/* Summary */}
-      <View style={styles.summaryBar}>
+      <View style={[styles.summaryBar, isDarkMode && { backgroundColor: '#1e1b4b', borderBottomColor: '#312e81' }]}>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Found</Text>
-          <Text style={styles.summaryValue}>{filteredTransactions.length}</Text>
+          <Text style={[styles.summaryLabel, isDarkMode && { color: '#9CA3AF' }]}>Found</Text>
+          <Text style={[styles.summaryValue, isDarkMode && { color: '#F9FAFB' }]}>{filteredTransactions.length}</Text>
         </View>
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Total</Text>
-          <Text style={[styles.summaryValue, { color: calculateTotal() >= 0 ? '#059669' : '#DC2626' }]}>
-            {calculateTotal() >= 0 ? '+' : ''}€{calculateTotal().toFixed(2)}
+          <Text style={[styles.summaryLabel, isDarkMode && { color: '#9CA3AF' }]}>Total</Text>
+          <Text style={[styles.summaryValue, { color: calculateTotal() >= 0 ? '#10B981' : '#F87171' }]}>
+            {calculateTotal() >= 0 ? '+' : ''}{currency}{calculateTotal().toFixed(2)}
           </Text>
         </View>
       </View>

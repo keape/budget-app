@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
-
+import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
@@ -22,14 +22,23 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
+  const { isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleFacebookLogin = async () => {
+    Alert.alert('Facebook Login', 'Facebook SDK integration required. Please run: npm install react-native-fbsdk-next');
+  };
+
+  const handleAppleLogin = async () => {
+    Alert.alert('Apple Sign In', 'Apple Authentication integration required. Please run: npm install @invertase/react-native-apple-authentication');
+  };
+
   const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert('Error', 'Enter username and password');
+    if (!identifier || !password) {
+      Alert.alert('Error', 'Enter email/username and password');
       return;
     }
 
@@ -39,19 +48,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     const attemptLogin = async () => {
       try {
-        console.log(`Login attempt ${attempts + 1} for user: ${username}`);
+        console.log(`Login attempt ${attempts + 1} for identifier: ${identifier}`);
         const response = await fetch(`${BASE_URL}/api/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ identifier, password }),
         });
 
         const data = await response.json();
 
         if (response.ok && data.token) {
-          await login(data.token, username);
+          // Note: The backend should ideally return the username/email in the payload or we decode it.
+          // For now, if login is successful, we can use the identifier as a fallback or update backend to return user info.
+          await login(data.token, identifier);
           return true;
         } else {
           Alert.alert('Login Failed', data.message || 'Invalid credentials');
@@ -79,22 +90,22 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Budget 365</Text>
-          <Text style={styles.subtitle}>Log in to your account</Text>
+          <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Budget 365</Text>
+          <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>Log in to your account</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
-              placeholder="Username"
-              value={username}
-              onChangeText={setUsername}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+              placeholder="Email or Username"
+              value={identifier}
+              onChangeText={setIdentifier}
               autoCapitalize="none"
               autoCorrect={false}
               placeholderTextColor="#9CA3AF"
@@ -103,7 +114,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
               placeholder="Password"
               value={password}
               onChangeText={setPassword}
@@ -126,11 +137,33 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             )}
           </TouchableOpacity>
 
+          <View style={styles.dividerContainer}>
+            <View style={[styles.divider, isDarkMode && { backgroundColor: '#374151' }]} />
+            <Text style={[styles.dividerText, isDarkMode && { color: '#9CA3AF' }]}>OR</Text>
+            <View style={[styles.divider, isDarkMode && { backgroundColor: '#374151' }]} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.socialButton, { backgroundColor: '#1877F2' }]}
+            onPress={handleFacebookLogin}
+          >
+            <Text style={styles.socialButtonText}>Login with Facebook</Text>
+          </TouchableOpacity>
+
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.socialButton, { backgroundColor: isDarkMode ? '#F9FAFB' : '#000000', marginTop: 12 }]}
+              onPress={handleAppleLogin}
+            >
+              <Text style={[styles.socialButtonText, { color: isDarkMode ? '#000000' : '#FFFFFF' }]}>Sign in with Apple</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={styles.registerLink}
             onPress={() => navigation.navigate('Register')}
           >
-            <Text style={styles.registerLinkText}>
+            <Text style={[styles.registerLinkText, isDarkMode && { color: '#818CF8' }]}>
               Don't have an account? Register
             </Text>
           </TouchableOpacity>
@@ -192,6 +225,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
   },
   loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#D1D5DB',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  socialButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  socialButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
