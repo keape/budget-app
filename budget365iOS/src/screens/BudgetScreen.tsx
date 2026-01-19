@@ -25,9 +25,21 @@ interface BudgetScreenProps {
 const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const { userToken, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  // isSaving used for loading indicators if needed, though we want "automatic" feel
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
+
+  const today = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+
+  const months = [
+    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+  ];
+
+  const years = [2024, 2025, 2026, 2027];
+
+  const [isMonthModalVisible, setIsMonthModalVisible] = useState(false);
+  const [isYearModalVisible, setIsYearModalVisible] = useState(false);
 
   // Data State
   const [categories, setCategories] = useState<string[]>([]);
@@ -37,20 +49,21 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   // Dirty State (changes made by user)
   const [localBudget, setLocalBudget] = useState<Record<string, string>>({}); // Store as string for TextInput
 
+  const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
+
   useFocusEffect(
     useCallback(() => {
       if (userToken) {
         loadData();
       }
-    }, [userToken, activeTab])
+    }, [userToken, activeTab, selectedMonth, selectedYear])
   );
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth();
+      const year = selectedYear;
+      const month = selectedMonth;
 
       // 1. Fetch Categories
       const catRes = await fetch(`${BASE_URL}/api/categorie`, {
@@ -130,10 +143,11 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       // Background save, no blocking UI
       // We could set isSaving(true) if we wanted to show a small indicator
 
-      const today = new Date();
+      const year = selectedYear;
+      const month = selectedMonth;
 
       // We need to fetch current full settings first to preserve the OTHER tab's data
-      const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${today.getFullYear()}&mese=${today.getMonth()}`, {
+      const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${year}&mese=${month}`, {
         headers: { 'Authorization': `Bearer ${userToken}` }
       });
       const currentRemote = settingsRes.ok ? await settingsRes.json() : { spese: {}, entrate: {} };
@@ -150,8 +164,8 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
       // Construct payload matching backend expectation
       const payload = {
-        anno: today.getFullYear(),
-        mese: today.getMonth(),
+        anno: year,
+        mese: month,
         isYearly: false,
         settings: {
           spese: tab === 'expenses' ? newValues : (currentRemote.spese || {}),
@@ -222,6 +236,112 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     );
   };
 
+  const handleCopyFromPrevious = async () => {
+    try {
+      setIsLoading(true);
+
+      let prevMonth = selectedMonth - 1;
+      let prevYear = selectedYear;
+      if (prevMonth < 0) {
+        prevMonth = 11;
+        prevYear -= 1;
+      }
+
+      console.log(`📋 Copying from: ${prevMonth}/${prevYear} to ${selectedMonth}/${selectedYear}`);
+
+      const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${prevYear}&mese=${prevMonth}`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+
+      if (!settingsRes.ok) throw new Error("Failed to load previous month");
+
+      const settingsData = await settingsRes.json();
+      const prevLimits = activeTab === 'expenses'
+        ? (settingsData.spese || {})
+        : (settingsData.entrate || {});
+
+      // Apply these limits to current month local state
+      const newLocal = { ...localBudget };
+      Object.keys(prevLimits).forEach(cat => {
+        if (categories.includes(cat)) {
+          newLocal[cat] = String(prevLimits[cat]);
+        }
+      });
+
+      setLocalBudget(newLocal);
+
+      // Persist the entire new budget state for this month
+      await persistBudget(newLocal, activeTab);
+
+      Alert.alert("Successo", `Valori copiati da ${months[prevMonth]} ${prevYear}`);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Errore", "Impossibile copiare i valori dal mese precedente");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderMonthPicker = () => (
+    <Modal visible={isMonthModalVisible} transparent animationType="slide">
+      <View style={styles.modalOverlayPicker}>
+        <View style={styles.pickerModalContent}>
+          <Text style={styles.modalTitlePicker}>Seleziona Mese</Text>
+          <ScrollView>
+            {months.map((m, idx) => (
+              <TouchableOpacity
+                key={m}
+                style={[styles.pickerItem, selectedMonth === idx && styles.pickerItemActive]}
+                onPress={() => {
+                  setSelectedMonth(idx);
+                  setIsMonthModalVisible(false);
+                }}
+              >
+                <Text style={[styles.pickerItemText, selectedMonth === idx && styles.pickerItemTextActive]}>{m}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.closeButtonPicker} onPress={() => setIsMonthModalVisible(false)}>
+            <Text style={styles.closeButtonTextPicker}>Chiudi</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderYearPicker = () => (
+    <Modal visible={isYearModalVisible} transparent animationType="slide">
+      <View style={styles.modalOverlayPicker}>
+        <View style={styles.pickerModalContent}>
+          <Text style={styles.modalTitlePicker}>Seleziona Anno</Text>
+          <ScrollView>
+            {years.map(y => (
+              <TouchableOpacity
+                key={y}
+                style={[styles.pickerItem, selectedYear === y && styles.pickerItemActive]}
+                onPress={() => {
+                  setSelectedYear(y);
+                  setIsYearModalVisible(false);
+                }}
+              >
+                <Text style={[styles.pickerItemText, selectedYear === y && styles.pickerItemTextActive]}>{y}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={styles.closeButtonPicker} onPress={() => setIsYearModalVisible(false)}>
+            <Text style={styles.closeButtonTextPicker}>Chiudi</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+
+  // Rename Category State
+  const [isRenameModalVisible, setIsRenameModalVisible] = useState(false);
+  const [categoryToRename, setCategoryToRename] = useState<string | null>(null);
+  const [renamedCategoryName, setRenamedCategoryName] = useState('');
+
   // Add Category State
   const [isAddCatModalVisible, setIsAddCatModalVisible] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -248,6 +368,57 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
     // Autosave immediately
     persistBudget(newLocal, activeTab);
+  };
+
+  const handleRenameCategory = async () => {
+    if (!categoryToRename || !renamedCategoryName.trim()) {
+      Alert.alert('Error', 'Please enter a valid name');
+      return;
+    }
+
+    const oldName = categoryToRename;
+    const newName = renamedCategoryName.trim();
+    const type = activeTab === 'expenses' ? 'spese' : 'entrate';
+
+    if (categories.includes(newName)) {
+      Alert.alert('Error', 'Category name already exists');
+      return;
+    }
+
+    try {
+      // Optimistic UI Update
+      const newCats = categories.map(c => c === oldName ? newName : c);
+      const newLocal = { ...localBudget };
+      const value = newLocal[oldName];
+      delete newLocal[oldName];
+      newLocal[newName] = value;
+
+      setCategories(newCats);
+      setLocalBudget(newLocal);
+      setIsRenameModalVisible(false);
+      setCategoryToRename(null);
+      setRenamedCategoryName('');
+
+      // Call Global Rename Endpoint
+      const response = await fetch(`${BASE_URL}/api/categorie/rename`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ oldName, newName, type })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to rename global category");
+      }
+
+    } catch (error) {
+      console.error("Rename failed", error);
+      Alert.alert("Error", "Could not rename category globally. Please try again.");
+      // Rollback (optional, but good for UX)
+      loadData();
+    }
   };
 
   const handleDeleteCategory = (catName: string) => {
@@ -304,8 +475,24 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     >
       <View style={styles.header}>
         <Text style={styles.title}>Budget Planner</Text>
-        <Text style={styles.subtitle}>Set your monthly limits</Text>
+        <Text style={styles.subtitle}>Gestisci i tuoi limiti mensili</Text>
       </View>
+
+      {/* Period Selection */}
+      <View style={styles.periodContainer}>
+        <TouchableOpacity style={styles.periodButton} onPress={() => setIsMonthModalVisible(true)}>
+          <Text style={styles.periodButtonText}>{months[selectedMonth]}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.periodButton} onPress={() => setIsYearModalVisible(true)}>
+          <Text style={styles.periodButtonText}>{selectedYear}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity style={styles.copyButton} onPress={handleCopyFromPrevious}>
+        <Text style={styles.copyButtonText}>
+          Copia valori da {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
+        </Text>
+      </TouchableOpacity>
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -341,6 +528,23 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
             <View key={cat} style={styles.budgetCard}>
               <View style={styles.cardHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCategoryToRename(cat);
+                      setRenamedCategoryName(cat);
+                      setIsRenameModalVisible(true);
+                    }}
+                    style={{
+                      marginRight: 8,
+                      backgroundColor: '#EEF2FF',
+                      padding: 6,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: '#C7D2FE'
+                    }}
+                  >
+                    <Text style={{ fontSize: 16 }}>✏️</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDeleteCategory(cat)}
                     style={{
@@ -385,6 +589,43 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         )}
       </ScrollView>
 
+      {/* Rename Category Modal */}
+      <Modal
+        visible={isRenameModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsRenameModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Modifica Categoria</Text>
+            <Text style={styles.modalSubtitle}>Rinomina "{categoryToRename}" in:</Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Nuovo nome..."
+              value={renamedCategoryName}
+              onChangeText={setRenamedCategoryName}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setIsRenameModalVisible(false)}
+              >
+                <Text style={styles.modalBtnTextCancel}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave]}
+                onPress={handleRenameCategory}
+              >
+                <Text style={styles.modalBtnTextSave}>Rinomina</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Add Category Modal */}
       <Modal
         visible={isAddCatModalVisible}
@@ -402,7 +643,6 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
               placeholder="e.g. Vacation, Hobbies"
               value={newCategoryName}
               onChangeText={setNewCategoryName}
-              autoFocus
             />
 
             <View style={styles.modalActions}>
@@ -423,7 +663,16 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         </View>
       </Modal>
 
-    </KeyboardAvoidingView>
+      {isSaving && (
+        <View style={styles.savingIndicator}>
+          <ActivityIndicator size="small" color="#6366F1" />
+          <Text style={styles.savingText}>Salvataggio...</Text>
+        </View>
+      )}
+
+      {renderMonthPicker()}
+      {renderYearPicker()}
+    </KeyboardAvoidingView >
   );
 };
 
@@ -627,6 +876,112 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
   },
+  savingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 20,
+  },
+  savingText: {
+    color: '#6366F1',
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  periodContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  periodButton: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    width: '48%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  periodButtonText: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  copyButton: {
+    backgroundColor: '#4F46E5',
+    marginHorizontal: 16,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  copyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  modalOverlayPicker: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerModalContent: {
+    backgroundColor: '#fff',
+    width: '80%',
+    maxHeight: '70%',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  pickerItem: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  pickerItemActive: {
+    backgroundColor: '#F3F4F6',
+  },
+  pickerItemText: {
+    color: '#374151',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  pickerItemTextActive: {
+    color: '#4F46E5',
+    fontWeight: 'bold',
+  },
+  closeButtonPicker: {
+    marginTop: 20,
+    backgroundColor: '#FF6B6B',
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  closeButtonTextPicker: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalTitlePicker: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#111827',
+  }
 });
 
 export default BudgetScreen;
