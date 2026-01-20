@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const axios = require('axios');
 const User = require('../models/User');
 const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
@@ -224,10 +223,14 @@ router.post('/social-login', async (req, res) => {
     let socialId, email, name;
 
     if (provider === 'facebook') {
-      const fbRes = await axios.get(`https://graph.facebook.com/me?access_token=${token}&fields=id,name,email`);
-      socialId = fbRes.data.id;
-      email = fbRes.data.email;
-      name = fbRes.data.name;
+      const fbRes = await fetch(`https://graph.facebook.com/me?access_token=${token}&fields=id,name,email`);
+      if (!fbRes.ok) {
+        throw new Error(`Facebook API error: ${fbRes.statusText}`);
+      }
+      const fbData = await fbRes.json();
+      socialId = fbData.id;
+      email = fbData.email;
+      name = fbData.name;
     } else if (provider === 'apple') {
       // NOTE: In production, verify idToken signature with Apple Public Keys
       const decoded = jwt.decode(idToken);
