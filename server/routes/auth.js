@@ -302,7 +302,7 @@ router.post('/social-login', async (req, res) => {
     }
 
     const jwtToken = jwt.sign({ userId: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token: jwtToken });
+    res.json({ token: jwtToken, username: user.username });
 
   } catch (error) {
     console.error('❌ Social Login Error:', error.response?.data || error.message);
