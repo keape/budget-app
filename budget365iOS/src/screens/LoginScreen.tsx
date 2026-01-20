@@ -15,6 +15,9 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
+import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
+import { appleAuth } from '@invertase/react-native-apple-authentication';
+
 const BASE_URL = API_URL;
 
 interface LoginScreenProps {
@@ -28,12 +31,84 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
 
+  const socialLogin = async (payload: any) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}/api/auth/social-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        await login(data.token, data.username || 'Social User');
+      } else {
+        Alert.alert('Login Failed', data.message || 'Error during social login');
+      }
+    } catch (error) {
+      console.error('Social Login Error:', error);
+      Alert.alert('Error', 'Network error during social login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleFacebookLogin = async () => {
-    Alert.alert('Facebook Login', 'Facebook SDK integration required. Please run: npm install react-native-fbsdk-next');
+    try {
+      // Intentamos login con permisos básicos
+      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+
+      if (result.isCancelled) {
+        return;
+      }
+
+      const data = await AccessToken.getCurrentAccessToken();
+      if (!data) {
+        throw new Error('Something went wrong obtaining access token');
+      }
+
+      await socialLogin({
+        provider: 'facebook',
+        token: data.accessToken.toString(),
+      });
+    } catch (error) {
+      console.error('Facebook Login Logic Error:', error);
+      Alert.alert('Error', 'Facebook Login failed. Make sure you have configured your Info.plist correctly.');
+    }
   };
 
   const handleAppleLogin = async () => {
-    Alert.alert('Apple Sign In', 'Apple Authentication integration required. Please run: npm install @invertase/react-native-apple-authentication');
+    try {
+      // performs login request
+      const appleAuthRequestResponse = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      });
+
+      // get current authentication state for user
+      // /!\ This step must be done on your own backend to ensure the token is valid
+      const { identityToken, user } = appleAuthRequestResponse;
+
+      if (!identityToken) {
+        throw new Error('Apple Sign-In failed - no identity token returned');
+      }
+
+      await socialLogin({
+        provider: 'apple',
+        idToken: identityToken,
+        user: appleAuthRequestResponse
+      });
+    } catch (error: any) {
+      if (error.code === appleAuth.Error.CANCELED) {
+        return;
+      }
+      console.error('Apple Login Logic Error:', error);
+      Alert.alert('Error', 'Apple Sign-In failed');
+    }
   };
 
   const handleLogin = async () => {
