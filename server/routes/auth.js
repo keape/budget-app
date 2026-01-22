@@ -222,15 +222,15 @@ router.post('/social-login', async (req, res) => {
     const { provider, token, idToken, user: socialUser } = req.body;
     let socialId, email, name;
 
-    if (provider === 'facebook') {
-      const fbRes = await fetch(`https://graph.facebook.com/me?access_token=${token}&fields=id,name,email`);
-      if (!fbRes.ok) {
-        throw new Error(`Facebook API error: ${fbRes.statusText}`);
+    if (provider === 'google') {
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+      if (!googleRes.ok) {
+        throw new Error(`Google API error: ${googleRes.statusText}`);
       }
-      const fbData = await fbRes.json();
-      socialId = fbData.id;
-      email = fbData.email;
-      name = fbData.name;
+      const googleData = await googleRes.json();
+      socialId = googleData.sub;
+      email = googleData.email;
+      name = googleData.name;
     } else if (provider === 'apple') {
       // NOTE: In production, verify idToken signature with Apple Public Keys
       const decoded = jwt.decode(idToken);
@@ -249,7 +249,7 @@ router.post('/social-login', async (req, res) => {
     // Cerca utente per ID Social o Email
     let user = await User.findOne({
       $or: [
-        { facebookId: provider === 'facebook' ? socialId : undefined },
+        { googleId: provider === 'google' ? socialId : undefined },
         { appleId: provider === 'apple' ? socialId : undefined },
         { email: email && email !== '' ? email : '___invalid_email___' }
       ].filter(q => Object.values(q)[0] !== undefined)
@@ -273,7 +273,7 @@ router.post('/social-login', async (req, res) => {
         username,
         email,
         password: hashedPassword,
-        facebookId: provider === 'facebook' ? socialId : undefined,
+        googleId: provider === 'google' ? socialId : undefined,
         appleId: provider === 'apple' ? socialId : undefined
       });
       await user.save();
@@ -295,8 +295,8 @@ router.post('/social-login', async (req, res) => {
 
     } else {
       // Aggiorna ID social se non presente
-      if (provider === 'facebook' && !user.facebookId) {
-        user.facebookId = socialId;
+      if (provider === 'google' && !user.googleId) {
+        user.googleId = socialId;
         await user.save();
       } else if (provider === 'apple' && !user.appleId) {
         user.appleId = socialId;

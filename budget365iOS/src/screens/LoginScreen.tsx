@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
-import { LoginManager, AccessToken } from 'react-native-fbsdk-next';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 
 const BASE_URL = API_URL;
@@ -57,27 +57,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleFacebookLogin = async () => {
+  const handleGoogleLogin = async () => {
     try {
-      // Intentamos login con permisos básicos
-      const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const { idToken } = userInfo.data || {};
 
-      if (result.isCancelled) {
-        return;
-      }
-
-      const data = await AccessToken.getCurrentAccessToken();
-      if (!data) {
-        throw new Error('Something went wrong obtaining access token');
+      if (!idToken) {
+        throw new Error('Google Sign-In failed - no ID token returned');
       }
 
       await socialLogin({
-        provider: 'facebook',
-        token: data.accessToken.toString(),
+        provider: 'google',
+        idToken,
       });
-    } catch (error) {
-      console.error('Facebook Login Logic Error:', error);
-      Alert.alert('Error', 'Facebook Login failed. Make sure you have configured your Info.plist correctly.');
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        return;
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        return;
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services not available');
+      } else {
+        console.error('Google Login Logic Error:', error);
+        Alert.alert('Error', 'Google Sign-In failed');
+      }
     }
   };
 
@@ -219,10 +223,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.socialButton, { backgroundColor: '#1877F2' }]}
-            onPress={handleFacebookLogin}
+            style={[styles.socialButton, { backgroundColor: isDarkMode ? '#F9FAFB' : '#FFFFFF', borderWidth: 1, borderColor: '#D1D5DB' }]}
+            onPress={handleGoogleLogin}
           >
-            <Text style={styles.socialButtonText}>Login with Facebook</Text>
+            <Text style={[styles.socialButtonText, { color: '#1F2937' }]}>Sign in with Google</Text>
           </TouchableOpacity>
 
           {Platform.OS === 'ios' && (
