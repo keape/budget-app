@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
     type: Date,
     required: false
   },
-  facebookId: {
+  googleId: {
     type: String,
     required: false,
     unique: true,
