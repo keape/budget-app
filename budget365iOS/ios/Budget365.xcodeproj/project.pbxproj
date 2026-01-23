@@ -257,6 +257,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 736231217E08A51D8E09B7ED /* Pods-Budget365.debug.xcconfig */;
 			buildSettings = {
+                                ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 13;
@@ -287,6 +288,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A4AF84F6D0DBC15038A48D29 /* Pods-Budget365.release.xcconfig */;
 			buildSettings = {
+                                ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 13;
@@ -315,6 +317,7 @@
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+                                ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
@@ -396,6 +399,7 @@
 		83CBBA211A601CBA00E9B192 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+                                ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
