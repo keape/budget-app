@@ -14,11 +14,21 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'Budget365' do
-  config = use_native_modules!
+config = use_native_modules!
 
+target 'Budget365' do
   use_react_native!(
     :path => config[:reactNativePath],
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 end
+
+post_install do |installer|
+  react_native_post_install(
+    installer,
+    config[:reactNativePath],
+    :mac_catalyst_enabled => false
+  )
+end
+
+
