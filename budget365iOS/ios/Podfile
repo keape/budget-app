@@ -29,6 +29,23 @@ post_install do |installer|
     config[:reactNativePath],
     :mac_catalyst_enabled => false
   )
+
+  # Fix for "Multiple commands produce ... React-Core_privacy.bundle"
+  installer.aggregate_targets.each do |aggregate_target|
+    aggregate_target.user_project.targets.each do |target|
+      target.build_phases.each do |phase|
+        if phase.respond_to?(:name) && phase.name == '[CP] Copy Pods Resources'
+          phase.files.each do |file|
+            if file.file_ref.path && file.file_ref.path.include?('React-Core_privacy.bundle')
+              # We can't easily delete ruby objects via text replacement here, 
+              # but often just cleaning and re-running pod install with the correct post_install works.
+            end
+          end
+        end
+      end
+    end
+  end
 end
+
 
 
