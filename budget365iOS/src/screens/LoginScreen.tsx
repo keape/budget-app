@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { login } = useAuth();
   const { isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      iosClientId: '717541750569-brfd9c3iig0l09id6bs6l2i99t8r082c.apps.googleusercontent.com',
+    });
+  }, []);
 
   const socialLogin = async (payload: any) => {
     setIsLoading(true);
@@ -125,7 +131,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     let attempts = 0;
     const maxAttempts = 3;
 
-    const attemptLogin = async () => {
+    const attemptLogin = async (): Promise<boolean> => {
       try {
         console.log(`Login attempt ${attempts + 1} for identifier: ${identifier}`);
         const response = await fetch(`${BASE_URL}/api/auth/login`, {
