@@ -31,14 +31,29 @@ post_install do |installer|
   )
 
   # Fix for "Multiple commands produce ... React-Core_privacy.bundle"
-  installer.pods_project.targets.each do |target|
-    if target.name.include?('React-Core') && target.respond_to?(:product_type) && target.product_type == 'com.apple.product-type.bundle'
-      target.build_configurations.each do |config|
-        config.build_settings['PRODUCT_NAME'] = target.name
+  installer.aggregate_targets.each do |aggregate_target|
+    aggregate_target.user_project.targets.each do |target|
+      target.build_phases.each do |phase|
+        if phase.respond_to?(:name) && phase.name == '[CP] Copy Pods Resources'
+          seen_bundle = false
+          phase.files.delete_if do |file|
+            if file.respond_to?(:file_ref) && file.file_ref.respond_to?(:path) && file.file_ref.path.include?('React-Core_privacy.bundle')
+              if seen_bundle
+                true # Delete duplicate
+              else
+                seen_bundle = true
+                false # Keep first
+              end
+            else
+              false
+            end
+          end
+        end
       end
     end
   end
 end
+
 
 
 
