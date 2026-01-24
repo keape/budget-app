@@ -31,14 +31,23 @@ post_install do |installer|
   )
 
   # Fix for "Multiple commands produce ... React-Core_privacy.bundle"
-  installer.aggregate_targets.each do |aggregate_target|
-    aggregate_target.user_project.targets.each do |target|
-      target.build_phases.each do |phase|
+  installer.aggregate_targets.each do |target|
+    target.user_project.targets.each do |user_target|
+      user_target.build_phases.each do |phase|
         if phase.respond_to?(:name) && phase.name == '[CP] Copy Pods Resources'
-          phase.files.each do |file|
-            if file.file_ref.path && file.file_ref.path.include?('React-Core_privacy.bundle')
-              # We can't easily delete ruby objects via text replacement here, 
-              # but often just cleaning and re-running pod install with the correct post_install works.
+          # We search for the bundle and keep only the first occurrence across all phases
+          # To be safe, we collect all paths and deduplicate them in the phase
+          paths = []
+          phase.files.delete_if do |file|
+            if file.file_ref.respond_to?(:path) && file.file_ref.path.include?('React-Core_privacy.bundle')
+              if paths.include?(file.file_ref.path)
+                true # Delete duplicate
+              else
+                paths << file.file_ref.path
+                false # Keep first
+              end
+            else
+              false
             end
           end
         end
@@ -46,6 +55,9 @@ post_install do |installer|
     end
   end
 end
+
+
+
 
 
 
