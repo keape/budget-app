@@ -89,6 +89,16 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Budget365 needs access to your camera to take photos of receipts.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Budget365 needs access to your photo library to pick photos of receipts.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Budget365 needs access to your location to tag transactions with places.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Budget365 needs access to bluetooth for connectivity features.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Budget365 needs access to your microphone for voice notes.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
