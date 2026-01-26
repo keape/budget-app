@@ -1,4 +1,5 @@
 import "react-native-url-polyfill/auto";
+import "abort-controller/polyfill";
 /**
  * @format
  */
