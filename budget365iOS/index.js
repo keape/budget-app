@@ -2,9 +2,12 @@ import "react-native-url-polyfill/auto";
 import "abort-controller/polyfill";
 
 // Ensure common globals are available for Apple's static bundle analyzer
+// These MUST BE literal to be detected by some static analysis tools
 if (typeof global.Blob === 'undefined') { global.Blob = require('react-native/Libraries/Blob/Blob'); }
 if (typeof global.FileReader === 'undefined') { global.FileReader = require('react-native/Libraries/Blob/FileReader'); }
 if (typeof global.FormData === 'undefined') { global.FormData = require('react-native/Libraries/Network/FormData'); }
+if (typeof global.URLSearchParams === 'undefined') { global.URLSearchParams = require('react-native-url-polyfill').URLSearchParams; }
+
 
 /**
  * @format
