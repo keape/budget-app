@@ -1,7 +1,7 @@
 # Budget App – Developer Reference
 
 ## 1. Panorama del progetto
-- Ecosistema multi-piattaforma per la gestione personale delle finanze: Web React (cartella `src/`), backend Node/Express (`server/`), tre client React Native (`BudgetAppIOS/`, `BudgetAppExpo/`, `BudgetAppSimple/`).
+- Ecosistema multi-piattaforma per la gestione personale delle finanze: Web React (cartella `src/`), backend Node/Express (`server/`), tre client React Native (`BudgetAppIOS/`, `BudgetAppExpo/`, `/`).
 - Autenticazione basata su JWT: i token sono conservati nel browser/AsyncStorage, validati lato backend e allegati alle richieste Axios/fetch tramite interceptor o hook custom.
 - MongoDB gestisce utenti, movimenti (entrate/spese), impostazioni di budget e transazioni periodiche. Mongoose fornisce i modelli con validazioni di base.
 - Deploy previsti: frontend su Vercel (`vercel.json`, cartella `build/`), backend su Render (`render.yaml`, `server/render.yaml`), mobile tramite Xcode/Gradle o Expo.
@@ -11,7 +11,7 @@
 - `server/`: API REST Express modularizzate (`routes/`), modelli Mongoose (`models/`), servizi (email mock/nodemailer fallback) e script manutenzione DB (`scripts/`).
 - `BudgetAppIOS/`: app React Native classica con navigazione stack + bottom tabs; usa AsyncStorage per autenticazione.
 - `BudgetAppExpo/`: app Expo standalone con logica semplificata ma feature parity (login, transazioni, budget, transazioni periodiche).
-- `BudgetAppSimple/`: scaffold React Native minimale utile per prototipi/test UI.
+- `/`: scaffold React Native minimale utile per prototipi/test UI.
 - `models/`, `backup budget-app/`: dati di esempio per budget/entrate/spese.
 - Configurazioni di build/stile: `tailwind.config.js`, `postcss.config.js`, `_redirects` (Netlify), `vercel.json`.
 
@@ -47,7 +47,7 @@
 ## 5. Client Mobile
 - **BudgetAppIOS**: navigazione tab (Home/Transactions/Budget), verifica token da AsyncStorage on launch, transizioni condizionate login/register vs app. Coordinare API con backend (stesse rotte JWT).
 - **BudgetAppExpo**: implementa login via fetch, carica transazioni/budget/categorie, permette inserimento spese/entrate, filtri, gestione periodiche; utile per deploy rapido su Expo.
-- **BudgetAppSimple**: template di base (schermata demo) per test rapidi.
+- ****: template di base (schermata demo) per test rapidi.
 
 ## 6. Flusso dati e autenticazione
 - Frontend salva token JWT in `localStorage`; `useAuth` gestisce decode base64 e validità (`exp`). Eventi `storage` sincronizzano logout cross-tab.
