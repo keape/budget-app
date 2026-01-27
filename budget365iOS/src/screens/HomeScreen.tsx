@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     RefreshControl,
     Dimensions,
+    Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -167,7 +168,11 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
             <View style={[styles.header, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
-                <Text style={[styles.title, isDarkMode && { color: '#F9FAFB' }]}>📊 Budget Dashboard</Text>
+                <Image
+                    source={require('../assets/logo.png')}
+                    style={{ width: 40, height: 40, marginRight: 12, borderRadius: 8 }}
+                />
+                <Text style={[styles.title, isDarkMode && { color: '#F9FAFB' }]}>Budget Dashboard</Text>
             </View>
 
             {/* Quick Actions */}
@@ -318,6 +323,9 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     title: {
         fontSize: 28,
