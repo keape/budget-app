@@ -25,10 +25,12 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState(1);
   const { isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = async () => {
+  const handleSendOtp = async () => {
     if (!username || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -46,12 +48,44 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
     setIsLoading(true);
     try {
+      const response = await fetch(`${BASE_URL}/api/auth/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStep(2);
+        Alert.alert('Success', 'Verification code sent to your email.');
+      } else {
+        Alert.alert('Error', data.message || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('OTP error:', error);
+      Alert.alert('Error', 'Network error. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!otp) {
+      Alert.alert('Error', 'Please enter the verification code');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
       const response = await fetch(`${BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, otp }),
       });
 
       const data = await response.json();
@@ -86,60 +120,119 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Budget 365</Text>
-          <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>Create your account</Text>
+          <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>
+            {step === 1 ? 'Create your account' : 'Verify Email'}
+          </Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoCorrect={false}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+          {step === 1 ? (
+            <>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                  placeholder="Username"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoCorrect={false}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
 
-          <TouchableOpacity
-            style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
-            onPress={handleRegister}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.registerButtonText}>Register</Text>
-            )}
-          </TouchableOpacity>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+                onPress={handleSendOtp}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.registerButtonText}>Next</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={{ textAlign: 'center', marginBottom: 20, color: isDarkMode ? '#D1D5DB' : '#4B5563' }}>
+                We have sent a verification code to:{'\n'}
+                <Text style={{ fontWeight: 'bold' }}>{email}</Text>
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                  placeholder="Enter Verification Code"
+                  value={otp}
+                  onChangeText={setOtp}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+                onPress={handleRegister}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.registerButtonText}>Register</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.loginLink}
+                onPress={() => setStep(1)}
+                disabled={isLoading}
+              >
+                <Text style={[styles.loginLinkText, isDarkMode && { color: '#818CF8' }]}>
+                  Back
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.loginLink}

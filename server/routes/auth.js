@@ -8,7 +8,83 @@ const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
 const BudgetSettings = require('../models/BudgetSettings');
 const TransazionePeriodica = require('../models/TransazionePeriodica');
+const Otp = require('../models/Otp');
+const nodemailer = require('nodemailer');
 const router = express.Router();
+
+// Configure Nodemailer Transporter
+const transporter = nodemailer.createTransport({
+  service: process.env.EMAIL_SERVICE || 'gmail', // Default to gmail if not specified
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// Helper function to send email
+const sendEmail = async (to, subject, text) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to,
+    subject,
+    text
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Email sent to ${to}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error sending email:', error);
+    return false;
+  }
+};
+
+// POST /api/auth/send-otp
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Check if email is already in use
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Save OTP to database (upsert to replace existing OTP for same email)
+    await Otp.findOneAndUpdate(
+      { email },
+      { otp, createdAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // Send OTP via email
+    const emailSent = await sendEmail(
+      email,
+      'Budget365 - Verification Code',
+      `Your verification code is: ${otp}\n\nThis code will expire in 5 minutes.`
+    );
+
+    if (emailSent) {
+      res.json({ message: "Verification code sent" });
+    } else {
+      // If email fails (e.g. no config), we might want to fail or return it in dev mode
+      // For now, fail
+      res.status(500).json({ message: "Failed to send verification email. Please contact support." });
+    }
+
+  } catch (error) {
+    console.error('❌ Error sending OTP:', error);
+    res.status(500).json({ message: "Error sending verification code" });
+  }
+});
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -16,12 +92,18 @@ router.post('/register', async (req, res) => {
     console.log('🔍 DEBUG: Inizio registrazione');
     console.log('🔍 DEBUG: Dati ricevuti:', req.body);
 
-    const { username, password, email } = req.body;
+    const { username, password, email, otp } = req.body;
 
     // Validazione input
-    if (!username || !password || !email) {
-      console.log('❌ DEBUG: Dati mancanti - username:', username, 'email:', email, 'password:', !!password);
-      return res.status(400).json({ message: "Username, email e password sono richiesti" });
+    if (!username || !password || !email || !otp) {
+      console.log('❌ DEBUG: Dati mancanti - username:', username, 'email:', email, 'password:', !!password, 'otp:', !!otp);
+      return res.status(400).json({ message: "Username, email, password and OTP are required" });
+    }
+
+    // Verify OTP
+    const validOtp = await Otp.findOne({ email, otp });
+    if (!validOtp) {
+      return res.status(400).json({ message: "Invalid or expired verification code" });
     }
 
     console.log('🔍 DEBUG: Controllo utente esistente...');
@@ -87,6 +169,9 @@ router.post('/register', async (req, res) => {
       console.error('⚠️ Warning: Failed to create default budget:', budgetError);
       // We don't fail registration if this fails, just log it
     }
+
+    // Delete OTP after successful registration
+    await Otp.deleteOne({ email });
 
     res.status(201).json({ message: "Utente registrato con successo" });
   } catch (error) {
