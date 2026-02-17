@@ -19,10 +19,13 @@ const BASE_URL = API_URL;
 const SettingsScreen: React.FC = () => {
     const { logout, userToken } = useAuth();
     const { theme, setTheme, currency, setCurrency, showBalance, setShowBalance, isDarkMode } = useSettings();
-    const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about' | 'customization' | 'email'>('menu');
+    const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about' | 'customization' | 'email' | 'bug'>('menu');
 
     // Profile Settings State
     const [email, setEmail] = useState('');
+
+    // Bug Report State
+    const [bugDescription, setBugDescription] = useState('');
 
     // Password Change State
     const [currentPassword, setCurrentPassword] = useState('');
@@ -141,6 +144,11 @@ const SettingsScreen: React.FC = () => {
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('bug')}>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🐛 Report a Bug</Text>
+                <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={handleDeleteAccount}>
                 <Text style={[styles.menuItemText, { color: '#DC2626' }]}>🗑️ Delete Account</Text>
                 <Text style={styles.chevron}>›</Text>
@@ -233,7 +241,7 @@ const SettingsScreen: React.FC = () => {
             <View style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}>
                 <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>✉️ Contact Us</Text>
                 <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
-                    Have questions or suggestions? Email us at support@budget365.com
+                    Have questions or suggestions? Email us at keape@me.com
                 </Text>
             </View>
 
@@ -368,6 +376,70 @@ const SettingsScreen: React.FC = () => {
         </View>
     );
 
+    const handleSendBugReport = async () => {
+        if (!bugDescription.trim()) {
+            Alert.alert('Error', 'Please describe the bug');
+            return;
+        }
+
+        const subject = encodeURIComponent('Bug Report - Budget365');
+        const body = encodeURIComponent(bugDescription);
+        const mailtoUrl = `mailto:keape@me.com?subject=${subject}&body=${body}`;
+
+        try {
+            const canOpen = await Linking.canOpenURL(mailtoUrl);
+
+            if (!canOpen) {
+                Alert.alert(
+                    'No Email Client',
+                    'Available email client not found. If you are on a simulator, this is expected. Please email keape@me.com directly.'
+                );
+                return;
+            }
+
+            await Linking.openURL(mailtoUrl);
+            setActiveTab('menu');
+            setBugDescription('');
+        } catch (err) {
+            Alert.alert(
+                'Error',
+                'Could not open email client. Please email keape@me.com directly.'
+            );
+            console.error('An error occurred', err);
+        }
+    };
+
+    const renderBugReport = () => (
+        <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Report a Bug</Text>
+            <Text style={[styles.description, isDarkMode && { color: '#9CA3AF' }]}>
+                Found an issue? Let us know so we can fix it!
+            </Text>
+
+            <TextInput
+                style={[styles.input, styles.textArea, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                multiline
+                numberOfLines={6}
+                value={bugDescription}
+                onChangeText={setBugDescription}
+                placeholder="Describe the bug here..."
+                placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
+                textAlignVertical="top"
+            />
+
+            <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={handleSendBugReport}
+            >
+                <Text style={styles.primaryButtonText}>Send Report</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('menu')}>
+                <Text style={styles.secondaryButtonText}>Back</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     return (
         <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
             {activeTab === 'menu' && renderMenu()}
@@ -375,6 +447,7 @@ const SettingsScreen: React.FC = () => {
             {activeTab === 'about' && renderAbout()}
             {activeTab === 'customization' && renderCustomization()}
             {activeTab === 'email' && renderEmailUpdate()}
+            {activeTab === 'bug' && renderBugReport()}
         </View>
     );
 };
@@ -444,6 +517,10 @@ const styles = StyleSheet.create({
         padding: 12,
         fontSize: 16,
         marginBottom: 20,
+    },
+    textArea: {
+        height: 150,
+        textAlignVertical: 'top',
     },
     primaryButton: {
         backgroundColor: '#4F46E5',

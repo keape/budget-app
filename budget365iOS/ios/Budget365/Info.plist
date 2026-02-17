@@ -59,6 +59,10 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>101</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>mailto</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
