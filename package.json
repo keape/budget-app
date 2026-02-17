@@ -31,7 +31,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "cd server && npm start",
-    "serve": "serve -s build -p $PORT"
+    "serve": "serve -s build -p $PORT",
+    "postinstall": "cd server && npm install"
   },
   "browserslist": {
     "production": [
