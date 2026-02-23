@@ -30,9 +30,17 @@ post_install do |installer|
     :mac_catalyst_enabled => false
   )
 
-  # Fix for "Multiple commands produce ... React-Core_privacy.bundle"
-  # 1. Rename the PRODUCT_NAME of the duplicate target to avoid build conflict
   installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      # Fix for "No matching function for call to object of type 'const conditional_t<false, ...>'"
+      # This is a common issue with Folly and React Native 0.80+ on some Xcode versions.
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'FOLLY_HAS_COROUTINES=0']
+      
+      # Ensure consistent C++ version
+      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+    end
+
+    # Fix for "Multiple commands produce ... React-Core_privacy.bundle"
     if target.name == 'React-Core.common-React-Core_privacy'
       target.build_configurations.each do |config|
         config.build_settings['PRODUCT_NAME'] = 'React-Core-Common-Privacy'
@@ -40,7 +48,7 @@ post_install do |installer|
     end
   end
 
-  # 2. Deduplicate in the shell script to ensure only one (the original) is used
+  # Deduplicate in the shell script to ensure only one (the original) is used
   installer.aggregate_targets.each do |target|
     resources_script = target.copy_resources_script_path
     if File.exist?(resources_script)
@@ -63,8 +71,6 @@ post_install do |installer|
     end
   end
 end
-
-
 
 
 

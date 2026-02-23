@@ -11,7 +11,7 @@ import {
   Modal,
   ScrollView
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
@@ -30,6 +30,7 @@ interface Transaction {
 const TransactionsScreen: React.FC = () => {
   const { userToken } = useAuth();
   const { currency, isDarkMode } = useSettings();
+  const navigation = useNavigation<any>();
 
   // Data State
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -206,12 +207,20 @@ const TransactionsScreen: React.FC = () => {
           <Text style={[styles.dateText, isDarkMode && { color: '#6B7280' }]}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => deleteTransaction(item._id, item.tipo)}
-        >
-          <Text>🗑️</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate('AddTransaction', { transactionToEdit: item })}
+          >
+            <Text>✏️</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => deleteTransaction(item._id, item.tipo)}
+          >
+            <Text>🗑️</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -446,7 +455,8 @@ const styles = StyleSheet.create({
   amountUscita: { color: '#DC2626' },
   descText: { fontSize: 14, color: '#6B7280', fontStyle: 'italic', marginBottom: 4 },
   dateText: { fontSize: 12, color: '#9CA3AF' },
-  deleteBtn: { padding: 8 },
+  actionButtons: { flexDirection: 'row', alignItems: 'center' },
+  actionBtn: { padding: 8, marginLeft: 4 },
   emptyText: { textAlign: 'center', marginTop: 40, color: '#6B7280' },
 });
 
