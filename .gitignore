@@ -41,6 +41,8 @@ logs/
 # Backup files
 backup*/
 *.backup
+node_modules_old/
+**/node_modules_old/
 
 # Temporary files
 tmp/
