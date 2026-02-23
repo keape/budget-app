@@ -35,9 +35,12 @@ post_install do |installer|
       # Fix for "No matching function for call to object of type 'const conditional_t<false, ...>'"
       # This is a common issue with Folly and React Native 0.80+ on some Xcode versions.
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'FOLLY_HAS_COROUTINES=0']
-      
+
       # Ensure consistent C++ version
       config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+
+      # Speed up builds: disable source editor indexing during compilation
+      config.build_settings['COMPILER_INDEX_STORE_ENABLE'] = 'NO'
     end
 
     # Fix for "Multiple commands produce ... React-Core_privacy.bundle"
