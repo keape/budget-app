@@ -178,17 +178,24 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             {/* Quick Actions */}
             <View style={styles.actionsContainer}>
                 <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#4F46E5' }]}
+                    style={[styles.actionButton, { backgroundColor: '#4F46E5', flex: 1, marginRight: 8 }]}
                     onPress={() => navigation.navigate('AddTransaction')}
                 >
-                    <Text style={styles.actionButtonText}>💸 Add Expense</Text>
+                    <Text style={styles.actionButtonText}>💸 Expense</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#059669' }]}
+                    style={[styles.actionButton, { backgroundColor: '#059669', flex: 1, marginHorizontal: 4 }]}
                     onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
                 >
-                    <Text style={styles.actionButtonText}>💰 Add Income</Text>
+                    <Text style={styles.actionButtonText}>💰 Income</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: '#818CF8', flex: 1, marginLeft: 8 }]}
+                    onPress={() => navigation.navigate('PeriodicTransactions')}
+                >
+                    <Text style={styles.actionButtonText}>🔄 Recurring</Text>
                 </TouchableOpacity>
             </View>
 
@@ -347,7 +354,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 3,
-        minWidth: '40%',
         alignItems: 'center',
     },
     actionButtonText: {

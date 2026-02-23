@@ -9,7 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  Platform,
+  Modal,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -63,13 +66,36 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
   const [dataFine, setDataFine] = useState('');
   const [isInfinito, setIsInfinito] = useState(true);
 
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [activeDateField, setActiveDateField] = useState<'data' | 'dataInizio' | 'dataFine' | null>(null);
+
   const tipiRipetizione = [
     { value: 'mensile', label: 'Monthly' },
     { value: 'settimanale', label: 'Weekly' },
     { value: 'annuale', label: 'Yearly' },
   ];
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      const yr = selectedDate.getFullYear();
+      const mo = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const da = String(selectedDate.getDate()).padStart(2, '0');
+      const formattedDate = `${yr}-${mo}-${da}`;
 
+      if (activeDateField === 'data') setData(formattedDate);
+      else if (activeDateField === 'dataInizio') setDataInizio(formattedDate);
+      else if (activeDateField === 'dataFine') setDataFine(formattedDate);
+    }
+  };
+
+  const openDatePicker = (field: 'data' | 'dataInizio' | 'dataFine') => {
+    setActiveDateField(field);
+    setShowDatePicker(true);
+  };
 
   useEffect(() => {
     if (userToken) {
@@ -269,6 +295,16 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         </View>
       )}
 
+      {/* View Existing Recurring Button */}
+      {modalitaTransazione === 'periodica' && (
+        <TouchableOpacity
+          style={styles.viewRecurringBtn}
+          onPress={() => navigation.navigate('PeriodicTransactions')}
+        >
+          <Text style={styles.viewRecurringBtnText}>📑 View recurring list</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.form}>
         {/* Tipo Transazione */}
         <View style={styles.tipoSelector}>
@@ -361,14 +397,17 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         {/* Data - Solo per una_tantum */}
         {modalitaTransazione === 'una_tantum' && (
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Date (YYYY-MM-DD)</Text>
-            <TextInput
-              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="YYYY-MM-DD"
-              value={data}
-              onChangeText={setData}
-              placeholderTextColor="#9CA3AF"
-            />
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Date</Text>
+            <TouchableOpacity onPress={() => openDatePicker('data')}>
+              <TextInput
+                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                placeholder="YYYY-MM-DD"
+                value={data}
+                editable={false}
+                pointerEvents="none"
+                placeholderTextColor="#9CA3AF"
+              />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -400,14 +439,17 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             </View>
 
             {/* Data Inizio */}
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Start Date (YYYY-MM-DD)</Text>
-            <TextInput
-              style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="YYYY-MM-DD"
-              value={dataInizio}
-              onChangeText={setDataInizio}
-              placeholderTextColor="#9CA3AF"
-            />
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Start Date</Text>
+            <TouchableOpacity onPress={() => openDatePicker('dataInizio')}>
+              <TextInput
+                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                placeholder="YYYY-MM-DD"
+                value={dataInizio}
+                editable={false}
+                pointerEvents="none"
+                placeholderTextColor="#9CA3AF"
+              />
+            </TouchableOpacity>
 
             {/* Infinito Switch */}
             <View style={styles.switchContainer}>
@@ -423,14 +465,17 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             {/* Data Fine (se non infinito) */}
             {!isInfinito && (
               <View>
-                <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>End Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="YYYY-MM-DD"
-                  value={dataFine}
-                  onChangeText={setDataFine}
-                  placeholderTextColor="#9CA3AF"
-                />
+                <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>End Date</Text>
+                <TouchableOpacity onPress={() => openDatePicker('dataFine')}>
+                  <TextInput
+                    style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+                    placeholder="YYYY-MM-DD"
+                    value={dataFine}
+                    editable={false}
+                    pointerEvents="none"
+                    placeholderTextColor="#9CA3AF"
+                  />
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -451,6 +496,48 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
           )}
         </TouchableOpacity>
       </View>
+
+      {/* RENDER DATEPICKER */}
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={
+            activeDateField === 'data' && data ? new Date(data) :
+              activeDateField === 'dataInizio' && dataInizio ? new Date(dataInizio) :
+                activeDateField === 'dataFine' && dataFine ? new Date(dataFine) :
+                  new Date()
+          }
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+
+      {showDatePicker && Platform.OS === 'ios' && (
+        <Modal transparent={true} animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={[styles.modalDoneText, isDarkMode && { color: '#818CF8' }]}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={
+                  activeDateField === 'data' && data ? new Date(data) :
+                    activeDateField === 'dataInizio' && dataInizio ? new Date(dataInizio) :
+                      activeDateField === 'dataFine' && dataFine ? new Date(dataFine) :
+                        new Date()
+                }
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                textColor={isDarkMode ? "white" : "black"}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+
     </ScrollView>
   );
 };
@@ -639,6 +726,42 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
     marginTop: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalDoneText: {
+    color: '#4F46E5',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  viewRecurringBtn: {
+    marginHorizontal: 20,
+    marginBottom: 15,
+    padding: 12,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    alignItems: 'center',
+  },
+  viewRecurringBtnText: {
+    color: '#4F46E5',
+    fontWeight: '700',
+    fontSize: 15,
   },
 });
 

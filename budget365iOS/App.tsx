@@ -13,6 +13,7 @@ import TransactionsScreen from './src/screens/TransactionsScreen';
 import BudgetScreen from './src/screens/BudgetScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import PeriodicTransactionsScreen from './src/screens/PeriodicTransactionsScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SettingsProvider, useSettings } from './src/context/SettingsContext';
 
@@ -137,6 +138,17 @@ const AppNavigator = () => {
               options={{
                 headerShown: true,
                 title: 'Settings',
+                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
+                headerTintColor: '#fff'
+              }}
+            />
+
+            <Stack.Screen
+              name="PeriodicTransactions"
+              component={PeriodicTransactionsScreen}
+              options={{
+                headerShown: true,
+                title: 'Recurring Transactions',
                 headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
                 headerTintColor: '#fff'
               }}
