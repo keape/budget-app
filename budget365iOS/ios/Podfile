@@ -48,6 +48,14 @@ post_install do |installer|
     end
   end
 
+  # Fix double-conversion header path (folder may be named "double-conversion 2")
+  dc_pod_path = File.join(installer.sandbox.root, 'DoubleConversion')
+  dc_link = File.join(dc_pod_path, 'double-conversion')
+  dc_target = File.join(dc_pod_path, 'double-conversion 2')
+  if Dir.exist?(dc_target) && !File.exist?(dc_link)
+    FileUtils.ln_sf(dc_target, dc_link)
+  end
+
   # Deduplicate in the shell script to ensure only one (the original) is used
   installer.aggregate_targets.each do |target|
     resources_script = target.copy_resources_script_path
