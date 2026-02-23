@@ -48,12 +48,53 @@ post_install do |installer|
     end
   end
 
-  # Fix double-conversion header path (folder may be named "double-conversion 2")
-  dc_pod_path = File.join(installer.sandbox.root, 'DoubleConversion')
-  dc_link = File.join(dc_pod_path, 'double-conversion')
-  dc_target = File.join(dc_pod_path, 'double-conversion 2')
-  if Dir.exist?(dc_target) && !File.exist?(dc_link)
-    FileUtils.ln_sf(dc_target, dc_link)
+  # Fix pods where source directories are named with a trailing " 2" suffix.
+  # CocoaPods sometimes downloads into a renamed folder, breaking header imports.
+  # Strategy: create a symlink without the suffix pointing to the real directory.
+  require 'fileutils'
+
+  pods_root = installer.sandbox.root.to_s
+
+  # Map of pod_folder => [subfolder_that_needs_symlink, ...]
+  symlink_fixes = {
+    'DoubleConversion' => ['double-conversion'],
+    'AppCheckCore'     => ['AppCheckCore'],
+  }
+
+  symlink_fixes.each do |pod, subfolders|
+    subfolders.each do |subfolder|
+      pod_path    = File.join(pods_root, pod)
+      link_path   = File.join(pod_path, subfolder)
+      target_path = File.join(pod_path, "#{subfolder} 2")
+      if Dir.exist?(target_path) && !File.exist?(link_path)
+        FileUtils.ln_sf(target_path, link_path)
+        Pod::UI.puts "Fixed symlink: #{pod}/#{subfolder} -> #{subfolder} 2"
+      end
+    end
+  end
+
+  # Fix AppCheckCore public headers so <AppCheckCore/...> imports work.
+  # CocoaPods skips header symlinking when the source dir is named "AppCheckCore 2".
+  app_check_public = File.join(pods_root, 'AppCheckCore', 'AppCheckCore 2', 'Sources', 'Public', 'AppCheckCore')
+  if Dir.exist?(app_check_public)
+    public_headers_dest = File.join(pods_root, 'Headers', 'Public', 'AppCheckCore')
+    FileUtils.mkdir_p(public_headers_dest)
+    Dir.glob(File.join(app_check_public, '*.h')).each do |h|
+      dest = File.join(public_headers_dest, File.basename(h))
+      FileUtils.ln_sf(h, dest) unless File.exist?(dest)
+    end
+    Pod::UI.puts "Fixed AppCheckCore public headers (#{Dir.glob(File.join(public_headers_dest, '*.h')).count} headers)"
+
+    # Also inject AppCheckCore into HEADER_SEARCH_PATHS for every target xcconfig
+    installer.pods_project.targets.each do |tgt|
+      tgt.build_configurations.each do |bc|
+        existing = bc.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)'
+        app_check_path = '"$(PODS_ROOT)/Headers/Public/AppCheckCore"'
+        unless existing.include?('AppCheckCore')
+          bc.build_settings['HEADER_SEARCH_PATHS'] = "#{existing} #{app_check_path}"
+        end
+      end
+    end
   end
 
   # Deduplicate in the shell script to ensure only one (the original) is used
