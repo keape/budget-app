@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -22,6 +22,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
     const { currency, showBalance, isDarkMode } = useSettings();
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
     const [riepilogoData, setRiepilogoData] = useState({
         totaleSpeseMese: 0,
         totaleEntrateMese: 0,
@@ -52,28 +53,38 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
     useFocusEffect(
         useCallback(() => {
             if (userToken) {
-                caricaDati();
+                abortControllerRef.current?.abort();
+                abortControllerRef.current = new AbortController();
+                caricaDati(abortControllerRef.current.signal);
             }
+            return () => {
+                abortControllerRef.current?.abort();
+            };
         }, [userToken])
     );
 
-    const caricaDati = async () => {
+    const caricaDati = async (signal?: AbortSignal) => {
         try {
             const oggi = new Date();
             const meseCorrente = oggi.getMonth();
             const annoCorrente = oggi.getFullYear();
 
             const [speseRes, entrateRes, budgetRes] = await Promise.all([
-                fetch(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` } }),
-                fetch(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` } }),
+                fetch(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
+                fetch(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
                 fetch(`${BASE_URL}/api/budget-settings?anno=${annoCorrente}&mese=${meseCorrente}`, {
-                    headers: { 'Authorization': `Bearer ${userToken}` }
+                    headers: { 'Authorization': `Bearer ${userToken}` },
+                    signal,
                 })
             ]);
+
+            if (signal?.aborted) return;
 
             const speseData = await speseRes.json();
             const entrateData = await entrateRes.json();
             const budgetSettings = budgetRes.ok ? await budgetRes.json() : { spese: {}, entrate: {} };
+
+            if (signal?.aborted) return;
 
             const tutte_spese = speseData.spese || [];
             const tutte_entrate = entrateData.entrate || [];
@@ -124,17 +135,23 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 budgetEntrateMese: totBudgetEntrate
             });
 
-        } catch (error) {
-            console.error("Errore caricamento dashboard:", error);
+        } catch (error: any) {
+            if (error?.name !== 'AbortError') {
+                console.error("Errore caricamento dashboard:", error);
+            }
         } finally {
-            setIsLoading(false);
-            setRefreshing(false);
+            if (!signal?.aborted) {
+                setIsLoading(false);
+                setRefreshing(false);
+            }
         }
     };
 
     const onRefresh = () => {
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
         setRefreshing(true);
-        caricaDati();
+        caricaDati(abortControllerRef.current.signal);
     };
 
     const SimpleBarChart = ({ label, value, max, color }: { label: string, value: number, max: number, color: string }) => {

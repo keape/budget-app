@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -48,12 +48,18 @@ const TransactionsScreen: React.FC = () => {
   // Categories State
   const [categorieSpese, setCategorieSpese] = useState<string[]>([]);
   const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (userToken) {
-        loadData();
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
+        loadData(abortControllerRef.current.signal);
       }
+      return () => {
+        abortControllerRef.current?.abort();
+      };
     }, [userToken])
   );
 
@@ -61,15 +67,18 @@ const TransactionsScreen: React.FC = () => {
     applyFilters();
   }, [allTransactions, searchQuery, filterType, filterCategory, startDate, endDate]);
 
-  const loadData = async () => {
+  const loadData = async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       // Fetch Categories
       const catRes = await fetch(`${BASE_URL}/api/categorie`, {
-        headers: { 'Authorization': `Bearer ${userToken}` }
+        headers: { 'Authorization': `Bearer ${userToken}` },
+        signal,
       });
+      if (signal?.aborted) return;
       if (catRes.ok) {
         const data = await catRes.json();
+        if (signal?.aborted) return;
         setCategorieSpese(data.categorie.spese || []);
         setCategorieEntrate(data.categorie.entrate || []);
       }
@@ -77,12 +86,16 @@ const TransactionsScreen: React.FC = () => {
       // Fetch All Transactions
       // Using limit=2000 to get a good history without overkilling the mobile device
       const [speseRes, entrateRes] = await Promise.all([
-        fetch(`${BASE_URL}/api/spese?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` } }),
-        fetch(`${BASE_URL}/api/entrate?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` } })
+        fetch(`${BASE_URL}/api/spese?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
+        fetch(`${BASE_URL}/api/entrate?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal })
       ]);
+
+      if (signal?.aborted) return;
 
       const speseData = await speseRes.json();
       const entrateData = await entrateRes.json();
+
+      if (signal?.aborted) return;
 
       const spese = (speseData.spese || []).map((s: any) => ({ ...s, tipo: 'uscita' }));
       const entrate = (entrateData.entrate || []).map((e: any) => ({ ...e, tipo: 'entrata' }));
@@ -92,10 +105,14 @@ const TransactionsScreen: React.FC = () => {
       );
 
       setAllTransactions(all);
-    } catch (error) {
-      console.error("Error loading data:", error);
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error("Error loading data:", error);
+      }
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 

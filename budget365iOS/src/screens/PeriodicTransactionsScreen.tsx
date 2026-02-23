@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -35,38 +35,53 @@ const PeriodicTransactionsScreen: React.FC = () => {
     const [transactions, setTransactions] = useState<PeriodicTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     useFocusEffect(
         useCallback(() => {
             if (userToken) {
-                loadData();
+                abortControllerRef.current?.abort();
+                abortControllerRef.current = new AbortController();
+                loadData(abortControllerRef.current.signal);
             }
+            return () => {
+                abortControllerRef.current?.abort();
+            };
         }, [userToken])
     );
 
-    const loadData = async () => {
+    const loadData = async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
             const response = await fetch(`${BASE_URL}/api/transazioni-periodiche`, {
-                headers: { 'Authorization': `Bearer ${userToken}` }
+                headers: { 'Authorization': `Bearer ${userToken}` },
+                signal,
             });
+            if (signal?.aborted) return;
             if (response.ok) {
                 const data = await response.json();
+                if (signal?.aborted) return;
                 setTransactions(data.transazioni || []);
             } else {
                 console.error("Failed to load periodic transactions");
             }
-        } catch (error) {
-            console.error("Error loading periodic data:", error);
+        } catch (error: any) {
+            if (error?.name !== 'AbortError') {
+                console.error("Error loading periodic data:", error);
+            }
         } finally {
-            setIsLoading(false);
-            setRefreshing(false);
+            if (!signal?.aborted) {
+                setIsLoading(false);
+                setRefreshing(false);
+            }
         }
     };
 
     const onRefresh = () => {
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
         setRefreshing(true);
-        loadData();
+        loadData(abortControllerRef.current.signal);
     };
 
     const toggleStatus = async (item: PeriodicTransaction) => {
