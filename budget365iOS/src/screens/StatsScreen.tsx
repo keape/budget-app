@@ -6,7 +6,6 @@ import {
     ScrollView,
     TouchableOpacity,
     ActivityIndicator,
-    Dimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +13,6 @@ import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 interface CategoryStats {
     category: string;
@@ -22,18 +20,22 @@ interface CategoryStats {
     actual: number;
 }
 
-const StatsScreen: React.FC = () => {
+const MONTH_ABBRS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const CAT_COLORS = ['#4F46E5', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+const TREND_BAR_MAX_H = 70;
+
+const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navigation }) => {
     const { userToken } = useAuth();
     const { currency, isDarkMode } = useSettings();
 
-    // Selection State
     const [periodMode, setPeriodMode] = useState<'year' | 'month'>('year');
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [typeMode, setTypeMode] = useState<'spese' | 'entrate'>('spese');
 
-    // Data State
     const [statsData, setStatsData] = useState<CategoryStats[]>([]);
+    const [monthlyTotals, setMonthlyTotals] = useState<number[]>(Array(12).fill(0));
+    const [netData, setNetData] = useState<{ income: number; expenses: number }>({ income: 0, expenses: 0 });
     const [isLoading, setIsLoading] = useState(false);
 
     const months = [
@@ -41,7 +43,16 @@ const StatsScreen: React.FC = () => {
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
 
-    const years = [2024, 2025, 2026, 2027];
+    // Apply initialType param from Home navigation
+    useFocusEffect(
+        useCallback(() => {
+            const initialType = route?.params?.initialType;
+            if (initialType === 'entrate' || initialType === 'spese') {
+                setTypeMode(initialType);
+                navigation?.setParams({ initialType: undefined });
+            }
+        }, [route?.params?.initialType])
+    );
 
     useFocusEffect(
         useCallback(() => {
@@ -51,74 +62,87 @@ const StatsScreen: React.FC = () => {
         }, [userToken, periodMode, selectedYear, selectedMonth, typeMode])
     );
 
+    const goBack = () => {
+        if (periodMode === 'year') {
+            setSelectedYear(y => y - 1);
+        } else {
+            if (selectedMonth === 0) { setSelectedMonth(11); setSelectedYear(y => y - 1); }
+            else { setSelectedMonth(m => m - 1); }
+        }
+    };
+
+    const goForward = () => {
+        if (periodMode === 'year') {
+            setSelectedYear(y => y + 1);
+        } else {
+            if (selectedMonth === 11) { setSelectedMonth(0); setSelectedYear(y => y + 1); }
+            else { setSelectedMonth(m => m + 1); }
+        }
+    };
+
     const loadStats = async () => {
         setIsLoading(true);
         try {
-            // 1. Fetch Budget Settings
+            // 1. Budget settings
+            const budgetUrl = periodMode === 'year'
+                ? `${BASE_URL}/api/budget-settings?anno=${selectedYear}`
+                : `${BASE_URL}/api/budget-settings?anno=${selectedYear}&mese=${selectedMonth}`;
+            const budgetRes = await fetch(budgetUrl, { headers: { 'Authorization': `Bearer ${userToken}` } });
             let combinedBudget: Record<string, number> = {};
-
-            if (periodMode === 'year') {
-                // Fetch ALL months for this year to aggregate
-                // Ideally we'd have a backend endpoint for this, but for now we'll sum all existing setting docs
-                // Actually, let's fetch individual months to be accurate, or just one call if we assume 
-                // there's a specialized "yearly" document (which budgetSettings.js supports as mese: null)
-                const res = await fetch(`${BASE_URL}/api/budget-settings?anno=${selectedYear}`, {
-                    headers: { 'Authorization': `Bearer ${userToken}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    // The current backend GET / without mese returns the document where mese is null
-                    // If the app saves yearly budget there, we use it.
-                    combinedBudget = typeMode === 'spese' ? data.spese || {} : data.entrate || {};
-                }
-            } else {
-                const res = await fetch(`${BASE_URL}/api/budget-settings?anno=${selectedYear}&mese=${selectedMonth}`, {
-                    headers: { 'Authorization': `Bearer ${userToken}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    combinedBudget = typeMode === 'spese' ? data.spese || {} : data.entrate || {};
-                }
+            if (budgetRes.ok) {
+                const data = await budgetRes.json();
+                combinedBudget = typeMode === 'spese' ? data.spese || {} : data.entrate || {};
             }
 
-            // 2. Fetch Transactions
-            const txEndpoint = typeMode === 'spese' ? 'spese' : 'entrate';
-            const txRes = await fetch(`${BASE_URL}/api/${txEndpoint}?limit=2000`, {
-                headers: { 'Authorization': `Bearer ${userToken}` }
-            });
+            // 2. Fetch spese + entrate in parallel (needed for net balance)
+            const [speseRes, entrateRes] = await Promise.all([
+                fetch(`${BASE_URL}/api/spese?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` } }),
+                fetch(`${BASE_URL}/api/entrate?limit=2000`, { headers: { 'Authorization': `Bearer ${userToken}` } }),
+            ]);
+            const speseData = await speseRes.json();
+            const entrateData = await entrateRes.json();
+            const allSpese: any[] = speseData.spese || [];
+            const allEntrate: any[] = entrateData.entrate || [];
 
-            const txData = await txRes.json();
-            const transactions = typeMode === 'spese' ? txData.spese || [] : txData.entrate || [];
-
-            // 3. Filter transactions by selected period
-            const filteredTx = transactions.filter((t: any) => {
+            // 3. Filter by selected period
+            const filterByPeriod = (txs: any[]) => txs.filter((t: any) => {
                 const d = new Date(t.data);
-                const y = d.getFullYear();
-                const m = d.getMonth();
-
-                if (periodMode === 'year') {
-                    return y === selectedYear;
-                } else {
-                    return y === selectedYear && m === selectedMonth;
-                }
+                if (periodMode === 'year') return d.getFullYear() === selectedYear;
+                return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
             });
+            const filteredSpese = filterByPeriod(allSpese);
+            const filteredEntrate = filterByPeriod(allEntrate);
 
-            // 4. Aggregate Actuals by Category
+            // 4. Net balance
+            const totalExpenses = filteredSpese.reduce((s: number, t: any) => s + Math.abs(t.importo), 0);
+            const totalIncome = filteredEntrate.reduce((s: number, t: any) => s + Math.abs(t.importo), 0);
+            setNetData({ income: totalIncome, expenses: totalExpenses });
+
+            // 5. Monthly trend (year mode only — all months for selected typeMode)
+            if (periodMode === 'year') {
+                const monthly = Array(12).fill(0);
+                const txsForTrend = typeMode === 'spese' ? allSpese : allEntrate;
+                txsForTrend
+                    .filter((t: any) => new Date(t.data).getFullYear() === selectedYear)
+                    .forEach((t: any) => { monthly[new Date(t.data).getMonth()] += Math.abs(t.importo); });
+                setMonthlyTotals(monthly);
+            }
+
+            // 6. Category breakdown for selected typeMode
+            const filteredTx = typeMode === 'spese' ? filteredSpese : filteredEntrate;
             const actuals: Record<string, number> = {};
             filteredTx.forEach((t: any) => {
                 const cat = t.categoria || 'Uncategorized';
                 actuals[cat] = (actuals[cat] || 0) + Math.abs(t.importo);
             });
-
-            // 5. Merge all unique categories from budget and transactions
             const allCats = new Set([...Object.keys(combinedBudget), ...Object.keys(actuals)]);
             const finalStats: CategoryStats[] = Array.from(allCats).map(cat => ({
                 category: cat,
                 budget: combinedBudget[cat] || 0,
                 actual: actuals[cat] || 0
-            })).sort((a, b) => b.actual - a.actual); // Sort by highest spending
-
+            })).sort((a, b) => b.actual - a.actual);
             setStatsData(finalStats);
+
         } catch (error) {
             console.error("Error loading stats:", error);
         } finally {
@@ -126,126 +150,78 @@ const StatsScreen: React.FC = () => {
         }
     };
 
-    const calculateTotals = () => {
-        return statsData.reduce((acc, curr) => ({
-            budget: acc.budget + curr.budget,
-            actual: acc.actual + curr.actual,
-            diff: acc.diff + (curr.budget - curr.actual)
-        }), { budget: 0, actual: 0, diff: 0 });
-    };
+    const totals = statsData.reduce((acc, curr) => ({
+        budget: acc.budget + curr.budget,
+        actual: acc.actual + curr.actual,
+        diff: acc.diff + (curr.budget - curr.actual)
+    }), { budget: 0, actual: 0, diff: 0 });
 
-    const totals = calculateTotals();
+    const diffBgColor = typeMode === 'spese'
+        ? (totals.diff >= 0 ? '#14532D' : '#7F1D1D')
+        : (totals.diff <= 0 ? '#14532D' : '#7F1D1D');
+    const diffLabel = typeMode === 'spese'
+        ? (totals.diff >= 0 ? 'Savings' : 'Overbudget')
+        : (totals.diff <= 0 ? 'Exceeded Goal' : 'Below Goal');
 
-    // Helper to render bars
-    const renderBarChart = () => {
-        if (statsData.length === 0) return null;
+    const net = netData.income - netData.expenses;
+    const savingsRate = netData.income > 0 ? Math.round((net / netData.income) * 100) : 0;
+    const netPositive = net >= 0;
 
-        const maxVal = Math.max(...statsData.map(d => Math.max(d.budget, d.actual)), 1);
-        const CHART_MAX_HEIGHT = 150;
+    const maxMonthlyVal = Math.max(...monthlyTotals, 1);
+    const currentMonthIdx = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
 
-        return (
-            <View style={[styles.chartContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.chartInner}>
-                        {statsData.map((d, i) => (
-                            <View key={i} style={styles.barGroup}>
-                                <View style={styles.barsRow}>
-                                    {/* Budget Bar */}
-                                    <View style={[
-                                        styles.bar,
-                                        { height: (d.budget / maxVal) * CHART_MAX_HEIGHT, backgroundColor: isDarkMode ? '#60A5FA' : '#3B82F6' }
-                                    ]} />
-                                    {/* Actual Bar */}
-                                    <View style={[
-                                        styles.bar,
-                                        {
-                                            height: (d.actual / maxVal) * CHART_MAX_HEIGHT,
-                                            backgroundColor: isDarkMode ? '#A855F7' : '#6B21A8'
-                                        }
-                                    ]} />
-                                </View>
-                                <Text style={[styles.barLabel, isDarkMode && { color: '#9CA3AF' }]} numberOfLines={1}>{d.category}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </ScrollView>
-                {/* Legend */}
-                <View style={[styles.legend, isDarkMode && { borderTopColor: '#374151' }]}>
-                    <View style={styles.legendItem}>
-                        <View style={[styles.legendColor, { backgroundColor: isDarkMode ? '#60A5FA' : '#3B82F6' }]} />
-                        <Text style={[styles.legendText, isDarkMode && { color: '#D1D5DB' }]}>Budget</Text>
-                    </View>
-                    <View style={styles.legendItem}>
-                        <View style={[styles.legendColor, { backgroundColor: isDarkMode ? '#A855F7' : '#6B21A8' }]} />
-                        <Text style={[styles.legendText, isDarkMode && { color: '#D1D5DB' }]}>{typeMode === 'spese' ? 'Expenses' : 'Income'}</Text>
-                    </View>
-                </View>
-            </View>
-        );
-    };
+    const proportionData = statsData.filter(d => d.actual > 0);
+    const proportionTotal = proportionData.reduce((s, d) => s + d.actual, 0);
 
     return (
         <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
             {/* Header Filters */}
             <View style={[styles.filterSection, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
-                <View style={styles.filterRow}>
-                    <TouchableOpacity
-                        style={[styles.smallBtn, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, periodMode === 'year' && styles.activeSmallBtn]}
-                        onPress={() => setPeriodMode('year')}
-                    >
-                        <Text style={[styles.smallBtnText, isDarkMode && { color: '#D1D5DB' }, periodMode === 'year' && styles.activeSmallBtnText]}>Full Year</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.smallBtn, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, periodMode === 'month' && styles.activeSmallBtn]}
-                        onPress={() => setPeriodMode('month')}
-                    >
-                        <Text style={[styles.smallBtnText, isDarkMode && { color: '#D1D5DB' }, periodMode === 'month' && styles.activeSmallBtnText]}>Month</Text>
-                    </TouchableOpacity>
-                </View>
 
-                <View style={styles.filterRow}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {years.map(y => (
-                            <TouchableOpacity
-                                key={y}
-                                style={[styles.chip, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, selectedYear === y && styles.activeChip]}
-                                onPress={() => setSelectedYear(y)}
-                            >
-                                <Text style={[styles.chipText, isDarkMode && { color: '#D1D5DB' }, selectedYear === y && styles.activeChipText]}>{y}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                {periodMode === 'month' && (
-                    <View style={styles.filterRow}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {months.map((m, idx) => (
-                                <TouchableOpacity
-                                    key={m}
-                                    style={[styles.chip, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, selectedMonth === idx && styles.activeChip]}
-                                    onPress={() => setSelectedMonth(idx)}
-                                >
-                                    <Text style={[styles.chipText, isDarkMode && { color: '#D1D5DB' }, selectedMonth === idx && styles.activeChipText]}>{m}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                )}
-
+                {/* Expenses / Income toggle */}
                 <View style={[styles.typeSelector, isDarkMode && { borderColor: '#374151' }]}>
                     <TouchableOpacity
                         style={[styles.typeBtn, isDarkMode && { backgroundColor: '#1F2937' }, typeMode === 'spese' && styles.activeTypeBtnUscite]}
                         onPress={() => setTypeMode('spese')}
                     >
-                        <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, typeMode === 'spese' && styles.activeTypeBtnText]}>Expenses</Text>
+                        <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, typeMode === 'spese' && styles.activeTypeBtnText]}>💸 Expenses</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.typeBtn, isDarkMode && { backgroundColor: '#1F2937' }, typeMode === 'entrate' && styles.activeTypeBtnEntrate]}
                         onPress={() => setTypeMode('entrate')}
                     >
-                        <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, typeMode === 'entrate' && styles.activeTypeBtnText]}>Income</Text>
+                        <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, typeMode === 'entrate' && styles.activeTypeBtnText]}>💰 Income</Text>
                     </TouchableOpacity>
+                </View>
+
+                {/* Period toggle + navigator */}
+                <View style={styles.periodRow}>
+                    <View style={styles.periodModeToggle}>
+                        <TouchableOpacity
+                            style={[styles.smallBtn, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, periodMode === 'year' && styles.activeSmallBtn]}
+                            onPress={() => setPeriodMode('year')}
+                        >
+                            <Text style={[styles.smallBtnText, isDarkMode && { color: '#D1D5DB' }, periodMode === 'year' && styles.activeSmallBtnText]}>Year</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.smallBtn, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }, periodMode === 'month' && styles.activeSmallBtn]}
+                            onPress={() => setPeriodMode('month')}
+                        >
+                            <Text style={[styles.smallBtnText, isDarkMode && { color: '#D1D5DB' }, periodMode === 'month' && styles.activeSmallBtnText]}>Month</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.periodNav}>
+                        <TouchableOpacity onPress={goBack} style={styles.navArrowBtn}>
+                            <Text style={[styles.navArrow, isDarkMode && { color: '#D1D5DB' }]}>‹</Text>
+                        </TouchableOpacity>
+                        <Text style={[styles.periodLabel, isDarkMode && { color: '#F9FAFB' }]}>
+                            {periodMode === 'year' ? `${selectedYear}` : `${months[selectedMonth]} ${selectedYear}`}
+                        </Text>
+                        <TouchableOpacity onPress={goForward} style={styles.navArrowBtn}>
+                            <Text style={[styles.navArrow, isDarkMode && { color: '#D1D5DB' }]}>›</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -254,75 +230,152 @@ const StatsScreen: React.FC = () => {
                     <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
                 ) : (
                     <>
-                        <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
-                            Budget {periodMode === 'year' ? `Full year ${selectedYear}` : `${months[selectedMonth]} ${selectedYear}`}
-                        </Text>
-
-                        {/* Summary Cards */}
-                        <View style={styles.summaryContainer}>
-                            <View style={[styles.summaryCard, { backgroundColor: '#1E3A8A' }]}>
-                                <Text style={styles.cardLabel}>Planned Budget</Text>
-                                <Text style={styles.cardValue}>{currency}{totals.budget.toFixed(2)}</Text>
+                        {/* Net Balance row */}
+                        <View style={[styles.netRow, isDarkMode && { backgroundColor: '#1F2937' }, { borderLeftColor: netPositive ? '#10B981' : '#EF4444' }]}>
+                            <View style={styles.netItem}>
+                                <Text style={[styles.netLabel, isDarkMode && { color: '#9CA3AF' }]}>💰 Income</Text>
+                                <Text style={[styles.netValue, { color: '#10B981' }]}>{currency}{netData.income.toFixed(0)}</Text>
                             </View>
-                            <View style={[styles.summaryCard, { backgroundColor: '#6B21A8' }]}>
-                                <Text style={styles.cardLabel}>{typeMode === 'spese' ? 'Actual Spending' : 'Actual Income'}</Text>
-                                <Text style={styles.cardValue}>{currency}{totals.actual.toFixed(2)}</Text>
+                            <Text style={[styles.netSep, isDarkMode && { color: '#4B5563' }]}>·</Text>
+                            <View style={styles.netItem}>
+                                <Text style={[styles.netLabel, isDarkMode && { color: '#9CA3AF' }]}>💸 Expenses</Text>
+                                <Text style={[styles.netValue, { color: '#EF4444' }]}>{currency}{netData.expenses.toFixed(0)}</Text>
                             </View>
-                            <View style={[
-                                styles.summaryCard,
-                                {
-                                    backgroundColor: typeMode === 'spese'
-                                        ? (totals.diff >= 0 ? '#14532D' : '#7F1D1D')
-                                        : (totals.diff <= 0 ? '#14532D' : '#7F1D1D')
-                                }
-                            ]}>
-                                <Text style={styles.cardLabel}>Difference</Text>
-                                <Text style={styles.cardValue}>{currency}{Math.abs(totals.diff).toFixed(2)}</Text>
-                                <Text style={styles.cardInfo}>
-                                    {typeMode === 'spese'
-                                        ? (totals.diff >= 0 ? 'Savings' : 'Overbudget')
-                                        : (totals.diff <= 0 ? 'Exceeded Goal' : 'Below Goal')}
+                            <Text style={[styles.netSep, isDarkMode && { color: '#4B5563' }]}>→</Text>
+                            <View style={styles.netItem}>
+                                <Text style={[styles.netLabel, isDarkMode && { color: '#9CA3AF' }]}>Net</Text>
+                                <Text style={[styles.netValue, { color: netPositive ? '#10B981' : '#EF4444' }]}>
+                                    {netPositive ? '+' : ''}{currency}{Math.abs(net).toFixed(0)}
                                 </Text>
+                                {netData.income > 0 && (
+                                    <Text style={[styles.netRate, { color: netPositive ? '#10B981' : '#EF4444' }]}>
+                                        {savingsRate}% saved
+                                    </Text>
+                                )}
                             </View>
                         </View>
 
-                        {/* Chart */}
-                        {renderBarChart()}
-
-                        {/* Table */}
-                        <View style={[styles.tableContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                            <View style={[styles.tableHeader, isDarkMode && { backgroundColor: '#374151', borderBottomColor: '#4B5563' }]}>
-                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }, { flex: 2 }]}>CATEGORY</Text>
-                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }]}>BUDGET</Text>
-                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }]}>ACTUAL</Text>
-                                <Text style={[styles.tableHeaderText, isDarkMode && { color: '#D1D5DB' }]}>DIFF.</Text>
+                        {/* Summary cards — Budget / Spent / Diff */}
+                        <View style={styles.summaryRow}>
+                            <View style={[styles.summaryCardH, { backgroundColor: '#1E3A8A' }]}>
+                                <Text style={styles.cardLabelH}>Budget</Text>
+                                <Text style={styles.cardValueH}>{currency}{totals.budget.toFixed(0)}</Text>
                             </View>
-                            {statsData.map((item, idx) => {
-                                const diff = item.budget - item.actual;
-                                return (
-                                    <View key={idx} style={[styles.tableRow, isDarkMode && { borderBottomColor: '#374151' }]}>
-                                        <Text style={[styles.tableCell, isDarkMode && { color: '#F9FAFB' }, { flex: 2, fontWeight: 'bold' }]} numberOfLines={1}>
-                                            {item.category}
+                            <View style={[styles.summaryCardH, { backgroundColor: '#6B21A8' }]}>
+                                <Text style={styles.cardLabelH}>{typeMode === 'spese' ? 'Spent' : 'Earned'}</Text>
+                                <Text style={styles.cardValueH}>{currency}{totals.actual.toFixed(0)}</Text>
+                            </View>
+                            <View style={[styles.summaryCardH, { backgroundColor: diffBgColor }]}>
+                                <Text style={styles.cardLabelH}>Diff</Text>
+                                <Text style={styles.cardValueH}>{currency}{Math.abs(totals.diff).toFixed(0)}</Text>
+                                <Text style={styles.cardInfoH}>{diffLabel}</Text>
+                            </View>
+                        </View>
+
+                        {/* Monthly trend chart — year mode only */}
+                        {periodMode === 'year' && (
+                            <View style={[styles.trendCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                                <Text style={[styles.trendTitle, isDarkMode && { color: '#6B7280' }]}>
+                                    Monthly trend · tap a bar to view that month
+                                </Text>
+                                <View style={styles.trendBars}>
+                                    {monthlyTotals.map((val, idx) => {
+                                        const barH = val > 0 ? Math.max((val / maxMonthlyVal) * TREND_BAR_MAX_H, 4) : 0;
+                                        const isCurrent = idx === currentMonthIdx && selectedYear === currentYear;
+                                        const barColor = isCurrent
+                                            ? '#4F46E5'
+                                            : (typeMode === 'spese' ? '#EF4444' : '#10B981');
+                                        return (
+                                            <TouchableOpacity
+                                                key={idx}
+                                                style={styles.trendBarGroup}
+                                                onPress={() => { setPeriodMode('month'); setSelectedMonth(idx); }}
+                                            >
+                                                <View style={[styles.trendBarFill, { height: barH, backgroundColor: barColor }]} />
+                                                <Text style={[
+                                                    styles.trendBarLabel,
+                                                    isDarkMode && { color: '#6B7280' },
+                                                    isCurrent && { color: '#4F46E5', fontWeight: '700' }
+                                                ]}>
+                                                    {MONTH_ABBRS[idx]}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Category proportion bar */}
+                        {proportionTotal > 0 && (
+                            <View style={[styles.proportionCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                                <Text style={[styles.proportionTitle, isDarkMode && { color: '#6B7280' }]}>
+                                    {typeMode === 'spese' ? 'Expense' : 'Income'} distribution
+                                </Text>
+                                <View style={styles.proportionBar}>
+                                    {proportionData.map((item, idx) => (
+                                        <View
+                                            key={idx}
+                                            style={[
+                                                styles.proportionSegment,
+                                                { flex: item.actual / proportionTotal, backgroundColor: CAT_COLORS[idx % CAT_COLORS.length] },
+                                            ]}
+                                        />
+                                    ))}
+                                </View>
+                                <View style={styles.proportionLegend}>
+                                    {proportionData.slice(0, 5).map((item, idx) => (
+                                        <View key={idx} style={styles.proportionLegendItem}>
+                                            <View style={[styles.proportionDot, { backgroundColor: CAT_COLORS[idx % CAT_COLORS.length] }]} />
+                                            <Text style={[styles.proportionLegendText, isDarkMode && { color: '#9CA3AF' }]} numberOfLines={1}>
+                                                {item.category} {Math.round((item.actual / proportionTotal) * 100)}%
+                                            </Text>
+                                        </View>
+                                    ))}
+                                    {proportionData.length > 5 && (
+                                        <Text style={[styles.proportionMore, isDarkMode && { color: '#6B7280' }]}>
+                                            +{proportionData.length - 5} more
                                         </Text>
-                                        <Text style={[styles.tableCell, isDarkMode && { color: '#D1D5DB' }]}>{currency}{item.budget.toFixed(0)}</Text>
-                                        <Text style={[styles.tableCell, isDarkMode && { color: '#E5E7EB' }]}>{currency}{item.actual.toFixed(0)}</Text>
-                                        <Text style={[
-                                            styles.tableCell,
-                                            {
-                                                color: typeMode === 'spese'
-                                                    ? (diff >= 0 ? (isDarkMode ? '#34D399' : '#059669') : (isDarkMode ? '#F87171' : '#DC2626'))
-                                                    : (diff <= 0 ? (isDarkMode ? '#34D399' : '#059669') : (isDarkMode ? '#F87171' : '#DC2626'))
-                                            }
-                                        ]}>
-                                            {currency}{Math.abs(diff).toFixed(0)}
+                                    )}
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Category breakdown with progress bars */}
+                        {statsData.length === 0 ? (
+                            <Text style={styles.emptyText}>No data available for this period.</Text>
+                        ) : (
+                            statsData.map((item, idx) => {
+                                const pct = item.budget > 0 ? Math.min(item.actual / item.budget, 1) : 0;
+                                const overBudget = typeMode === 'spese' ? item.actual > item.budget : false;
+                                const barColor = overBudget ? '#EF4444' : '#10B981';
+                                const absDiff = Math.abs(item.budget - item.actual);
+                                const pctText = item.budget > 0
+                                    ? `${Math.round((item.actual / item.budget) * 100)}%  ·  ${overBudget ? '+' : '-'}${currency}${absDiff.toFixed(0)} ${overBudget ? 'over' : 'remaining'}`
+                                    : `${currency}${item.actual.toFixed(0)}`;
+
+                                return (
+                                    <View key={idx} style={[styles.catRow, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                                        <View style={styles.catHeader}>
+                                            <Text style={[styles.catName, isDarkMode && { color: '#F9FAFB' }]} numberOfLines={1}>
+                                                {item.category}
+                                            </Text>
+                                            <Text style={[styles.catAmounts, isDarkMode && { color: '#9CA3AF' }]}>
+                                                {currency}{item.actual.toFixed(0)}{item.budget > 0 ? ` / ${currency}${item.budget.toFixed(0)}` : ''}
+                                            </Text>
+                                        </View>
+                                        {item.budget > 0 && (
+                                            <View style={[styles.progressTrack, isDarkMode && { backgroundColor: '#374151' }]}>
+                                                <View style={[styles.progressFill, { width: `${pct * 100}%` as any, backgroundColor: barColor }]} />
+                                            </View>
+                                        )}
+                                        <Text style={[styles.pctLabel, { color: overBudget ? '#EF4444' : (isDarkMode ? '#6B7280' : '#9CA3AF') }]}>
+                                            {pctText}{overBudget ? ' ⚠️' : ''}
                                         </Text>
                                     </View>
                                 );
-                            })}
-                            {statsData.length === 0 && (
-                                <Text style={styles.emptyText}>No data available for this period.</Text>
-                            )}
-                        </View>
+                            })
+                        )}
                     </>
                 )}
             </ScrollView>
@@ -332,39 +385,17 @@ const StatsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F9FAFB' },
+
+    // Filter section
     filterSection: {
         backgroundColor: 'white',
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E7EB',
-        gap: 12
+        gap: 10,
     },
-    filterRow: { flexDirection: 'row', gap: 8 },
-    smallBtn: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        backgroundColor: '#F3F4F6',
-        borderWidth: 1,
-        borderColor: '#D1D5DB'
-    },
-    activeSmallBtn: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-    smallBtnText: { color: '#374151', fontSize: 13, fontWeight: '500' },
-    activeSmallBtnText: { color: 'white' },
-
-    chip: {
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-        backgroundColor: '#F3F4F6',
-        marginRight: 8,
-        borderWidth: 1,
-        borderColor: '#D1D5DB'
-    },
-    activeChip: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-    chipText: { fontSize: 12, color: '#374151' },
-    activeChipText: { color: 'white' },
-
     typeSelector: { flexDirection: 'row', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#D1D5DB' },
     typeBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: '#F9FAFB' },
     activeTypeBtnUscite: { backgroundColor: '#EF4444' },
@@ -372,39 +403,115 @@ const styles = StyleSheet.create({
     typeBtnText: { fontWeight: '600', color: '#374151' },
     activeTypeBtnText: { color: 'white' },
 
-    content: { flex: 1, padding: 16 },
-    sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#111827', marginBottom: 20 },
-
-    summaryContainer: { gap: 12, marginBottom: 24 },
-    summaryCard: { padding: 16, borderRadius: 12, minHeight: 90 },
-    cardLabel: { fontSize: 13, color: '#E0E7FF', opacity: 0.9, marginBottom: 4 },
-    cardValue: { fontSize: 24, fontWeight: 'bold', color: 'white' },
-    cardInfo: { fontSize: 11, color: 'white', opacity: 0.8, marginTop: 4 },
-
-    chartContainer: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 24,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3
+    periodRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    periodModeToggle: { flexDirection: 'row', gap: 8 },
+    smallBtn: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: '#F3F4F6',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
     },
-    chartInner: { flexDirection: 'row', alignItems: 'flex-end', paddingBottom: 20, gap: 20 },
-    barGroup: { alignItems: 'center', width: 60 },
-    barsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
-    bar: { width: 15, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-    barLabel: { fontSize: 10, color: '#6B7280', marginTop: 8, width: 60, textAlign: 'center' },
+    activeSmallBtn: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+    smallBtnText: { color: '#374151', fontSize: 13, fontWeight: '500' },
+    activeSmallBtnText: { color: 'white' },
 
-    legend: { flexDirection: 'row', justifyContent: 'center', gap: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
-    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    legendColor: { width: 12, height: 12, borderRadius: 3 },
-    legendText: { fontSize: 12, color: '#4B5563' },
+    periodNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    navArrowBtn: { padding: 4 },
+    navArrow: { fontSize: 22, color: '#374151', fontWeight: '600' },
+    periodLabel: { fontSize: 14, fontWeight: '600', color: '#111827', minWidth: 110, textAlign: 'center' },
 
-    tableContainer: { backgroundColor: 'white', borderRadius: 12, overflow: 'hidden', marginBottom: 40 },
-    tableHeader: { flexDirection: 'row', backgroundColor: '#F8FAFC', padding: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-    tableHeaderText: { flex: 1, fontSize: 11, fontWeight: 'bold', color: '#64748B', textAlign: 'center' },
-    tableRow: { flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', alignItems: 'center' },
-    tableCell: { flex: 1, fontSize: 12, color: '#334155', textAlign: 'center' },
-    emptyText: { textAlign: 'center', padding: 20, color: '#94A3B8', fontStyle: 'italic' }
+    // Content
+    content: { flex: 1, padding: 16 },
+
+    // Net balance row
+    netRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 12,
+        borderLeftWidth: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    netItem: { flex: 1, alignItems: 'center' },
+    netLabel: { fontSize: 10, color: '#6B7280', marginBottom: 2 },
+    netValue: { fontSize: 15, fontWeight: '700' },
+    netRate: { fontSize: 10, marginTop: 1 },
+    netSep: { fontSize: 16, color: '#D1D5DB', marginHorizontal: 2 },
+
+    // Summary cards (horizontal)
+    summaryRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+    summaryCardH: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center' },
+    cardLabelH: { fontSize: 10, color: 'rgba(255,255,255,0.85)', marginBottom: 4, textAlign: 'center' },
+    cardValueH: { fontSize: 16, fontWeight: 'bold', color: 'white', textAlign: 'center' },
+    cardInfoH: { fontSize: 9, color: 'rgba(255,255,255,0.75)', marginTop: 3, textAlign: 'center' },
+
+    // Monthly trend chart
+    trendCard: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    trendTitle: { fontSize: 11, color: '#9CA3AF', marginBottom: 10 },
+    trendBars: { flexDirection: 'row', alignItems: 'flex-end', height: 90 },
+    trendBarGroup: { flex: 1, alignItems: 'center' },
+    trendBarFill: { width: 14, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+    trendBarLabel: { fontSize: 9, color: '#9CA3AF', marginTop: 4 },
+
+    // Proportion bar
+    proportionCard: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    proportionTitle: { fontSize: 11, color: '#9CA3AF', marginBottom: 10 },
+    proportionBar: { flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden', marginBottom: 12 },
+    proportionSegment: { height: 12 },
+    proportionLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    proportionLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    proportionDot: { width: 8, height: 8, borderRadius: 4 },
+    proportionLegendText: { fontSize: 11, color: '#6B7280' },
+    proportionMore: { fontSize: 11, color: '#9CA3AF' },
+
+    // Category rows
+    catRow: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    catHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    catName: { fontSize: 15, fontWeight: '600', color: '#111827', flex: 1 },
+    catAmounts: { fontSize: 13, color: '#6B7280', marginLeft: 8 },
+    progressTrack: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginBottom: 4 },
+    progressFill: { height: 6, borderRadius: 3 },
+    pctLabel: { fontSize: 11, textAlign: 'right' },
+
+    emptyText: { textAlign: 'center', padding: 40, color: '#94A3B8', fontStyle: 'italic' },
 });
 
 export default StatsScreen;

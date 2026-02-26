@@ -220,7 +220,7 @@ const SettingsScreen: React.FC = () => {
                 Designed to be simple yet powerful, it helps you track your income and expenses intuitively.
             </Text>
 
-            <View style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}>
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937', borderBottomColor: '#374151' }]}>
                 <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🎯 Our Goals</Text>
                 <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Simple and accessible management</Text>
                 <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Powerful tools without complexity</Text>
@@ -228,7 +228,7 @@ const SettingsScreen: React.FC = () => {
             </View>
 
             <TouchableOpacity
-                style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}
+                style={[styles.section, isDarkMode && { backgroundColor: '#1F2937', borderBottomColor: '#374151' }]}
                 onPress={() => Linking.openURL('https://various-sushi-3f4.notion.site/Budget365-Privacy-Policy-2e372b8820f88038a92ef83fedfd03d7')}
                 activeOpacity={0.8}
             >
@@ -238,7 +238,7 @@ const SettingsScreen: React.FC = () => {
                 </View>
             </TouchableOpacity>
 
-            <View style={[styles.section, isDarkMode && { borderBottomColor: '#374151' }]}>
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937', borderBottomColor: '#374151' }]}>
                 <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>✉️ Contact Us</Text>
                 <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
                     Have questions or suggestions? Email us at keape@me.com

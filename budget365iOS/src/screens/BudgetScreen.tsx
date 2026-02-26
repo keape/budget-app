@@ -10,7 +10,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Modal
+  Modal,
+  InputAccessoryView,
+  Keyboard,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -476,7 +478,6 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
     >
       <View style={[styles.header, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
-        <Text style={[styles.title, isDarkMode && { color: '#F9FAFB' }]}>Budget Planner</Text>
         <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>Manage your monthly limits</Text>
       </View>
 
@@ -568,10 +569,14 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                     style={[styles.input, isDarkMode && { color: '#F9FAFB' }]}
                     keyboardType="numeric"
                     value={limitStr}
-                    onChangeText={(text) => setLocalBudget(prev => ({ ...prev, [cat]: text }))}
+                    onChangeText={(text) => {
+                      const cleaned = text.replace(/^0+(\d)/, '$1');
+                      setLocalBudget(prev => ({ ...prev, [cat]: cleaned }));
+                    }}
                     onEndEditing={() => persistBudget(localBudget, activeTab)}
                     placeholder="0"
                     placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
+                    inputAccessoryViewID="budgetInputAccessory"
                   />
                 </View>
               </View>
@@ -692,11 +697,42 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
       {renderMonthPicker()}
       {renderYearPicker()}
+
+      <InputAccessoryView nativeID="budgetInputAccessory">
+        <View style={[styles.keyboardAccessory, isDarkMode && { backgroundColor: '#1F2937', borderTopColor: '#374151' }]}>
+          <TouchableOpacity
+            onPress={() => {
+              Keyboard.dismiss();
+              persistBudget(localBudget, activeTab);
+            }}
+            style={styles.keyboardDoneButton}
+          >
+            <Text style={styles.keyboardDoneText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </InputAccessoryView>
     </KeyboardAvoidingView >
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAccessory: {
+    backgroundColor: '#F3F4F6',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  keyboardDoneButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  keyboardDoneText: {
+    color: '#4F46E5',
+    fontWeight: '600',
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
