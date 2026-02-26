@@ -226,16 +226,16 @@ const TransactionsScreen: React.FC = () => {
 
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={[styles.actionBtn, isDarkMode ? { backgroundColor: '#1e1b4b', borderColor: '#312e81' } : { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }]}
             onPress={() => navigation.navigate('AddTransaction', { transactionToEdit: item })}
           >
-            <Text>✏️</Text>
+            <Text style={{ fontSize: 16 }}>✏️</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={[styles.actionBtn, isDarkMode ? { backgroundColor: '#450a0a', borderColor: '#7f1d1d' } : { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
             onPress={() => deleteTransaction(item._id, item.tipo)}
           >
-            <Text>🗑️</Text>
+            <Text style={{ fontSize: 16 }}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   descText: { fontSize: 14, color: '#6B7280', fontStyle: 'italic', marginBottom: 4 },
   dateText: { fontSize: 12, color: '#9CA3AF' },
   actionButtons: { flexDirection: 'row', alignItems: 'center' },
-  actionBtn: { padding: 8, marginLeft: 4 },
+  actionBtn: { padding: 6, marginLeft: 4, borderRadius: 6, borderWidth: 1 },
   emptyText: { textAlign: 'center', marginTop: 40, color: '#6B7280' },
 });
 

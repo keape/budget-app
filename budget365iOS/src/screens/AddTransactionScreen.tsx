@@ -6,11 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
   Alert,
   ActivityIndicator,
   Switch,
   Platform,
   Modal,
+  InputAccessoryView,
+  Keyboard,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -169,9 +172,16 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         });
 
         if (response.ok) {
-          Alert.alert('Success', `${tipo === 'spesa' ? 'Expense' : 'Income'} ${isEditing ? 'updated' : 'added'} successfully!`, [
-            { text: 'OK', onPress: () => isEditing ? navigation.goBack() : resetForm() }
-          ]);
+          Alert.alert(
+            'Success',
+            `${tipo === 'spesa' ? 'Expense' : 'Income'} ${isEditing ? 'updated' : 'added'} successfully!`,
+            isEditing
+              ? [{ text: 'OK', onPress: () => navigation.goBack() }]
+              : [
+                  { text: 'OK', onPress: () => navigation.goBack() },
+                  { text: 'Add another', onPress: () => resetForm() },
+                ]
+          );
         } else {
           try {
             const errorData = await response.json();
@@ -214,15 +224,20 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         });
 
         if (response.ok) {
-          Alert.alert('Success', 'Recurring transaction created successfully!');
-
           // Triggera generazione movimenti mancanti (come da web app)
           fetch(`${BASE_URL}/api/transazioni-periodiche/genera`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${userToken}` }
           }).catch(err => console.error("Error generating transactions:", err));
 
-          resetForm();
+          Alert.alert(
+            'Success',
+            'Recurring transaction created successfully!',
+            [
+              { text: 'OK', onPress: () => navigation.goBack() },
+              { text: 'Add another', onPress: () => resetForm() },
+            ]
+          );
         } else {
           const errorData = await response.json();
           Alert.alert('Error', errorData.message || 'Unable to create recurring transaction');
@@ -253,11 +268,16 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
   };
 
   return (
-    <ScrollView style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{isEditing ? 'Edit Transaction' : 'Manage Transactions'}</Text>
-      </View>
-
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={88}
+    >
+    <ScrollView
+      style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Selettore Modalità - Disable in Edit Mode */}
       {!isEditing && (
         <View style={[styles.modalitySelector, isDarkMode && { backgroundColor: '#374151' }]}>
@@ -289,7 +309,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
               isDarkMode && { color: '#D1D5DB' },
               modalitaTransazione === 'periodica' && styles.modalityButtonTextActive
             ]}>
-              🔄 Periodic
+              🔄 Recurring
             </Text>
           </TouchableOpacity>
         </View>
@@ -354,12 +374,21 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             onChangeText={setImporto}
             keyboardType="numeric"
             placeholderTextColor="#9CA3AF"
+            inputAccessoryViewID="importoAccessory"
           />
         </View>
 
-        {/* Categoria */}
+        <InputAccessoryView nativeID="importoAccessory">
+          <View style={[styles.keyboardAccessory, isDarkMode && { backgroundColor: '#1F2937', borderTopColor: '#374151' }]}>
+            <TouchableOpacity onPress={() => Keyboard.dismiss()} style={styles.keyboardDoneButton}>
+              <Text style={styles.keyboardDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+
+        {/* Category */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Categoria</Text>
+          <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categorieContainer}>
             {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
               <TouchableOpacity
@@ -539,10 +568,28 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
       )}
 
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAccessory: {
+    backgroundColor: '#F3F4F6',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  keyboardDoneButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  keyboardDoneText: {
+    color: '#4F46E5',
+    fontWeight: '600',
+    fontSize: 16,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -666,6 +713,12 @@ const styles = StyleSheet.create({
   categoriaButtonTextActive: {
     color: '#FFFFFF',
   },
+  buttonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+    marginBottom: 30,
+  },
   addButton: {
     backgroundColor: '#2563EB',
     paddingVertical: 16,
@@ -679,6 +732,19 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addAnotherButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#2563EB',
+  },
+  addAnotherButtonText: {
+    color: '#2563EB',
     fontSize: 16,
     fontWeight: '600',
   },

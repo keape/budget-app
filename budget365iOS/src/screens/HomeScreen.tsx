@@ -184,67 +184,71 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-            <View style={[styles.header, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
-                <Image
-                    source={require('../assets/logo.png')}
-                    style={{ width: 40, height: 40, marginRight: 12, borderRadius: 8 }}
-                />
-                <Text style={[styles.title, isDarkMode && { color: '#F9FAFB' }]}>Budget Dashboard</Text>
-            </View>
-
             {/* Quick Actions */}
             <View style={styles.actionsContainer}>
                 <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#4F46E5', flex: 1, marginRight: 8 }]}
+                    style={[styles.actionButton, { backgroundColor: '#DC2626', flex: 1, marginRight: 4 }]}
                     onPress={() => navigation.navigate('AddTransaction')}
                 >
-                    <Text style={styles.actionButtonText}>💸 Expense</Text>
+                    <Text style={styles.actionButtonText}>💸 Add Expense</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#059669', flex: 1, marginHorizontal: 4 }]}
+                    style={[styles.actionButton, { backgroundColor: '#059669', flex: 1, marginLeft: 4 }]}
                     onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
                 >
-                    <Text style={styles.actionButtonText}>💰 Income</Text>
+                    <Text style={styles.actionButtonText}>💰 Add Income</Text>
                 </TouchableOpacity>
+            </View>
 
-                <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#818CF8', flex: 1, marginLeft: 8 }]}
-                    onPress={() => navigation.navigate('PeriodicTransactions')}
-                >
-                    <Text style={styles.actionButtonText}>🔄 Recurring</Text>
+            {/* Quick Navigation */}
+            <View style={[styles.quickNavRow, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Transactions')}>
+                    <Text style={styles.quickNavIcon}>🔍</Text>
+                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Transactions</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Budget')}>
+                    <Text style={styles.quickNavIcon}>📈</Text>
+                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Budget</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Stats')}>
+                    <Text style={styles.quickNavIcon}>📊</Text>
+                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Stats</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Cards Riepilogo */}
             <View style={styles.cardsGrid}>
-                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats', { initialType: 'entrate' })}>
                     <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Income</Text>
                     <Text style={[styles.cardValue, { color: '#059669' }]}>
                         {showBalance ? `+${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
                     </Text>
-                </View>
-                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats', { initialType: 'spese' })}>
                     <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Expenses</Text>
                     <Text style={[styles.cardValue, { color: '#DC2626' }]}>
                         {showBalance ? `-${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
                     </Text>
-                </View>
-                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats')}>
                     <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Balance</Text>
                     <Text style={[styles.cardValue, { color: riepilogoData.bilancioMese >= 0 ? '#059669' : '#DC2626' }]}>
                         {showBalance ? `${riepilogoData.bilancioMese >= 0 ? '+' : ''}${currency}${riepilogoData.bilancioMese.toFixed(2)}` : '****'}
                     </Text>
-                </View>
-                <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats')}>
                     <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Transactions</Text>
                     <Text style={[styles.cardValue, { color: '#3B82F6' }]}>{riepilogoData.numeroTransazioniMese}</Text>
-                </View>
+                </TouchableOpacity>
             </View>
 
             {/* Budget Summary Charts */}
-            <View style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>📉 Performance vs Budget</Text>
+            <TouchableOpacity style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Budget')}>
+                <View style={styles.sectionTitleRow}>
+                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>📉 Performance vs Budget</Text>
+                    <Text style={styles.chevron}>›</Text>
+                </View>
                 <View style={styles.sectionContent}>
                     <SimpleBarChart
                         label="Expenses vs Budget"
@@ -268,12 +272,15 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         Income Budget: {showBalance ? `${currency}${budgetData.budgetEntrateMese.toFixed(2)}` : '****'}
                     </Text>
                 </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Categorie Top */}
             <View style={styles.row}>
-                <View style={[styles.sectionContainer, { flex: 1, marginRight: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Expenses</Text>
+                <TouchableOpacity style={[styles.sectionContainer, { flex: 1, marginRight: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Transactions')}>
+                    <View style={styles.sectionTitleRow}>
+                        <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Expenses</Text>
+                        <Text style={styles.chevron}>›</Text>
+                    </View>
                     <View style={styles.sectionContent}>
                         {riepilogoData.dettagliCategorie.spese.length === 0 ? (
                             <Text style={styles.emptyText}>No expenses</Text>
@@ -288,10 +295,13 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             ))
                         )}
                     </View>
-                </View>
+                </TouchableOpacity>
 
-                <View style={[styles.sectionContainer, { flex: 1, marginLeft: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Income</Text>
+                <TouchableOpacity style={[styles.sectionContainer, { flex: 1, marginLeft: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Transactions')}>
+                    <View style={styles.sectionTitleRow}>
+                        <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Income</Text>
+                        <Text style={styles.chevron}>›</Text>
+                    </View>
                     <View style={styles.sectionContent}>
                         {riepilogoData.dettagliCategorie.entrate.length === 0 ? (
                             <Text style={styles.emptyText}>No income</Text>
@@ -306,12 +316,15 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             ))
                         )}
                     </View>
-                </View>
+                </TouchableOpacity>
             </View>
 
             {/* Ultime Transazioni */}
-            <View style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>🕐 Recent Activity</Text>
+            <TouchableOpacity style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Transactions')}>
+                <View style={styles.sectionTitleRow}>
+                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>🕐 Recent Activity</Text>
+                    <Text style={styles.chevron}>›</Text>
+                </View>
                 <View style={styles.sectionContent}>
                     {riepilogoData.ultime5Transazioni.map((t, i) => (
                         <View key={i} style={[styles.transactionRow, isDarkMode && { borderBottomColor: '#374151' }]}>
@@ -325,7 +338,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         </View>
                     ))}
                 </View>
-            </View>
+            </TouchableOpacity>
 
             <View style={{ height: 40 }} />
         </ScrollView>
@@ -356,6 +369,37 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#111827',
         textAlign: 'center',
+    },
+    quickNavRow: {
+        flexDirection: 'row',
+        marginHorizontal: 16,
+        marginBottom: 16,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        padding: 8,
+        gap: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    quickNavBtn: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#F9FAFB',
+    },
+    quickNavIcon: {
+        fontSize: 22,
+        marginBottom: 4,
+    },
+    quickNavLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#374151',
+        letterSpacing: 0.2,
     },
     actionsContainer: {
         flexDirection: 'row',
@@ -417,11 +461,21 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
+    sectionTitleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    chevron: {
+        fontSize: 22,
+        color: '#9CA3AF',
+        fontWeight: '300',
+    },
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#111827',
-        marginBottom: 16,
     },
     sectionContent: {},
     subText: {

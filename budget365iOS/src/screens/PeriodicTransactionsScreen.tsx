@@ -61,7 +61,7 @@ const PeriodicTransactionsScreen: React.FC = () => {
             if (response.ok) {
                 const data = await response.json();
                 if (signal?.aborted) return;
-                setTransactions(data.transazioni || []);
+                setTransactions(Array.isArray(data) ? data : (data.transazioni || []));
             } else {
                 console.error("Failed to load periodic transactions");
             }

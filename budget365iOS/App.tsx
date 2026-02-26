@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, StyleSheet, Text, Image } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import LoginScreen from './src/screens/LoginScreen';
@@ -29,12 +29,7 @@ const MainTabs = () => {
         tabBarActiveTintColor: '#4F46E5',
         tabBarInactiveTintColor: isDarkMode ? '#9CA3AF' : '#6B7280',
         tabBarStyle: {
-          backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: isDarkMode ? '#374151' : '#E5E7EB',
-          paddingTop: 5,
-          paddingBottom: 5,
-          height: 60,
+          display: 'none',
         },
         headerStyle: {
           backgroundColor: isDarkMode ? '#111827' : '#4F46E5',
@@ -66,38 +61,53 @@ const MainTabs = () => {
       <Tab.Screen
         name="Transactions"
         component={TransactionsScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'Search & Filter',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 22, color: '#FFFFFF' }}>←</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>🔍</Text>
             </View>
           ),
-        }}
+        })}
       />
       <Tab.Screen
         name="Budget"
         component={BudgetScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'Budget',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 22, color: '#FFFFFF' }}>←</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>📈</Text>
             </View>
           ),
-        }}
+        })}
       />
       <Tab.Screen
         name="Stats"
         component={StatsScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'Stats',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 22, color: '#FFFFFF' }}>←</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>📊</Text>
             </View>
           ),
-        }}
+        })}
       />
     </Tab.Navigator>
   );

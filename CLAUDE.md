@@ -1,4 +1,4 @@
-# Budget App - Claude Code Context
+# Budget365 - Claude Code Context
 
 ## Project Overview
 Budget App is a multi-platform personal budget management application consisting of:
@@ -147,8 +147,10 @@ const { authenticateToken } = require('./routes/auth');
 
 ### React Native App (iOS + Android)
 **Location**: `/budget365iOS/`
-**Tech Stack**: React Native 0.80.2, TypeScript, React Navigation (stack + bottom tabs), AsyncStorage
+**Tech Stack**: React Native 0.80.2 + React **19.1.0** (exact), TypeScript, New Architecture (Hermes + JSI)
 **Entry**: `index.js` → `App.tsx`
+**API Base URL**: `https://budget-app-ios-backend.onrender.com` (from `src/config.ts`)
+**Note**: This is React Native — NOT Swift/native iOS.
 
 **Notable dependencies**:
 - `@invertase/react-native-apple-authentication` - Apple Sign-In
@@ -161,7 +163,7 @@ const { authenticateToken } = require('./routes/auth');
 budget365iOS/
 ├── src/
 │   ├── screens/     # Screen components
-│   ├── context/     # React context providers
+│   ├── context/     # React context providers (AuthContext, SettingsContext)
 │   ├── config.ts    # API config
 │   └── assets/      # Images/icons
 ├── ios/             # Xcode project
@@ -169,13 +171,31 @@ budget365iOS/
 └── App.tsx          # Root component
 ```
 
+**Navigation** (`App.tsx`):
+- Bottom tab navigator (tabs hidden) → Home, Transactions, Budget, Stats
+- Stack screens: AddTransaction, Settings, PeriodicTransactions
+- Auth flow: Login, Register (when not authenticated)
+
+**Screens** (`src/screens/`):
+- `HomeScreen` — Dashboard: monthly balance, income/expenses cards, Performance vs Budget chart (bar), top categories, last 5 transactions. Quick-action buttons "Add Expense" / "Add Income".
+- `TransactionsScreen` — Full transaction list with text search, filters (type/category/date range), running total of filtered results, per-row edit and delete.
+- `AddTransactionScreen` — Add/edit transaction. One-time or Recurring mode toggle. Native date picker (iOS modal spinner, Android default). Edit mode changes header to "Edit Transaction".
+- `PeriodicTransactionsScreen` — Recurring transactions list: frequency, start date, active/paused badge. Pause/resume and delete buttons. Pull-to-refresh.
+- `BudgetScreen` — Budget planner per category: Expenses / Income (Goals) tabs, month/year selector, copy values from previous month, add/rename/delete categories, progress bar per category, autosave on blur.
+- `StatsScreen` — Statistics: Year or Month mode, Expenses/Income toggle, monthly trend bar chart (tap bar → drill into month), category distribution proportion bar, per-category breakdown with progress bars and savings rate.
+- `SettingsScreen` — Settings: change password, link email, app customization (theme light/dark/system, currency €/$£, show/hide balance), about + Privacy Policy, bug report (mailto), delete account, logout.
+
+**Context** (`src/context/`):
+- `AuthContext` — JWT token, login/logout, isAuthenticated
+- `SettingsContext` — theme, currency, showBalance, isDarkMode (persisted with AsyncStorage)
+
 **Commands**:
 ```bash
 cd budget365iOS
-npm start                         # Metro bundler
-npx react-native run-ios          # Build & run iOS simulator (requires macOS + Xcode)
-npx react-native run-android      # Build & run Android emulator
-npm test                          # Jest tests
+npm start                                          # Metro bundler (port 8081)
+npx react-native run-ios --scheme Debug            # iOS simulator (always use Debug)
+npx react-native run-android                       # Android emulator
+npm test                                           # Jest tests
 ```
 
 ### Expo App (Simplified)
@@ -243,6 +263,8 @@ The React dev server proxies API calls; `config.js` points to `localhost:5001` i
 - **Dark Mode**: Toggle in UI, verify every page
 - **Recurring Transactions**: Requires backend + MongoDB
 
+---
+
 ## Environment Variables
 
 **Root `.env`** (used by both CRA dev server and backend via `dotenv`):
@@ -276,7 +298,7 @@ The React dev server proxies API calls; `config.js` points to `localhost:5001` i
 - **Alternative**: `vercel.json` routes `/api/*` to `server/index.js` for Vercel-hosted backend
 
 ### Mobile
-- **iOS**: Requires macOS + Xcode + Apple Developer certificates
+- **iOS**: Requires macOS + Xcode + Apple Developer certificates; always use **Debug** scheme in development (Release embeds JS bundle, takes 90+ sec to build)
 - **Android**: Android Studio + Gradle
 
 ## Code Conventions
@@ -304,6 +326,10 @@ The React dev server proxies API calls; `config.js` points to `localhost:5001` i
 - **Language**: TypeScript (`.tsx` / `.ts`)
 - **Navigation**: React Navigation (stack + bottom tabs)
 - **Storage**: `@react-native-async-storage/async-storage` instead of localStorage
+- **Styling**: StyleSheet inline (no Tailwind); dark mode via `isDarkMode` from SettingsContext
+- **Fetch**: native `fetch()` with `Authorization: Bearer` header (no Axios)
+- **AbortController**: required in every `useFocusEffect` data-fetching screen to prevent `EXC_BAD_ACCESS` crash in the C++ JSI layer (React Native New Architecture). See pattern in HomeScreen, TransactionsScreen, PeriodicTransactionsScreen.
+- **React version**: must be exactly `19.1.0` — RN 0.80.x bundles `react-native-renderer@19.1.0`; any mismatch causes white screen (`TypeError: Cannot read property 'S' of undefined`)
 
 ## Common Patterns
 - **JWT storage**: `localStorage` (web) / AsyncStorage (mobile)
@@ -323,3 +349,7 @@ The React dev server proxies API calls; `config.js` points to `localhost:5001` i
 - Backend starts successfully even without a MongoDB connection (graceful degradation; auth + health work)
 - Debug/migration endpoints in `server/index.js` are operational utilities - do not remove without understanding their purpose
 - `src/config.js` contains `console.log` debug statements - expected in development
+- `budget365iOS/` is **React Native** (not Swift) — full-featured native app, separate from the Expo version
+- `Home_backup.js` and `Home_new.js` in `/src/` are legacy backups — not imported by `App.js`
+- `render.yaml` contains credentials in plaintext — do not modify carelessly
+- Root `package.json` has a `postinstall` script that runs `cd server && npm install` automatically
