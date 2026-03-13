@@ -15,12 +15,14 @@ import Navbar from './navbar';
 import ProtectedRoute from './ProtectedRoute';
 import { ThemeProvider } from './ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import ServerWakeupBanner from './components/ServerWakeupBanner';
 
 function App() {
   return (
     <ThemeProvider>
       <NotificationProvider>
         <Router>
+        <ServerWakeupBanner />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
           <Routes>
             <Route path="/login" element={<Login />} />

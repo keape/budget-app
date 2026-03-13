@@ -355,7 +355,27 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                                     : `${currency}${item.actual.toFixed(0)}`;
 
                                 return (
-                                    <View key={idx} style={[styles.catRow, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                                    <TouchableOpacity
+                                        key={idx}
+                                        style={[styles.catRow, isDarkMode && { backgroundColor: '#1F2937' }]}
+                                        activeOpacity={0.7}
+                                        onPress={() => {
+                                            const month = String(selectedMonth + 1).padStart(2, '0');
+                                            const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+                                            const startDate = periodMode === 'year'
+                                                ? `${selectedYear}-01-01`
+                                                : `${selectedYear}-${month}-01`;
+                                            const endDate = periodMode === 'year'
+                                                ? `${selectedYear}-12-31`
+                                                : `${selectedYear}-${month}-${lastDay}`;
+                                            navigation?.navigate('Transactions', {
+                                                filterCategory: item.category,
+                                                filterType: typeMode === 'spese' ? 'uscita' : 'entrata',
+                                                startDate,
+                                                endDate,
+                                            });
+                                        }}
+                                    >
                                         <View style={styles.catHeader}>
                                             <Text style={[styles.catName, isDarkMode && { color: '#F9FAFB' }]} numberOfLines={1}>
                                                 {item.category}
@@ -372,7 +392,10 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                                         <Text style={[styles.pctLabel, { color: overBudget ? '#EF4444' : (isDarkMode ? '#6B7280' : '#9CA3AF') }]}>
                                             {pctText}{overBudget ? ' ⚠️' : ''}
                                         </Text>
-                                    </View>
+                                        <Text style={[styles.catTapHint, isDarkMode && { color: '#4B5563' }]}>
+                                            Tap to view transactions →
+                                        </Text>
+                                    </TouchableOpacity>
                                 );
                             })
                         )}
@@ -510,6 +533,7 @@ const styles = StyleSheet.create({
     progressTrack: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden', marginBottom: 4 },
     progressFill: { height: 6, borderRadius: 3 },
     pctLabel: { fontSize: 11, textAlign: 'right' },
+    catTapHint: { fontSize: 10, color: '#D1D5DB', textAlign: 'right', marginTop: 4 },
 
     emptyText: { textAlign: 'center', padding: 40, color: '#94A3B8', fontStyle: 'italic' },
 });

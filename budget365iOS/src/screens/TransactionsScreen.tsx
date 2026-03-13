@@ -27,7 +27,7 @@ interface Transaction {
   tipo: 'entrata' | 'uscita';
 }
 
-const TransactionsScreen: React.FC = () => {
+const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const { userToken } = useAuth();
   const { currency, isDarkMode } = useSettings();
   const navigation = useNavigation<any>();
@@ -49,6 +49,17 @@ const TransactionsScreen: React.FC = () => {
   const [categorieSpese, setCategorieSpese] = useState<string[]>([]);
   const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Apply filters from Stats screen navigation
+  useEffect(() => {
+    const params = route?.params;
+    if (!params) return;
+    if (params.filterCategory !== undefined) setFilterCategory(params.filterCategory || '');
+    if (params.filterType !== undefined) setFilterType(params.filterType || 'tutte');
+    if (params.startDate !== undefined) setStartDate(params.startDate || '');
+    if (params.endDate !== undefined) setEndDate(params.endDate || '');
+    if (params.filterCategory || params.filterType || params.startDate) setShowFilters(true);
+  }, [route?.params]);
 
   useFocusEffect(
     useCallback(() => {
