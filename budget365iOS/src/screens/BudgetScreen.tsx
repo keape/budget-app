@@ -40,6 +40,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
+  const YEARLY_SENTINEL = 12;
+  const monthsWithYearly = [...months, 'Full Year'];
+  const isYearlyMode = selectedMonth === YEARLY_SENTINEL;
+
   const years = [2024, 2025, 2026, 2027];
 
   const [isMonthModalVisible, setIsMonthModalVisible] = useState(false);
@@ -49,6 +53,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const [categories, setCategories] = useState<string[]>([]);
   const [budgetSettings, setBudgetSettings] = useState<Record<string, number>>({});
   const [actualSpending, setActualSpending] = useState<Record<string, number>>({});
+
+  // Yearly aggregated state
+  const [yearlyBudget, setYearlyBudget] = useState<Record<string, number>>({});
+  const [yearlyActual, setYearlyActual] = useState<Record<string, number>>({});
 
   // Dirty State (changes made by user)
   const [localBudget, setLocalBudget] = useState<Record<string, string>>({}); // Store as string for TextInput
@@ -91,45 +99,91 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         console.log("Cleanup failed", err);
       }
 
-      // 2. Fetch Current Budget Settings (Limits)
-      const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${year}&mese=${month}`, {
-        headers: { 'Authorization': `Bearer ${userToken}` }
-      });
-      const settingsData = settingsRes.ok ? await settingsRes.json() : { spese: {}, entrate: {} };
+      if (isYearlyMode) {
+        // 2a. Yearly mode: fetch all 12 months in parallel and aggregate
+        const allSettings = await Promise.all(
+          Array.from({ length: 12 }, (_, m) =>
+            fetch(`${BASE_URL}/api/budget-settings?anno=${year}&mese=${m}`, {
+              headers: { 'Authorization': `Bearer ${userToken}` }
+            }).then(r => r.ok ? r.json() : { spese: {}, entrate: {} })
+          )
+        );
 
-      const currentLimits = activeTab === 'expenses'
-        ? (settingsData.spese || {})
-        : (settingsData.entrate || {});
+        const aggBudget: Record<string, number> = {};
+        allSettings.forEach(s => {
+          const src = activeTab === 'expenses' ? (s.spese || {}) : (s.entrate || {});
+          Object.entries(src).forEach(([cat, val]) => {
+            aggBudget[cat] = (aggBudget[cat] || 0) + (val as number);
+          });
+        });
+        setYearlyBudget(aggBudget);
+        setBudgetSettings(aggBudget);
 
-      setBudgetSettings(currentLimits);
+        // 3a. Fetch actual spending for the whole year
+        const endpoint = activeTab === 'expenses' ? 'spese' : 'entrate';
+        const txRes = await fetch(`${BASE_URL}/api/${endpoint}?limit=5000`, {
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        const txData = await txRes.json();
+        const transactions = activeTab === 'expenses' ? (txData.spese || []) : (txData.entrate || []);
 
-      // Initialize local inputs
-      const initialLocal: Record<string, string> = {};
-      targetCategories.forEach((cat: string) => {
-        initialLocal[cat] = currentLimits[cat] ? String(currentLimits[cat]) : '0';
-      });
-      setLocalBudget(initialLocal);
+        const aggActual: Record<string, number> = {};
+        transactions
+          .filter((t: any) => new Date(t.data).getFullYear() === year)
+          .forEach((t: any) => {
+            aggActual[t.categoria] = (aggActual[t.categoria] || 0) + Math.abs(t.importo);
+          });
+        setYearlyActual(aggActual);
+        setActualSpending(aggActual);
 
-      // 3. Fetch Actual Spending (Transactions)
-      const endpoint = activeTab === 'expenses' ? 'spese' : 'entrate';
-      const txRes = await fetch(`${BASE_URL}/api/${endpoint}?limit=1000`, {
-        headers: { 'Authorization': `Bearer ${userToken}` }
-      });
-      const txData = await txRes.json();
-      const transactions = activeTab === 'expenses' ? (txData.spese || []) : (txData.entrate || []);
+        // Initialize local inputs (read-only in yearly mode)
+        const dispLocal: Record<string, string> = {};
+        targetCategories.forEach((cat: string) => {
+          dispLocal[cat] = String(aggBudget[cat] || 0);
+        });
+        setLocalBudget(dispLocal);
 
-      // Filter for current month and aggregate
-      const startOfMonth = new Date(year, month, 1).getTime();
-      const endOfMonth = new Date(year, month + 1, 0).getTime();
+      } else {
+        // 2b. Monthly mode: existing logic
+        const settingsRes = await fetch(`${BASE_URL}/api/budget-settings?anno=${year}&mese=${month}`, {
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        const settingsData = settingsRes.ok ? await settingsRes.json() : { spese: {}, entrate: {} };
 
-      const aggregated: Record<string, number> = {};
-      transactions.forEach((t: any) => {
-        const tDate = new Date(t.data).getTime();
-        if (tDate >= startOfMonth && tDate <= endOfMonth) {
-          aggregated[t.categoria] = (aggregated[t.categoria] || 0) + Math.abs(t.importo);
-        }
-      });
-      setActualSpending(aggregated);
+        const currentLimits = activeTab === 'expenses'
+          ? (settingsData.spese || {})
+          : (settingsData.entrate || {});
+
+        setBudgetSettings(currentLimits);
+
+        // Initialize local inputs
+        const initialLocal: Record<string, string> = {};
+        targetCategories.forEach((cat: string) => {
+          initialLocal[cat] = currentLimits[cat] ? String(currentLimits[cat]) : '0';
+        });
+        setLocalBudget(initialLocal);
+
+        // 3b. Fetch Actual Spending (Transactions)
+        const endpoint = activeTab === 'expenses' ? 'spese' : 'entrate';
+        const txRes = await fetch(`${BASE_URL}/api/${endpoint}?limit=1000`, {
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        const txData = await txRes.json();
+        const transactions = activeTab === 'expenses' ? (txData.spese || []) : (txData.entrate || []);
+
+        // Filter for current month and aggregate
+        const startOfMonth = new Date(year, month, 1).getTime();
+        const endOfMonth = new Date(year, month + 1, 0).getTime();
+
+        const aggregated: Record<string, number> = {};
+        transactions.forEach((t: any) => {
+          const tDate = new Date(t.data).getTime();
+          if (tDate >= startOfMonth && tDate <= endOfMonth) {
+            aggregated[t.categoria] = (aggregated[t.categoria] || 0) + Math.abs(t.importo);
+          }
+        });
+        setActualSpending(aggregated);
+      }
 
     } catch (error) {
       console.error("Error loading budget planner:", error);
@@ -286,13 +340,76 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleCopyPreviousYear = async () => {
+    if (!isYearlyMode) return;
+    try {
+      setIsLoading(true);
+      const prevYear = selectedYear - 1;
+
+      // Fetch prevYear and currentYear for all 12 months in parallel (24 GETs total)
+      const [prevResults, currResults] = await Promise.all([
+        Promise.all(
+          Array.from({ length: 12 }, (_, m) =>
+            fetch(`${BASE_URL}/api/budget-settings?anno=${prevYear}&mese=${m}`, {
+              headers: { 'Authorization': `Bearer ${userToken}` }
+            }).then(r => r.ok ? r.json() : { spese: {}, entrate: {} })
+          )
+        ),
+        Promise.all(
+          Array.from({ length: 12 }, (_, m) =>
+            fetch(`${BASE_URL}/api/budget-settings?anno=${selectedYear}&mese=${m}`, {
+              headers: { 'Authorization': `Bearer ${userToken}` }
+            }).then(r => r.ok ? r.json() : { spese: {}, entrate: {} })
+          )
+        )
+      ]);
+
+      // POST 12 months in parallel
+      await Promise.all(
+        Array.from({ length: 12 }, (_, m) =>
+          fetch(`${BASE_URL}/api/budget-settings`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${userToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              anno: selectedYear,
+              mese: m,
+              isYearly: false,
+              settings: {
+                spese: activeTab === 'expenses'
+                  ? (prevResults[m].spese || {})
+                  : (currResults[m].spese || {}),
+                entrate: activeTab === 'income'
+                  ? (prevResults[m].entrate || {})
+                  : (currResults[m].entrate || {})
+              }
+            })
+          })
+        )
+      );
+
+      Alert.alert(
+        'Success',
+        `${activeTab === 'expenses' ? 'Expense' : 'Income'} budgets copied from ${prevYear} to ${selectedYear}`
+      );
+      loadData();
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Unable to copy previous year values');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderMonthPicker = () => (
     <Modal visible={isMonthModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
         <View style={[styles.pickerModalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
           <Text style={[styles.modalTitlePicker, isDarkMode && { color: '#F9FAFB' }]}>Select Month</Text>
           <ScrollView>
-            {months.map((m, idx) => (
+            {monthsWithYearly.map((m, idx) => (
               <TouchableOpacity
                 key={m}
                 style={[styles.pickerItem, isDarkMode && { borderBottomColor: '#374151' }, selectedMonth === idx && (isDarkMode ? { backgroundColor: '#374151' } : styles.pickerItemActive)]}
@@ -478,24 +595,35 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
     >
       <View style={[styles.header, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
-        <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>Manage your monthly limits</Text>
+        <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>{isYearlyMode ? `Overview for ${selectedYear}` : 'Manage your monthly limits'}</Text>
       </View>
 
       {/* Period Selection */}
       <View style={styles.periodContainer}>
         <TouchableOpacity style={[styles.periodButton, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }]} onPress={() => setIsMonthModalVisible(true)}>
-          <Text style={[styles.periodButtonText, isDarkMode && { color: '#F9FAFB' }]}>{months[selectedMonth]}</Text>
+          <Text style={[styles.periodButtonText, isDarkMode && { color: '#F9FAFB' }]}>{isYearlyMode ? 'Full Year' : months[selectedMonth]}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.periodButton, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }]} onPress={() => setIsYearModalVisible(true)}>
           <Text style={[styles.periodButtonText, isDarkMode && { color: '#F9FAFB' }]}>{selectedYear}</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.copyButton} onPress={handleCopyFromPrevious}>
-        <Text style={styles.copyButtonText}>
-          Copy values from {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
-        </Text>
-      </TouchableOpacity>
+      {!isYearlyMode ? (
+        <TouchableOpacity style={styles.copyButton} onPress={handleCopyFromPrevious}>
+          <Text style={styles.copyButtonText}>
+            Copy values from {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={[styles.copyButton, { backgroundColor: '#D97706' }]}
+          onPress={handleCopyPreviousYear}
+        >
+          <Text style={styles.copyButtonText}>
+            Copy {activeTab === 'expenses' ? 'expenses' : 'income'} from {selectedYear - 1}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
@@ -523,9 +651,9 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
 
         {categories.map((cat) => {
-          const spending = actualSpending[cat] || 0;
+          const spending = isYearlyMode ? (yearlyActual[cat] || 0) : (actualSpending[cat] || 0);
           const limitStr = localBudget[cat] || '0';
-          const limit = parseFloat(limitStr.replace(',', '.')) || 0;
+          const limit = isYearlyMode ? (yearlyBudget[cat] || 0) : (parseFloat(limitStr.replace(',', '.')) || 0);
 
           return (
             <View key={cat} style={[styles.budgetCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
@@ -566,14 +694,15 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                 <View style={[styles.inputContainer, isDarkMode && { backgroundColor: '#374151' }]}>
                   <Text style={[styles.currency, isDarkMode && { color: '#9CA3AF' }]}>{currency}</Text>
                   <TextInput
-                    style={[styles.input, isDarkMode && { color: '#F9FAFB' }]}
+                    style={[styles.input, isDarkMode && { color: '#F9FAFB' }, isYearlyMode && { color: '#9CA3AF' }]}
                     keyboardType="numeric"
                     value={limitStr}
-                    onChangeText={(text) => {
+                    editable={!isYearlyMode}
+                    onChangeText={isYearlyMode ? undefined : (text) => {
                       const cleaned = text.replace(/^0+(\d)/, '$1');
                       setLocalBudget(prev => ({ ...prev, [cat]: cleaned }));
                     }}
-                    onEndEditing={() => persistBudget(localBudget, activeTab)}
+                    onEndEditing={isYearlyMode ? undefined : () => persistBudget(localBudget, activeTab)}
                     placeholder="0"
                     placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
                     inputAccessoryViewID="budgetInputAccessory"

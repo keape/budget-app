@@ -1,5 +1,5 @@
 // Filtri.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -9,6 +9,267 @@ import React from 'react';
 import { useTheme } from './ThemeContext';
 import BASE_URL from './config';
 import LoadingSpinner from './components/LoadingSpinner';
+
+const GIORNI_SETTIMANA = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+function toDateStr(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function DateRangePicker({ dataInizio, dataFine, onChangeInizio, onChangeFine }) {
+  const { darkMode } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+  const [phase, setPhase] = useState('start'); // 'start' | 'end'
+  const [hoverDate, setHoverDate] = useState(null);
+  const [viewDate, setViewDate] = useState(() => {
+    const d = dataInizio ? new Date(dataInizio + 'T00:00:00') : new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setIsOpen(false);
+        setPhase('start');
+        setHoverDate(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const formatDisplay = (dateStr) => {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-');
+    return `${d} ${MESI[parseInt(m) - 1].slice(0, 3)} ${y}`;
+  };
+
+  const prevMonth = () => setViewDate(v => {
+    if (v.month === 0) return { year: v.year - 1, month: 11 };
+    return { year: v.year, month: v.month - 1 };
+  });
+
+  const nextMonth = () => setViewDate(v => {
+    if (v.month === 11) return { year: v.year + 1, month: 0 };
+    return { year: v.year, month: v.month + 1 };
+  });
+
+  const daysInMonth = new Date(viewDate.year, viewDate.month + 1, 0).getDate();
+  const firstDay = (() => {
+    const d = new Date(viewDate.year, viewDate.month, 1).getDay();
+    return d === 0 ? 6 : d - 1;
+  })();
+
+  const effectiveEnd = hoverDate && phase === 'end' ? hoverDate : dataFine;
+
+  const rangeStart = dataInizio && effectiveEnd
+    ? (dataInizio <= effectiveEnd ? dataInizio : effectiveEnd)
+    : dataInizio;
+  const rangeEnd = dataInizio && effectiveEnd
+    ? (dataInizio <= effectiveEnd ? effectiveEnd : dataInizio)
+    : null;
+
+  const handleDayClick = (dateStr) => {
+    if (phase === 'start' || (!dataInizio)) {
+      onChangeInizio(dateStr);
+      onChangeFine('');
+      setPhase('end');
+    } else {
+      if (dateStr < dataInizio) {
+        onChangeFine(dataInizio);
+        onChangeInizio(dateStr);
+      } else {
+        onChangeFine(dateStr);
+      }
+      setPhase('start');
+      setIsOpen(false);
+      setHoverDate(null);
+    }
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    onChangeInizio('');
+    onChangeFine('');
+    setPhase('start');
+    setHoverDate(null);
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const setPreset = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days + 1);
+    onChangeInizio(start.toISOString().split('T')[0]);
+    onChangeFine(end.toISOString().split('T')[0]);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const setThisMonth = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    onChangeInizio(start.toISOString().split('T')[0]);
+    onChangeFine(end.toISOString().split('T')[0]);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const setLastMonth = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    onChangeInizio(start.toISOString().split('T')[0]);
+    onChangeFine(end.toISOString().split('T')[0]);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const setThisYear = () => {
+    const y = new Date().getFullYear();
+    onChangeInizio(`${y}-01-01`);
+    onChangeFine(`${y}-12-31`);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const base = darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
+  const border = darkMode ? 'border-gray-700' : 'border-gray-200';
+  const inputBg = darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300';
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <div
+        onClick={() => { setIsOpen(o => !o); if (!isOpen) setPhase(dataInizio && !dataFine ? 'end' : 'start'); }}
+        className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-all duration-200 ${inputBg} ${isOpen ? 'ring-2 ring-purple-500 border-transparent' : 'hover:border-purple-400'}`}
+      >
+        <svg className="w-5 h-5 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Dal</span>
+            <span className={`text-sm font-semibold truncate ${dataInizio ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              {formatDisplay(dataInizio) || 'Seleziona data'}
+            </span>
+          </div>
+          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Al</span>
+            <span className={`text-sm font-semibold truncate ${dataFine ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              {formatDisplay(dataFine) || 'Seleziona data'}
+            </span>
+          </div>
+        </div>
+        {(dataInizio || dataFine) && (
+          <button onClick={handleClear} className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center hover:bg-red-400 transition-colors">
+            <svg className="w-3 h-3 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown calendar */}
+      {isOpen && (
+        <div className={`absolute top-full left-0 mt-2 z-50 rounded-2xl shadow-2xl border ${base} ${border} overflow-hidden`}
+          style={{ minWidth: '320px' }}>
+          {/* Presets */}
+          <div className={`flex flex-wrap gap-1.5 px-4 pt-3 pb-2 border-b ${border}`}>
+            {[
+              { label: 'Ultimi 7gg', action: () => setPreset(7) },
+              { label: 'Ultimi 30gg', action: () => setPreset(30) },
+              { label: 'Questo mese', action: setThisMonth },
+              { label: 'Mese scorso', action: setLastMonth },
+              { label: 'Quest\'anno', action: setThisYear },
+            ].map(p => (
+              <button key={p.label} onClick={p.action}
+                className="text-xs px-3 py-1.5 rounded-full font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors">
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Month nav */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="font-bold text-base">{MESI[viewDate.month]} {viewDate.year}</span>
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Days grid */}
+          <div className="px-3 pb-4">
+            <div className="grid grid-cols-7 mb-1">
+              {GIORNI_SETTIMANA.map(g => (
+                <div key={g} className="text-center text-xs font-semibold text-gray-400 py-1">{g}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {cells.map((d, i) => {
+                if (d === null) return <div key={`empty-${i}`} />;
+                const dateStr = toDateStr(viewDate.year, viewDate.month, d);
+                const isStart = dateStr === dataInizio;
+                const isEnd = dateStr === dataFine;
+                const inRange = rangeStart && rangeEnd && dateStr > rangeStart && dateStr < rangeEnd;
+                const isToday = dateStr === today;
+
+                let dayClass = 'relative flex items-center justify-center w-full aspect-square text-sm cursor-pointer transition-all duration-100 ';
+
+                if (isStart || isEnd) {
+                  dayClass += 'rounded-full bg-purple-600 text-white font-bold z-10 ';
+                } else if (inRange) {
+                  dayClass += 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 rounded-none ';
+                } else if (isToday) {
+                  dayClass += 'rounded-full border-2 border-purple-400 font-semibold hover:bg-purple-50 dark:hover:bg-purple-900/30 ';
+                } else {
+                  dayClass += 'rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ';
+                }
+
+                return (
+                  <div key={dateStr}
+                    className={dayClass}
+                    onClick={() => handleDayClick(dateStr)}
+                    onMouseEnter={() => phase === 'end' && setHoverDate(dateStr)}
+                    onMouseLeave={() => setHoverDate(null)}
+                  >
+                    {d}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer hint */}
+          <div className={`border-t ${border} px-4 py-2 text-center`}>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {phase === 'start' ? 'Clicca per selezionare la data di inizio' : 'Clicca per selezionare la data di fine'}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Filtri() {
   const [searchParams] = useSearchParams();
@@ -383,26 +644,12 @@ function Filtri() {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Intervallo Date
               </label>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data inizio</label>
-                  <input
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
-                    type="date"
-                    value={dataInizio}
-                    onChange={e => setDataInizio(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data fine</label>
-                  <input
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
-                    type="date"
-                    value={dataFine}
-                    onChange={e => setDataFine(e.target.value)}
-                  />
-                </div>
-              </div>
+              <DateRangePicker
+                dataInizio={dataInizio}
+                dataFine={dataFine}
+                onChangeInizio={setDataInizio}
+                onChangeFine={setDataFine}
+              />
             </div>
 
             {/* Ricerca Descrizione */}

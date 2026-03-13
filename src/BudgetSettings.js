@@ -12,6 +12,7 @@ function BudgetSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
+  const [isCopyingYear, setIsCopyingYear] = useState(false);
   const [error, setError] = useState(null);
   const [editingCategory, setEditingCategory] = useState({ type: null, oldName: null, newName: '' });
   const [newCategory, setNewCategory] = useState({ type: null, name: '', value: '' });
@@ -587,6 +588,51 @@ function BudgetSettings() {
     }
   };
 
+  const copiaAnnoPrecedente = async () => {
+    if (selectedMonth !== 0) return;
+    setIsCopyingYear(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Token non trovato');
+      const prevYear = selectedYear - 1;
+
+      // Phase 1: fetch 12 mesi dell'anno precedente in parallelo
+      const getResults = await Promise.all(
+        Array.from({ length: 12 }, (_, m) =>
+          axios.get(`${BASE_URL}/api/budget-settings`, {
+            params: { anno: prevYear, mese: m },
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+        )
+      );
+
+      // Phase 2: POST 12 mesi nell'anno corrente in parallelo
+      await Promise.all(
+        getResults.map((res, m) => {
+          const d = res.data || {};
+          return axios.post(`${BASE_URL}/api/budget-settings`, {
+            anno: selectedYear,
+            mese: m,
+            isYearly: false,
+            settings: { spese: d.spese || {}, entrate: d.entrate || {} }
+          }, { headers: { 'Authorization': `Bearer ${token}` } });
+        })
+      );
+
+      alert(`Anno ${prevYear} copiato con successo in ${selectedYear}!`);
+      fetchBudgetSettings();
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        handleAuthError('Sessione scaduta. Effettua nuovamente il login.');
+      } else {
+        setError("Errore durante la copia dell'anno precedente. Riprova più tardi.");
+      }
+    } finally {
+      setIsCopyingYear(false);
+    }
+  };
+
   return (
     <div className="theme-container p-6">
       <h1 className="text-4xl font-bold text-center mb-4 text-indigo-700 dark:text-indigo-300">
@@ -645,6 +691,19 @@ function BudgetSettings() {
               }`}
             >
               {isCopying ? 'Copia in corso...' : `Copia valori da ${mesi[selectedMonth+1]}`}
+            </button>
+          )}
+          {selectedMonth === 0 && (
+            <button
+              onClick={copiaAnnoPrecedente}
+              disabled={isCopyingYear || isLoading}
+              className={`px-6 py-4 text-lg font-semibold text-white rounded-lg shadow-md transition-all duration-200 ${
+                isCopyingYear || isLoading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-orange-600 hover:bg-orange-700 hover:scale-105'
+              }`}
+            >
+              {isCopyingYear ? 'Copia in corso...' : `Copia anno ${selectedYear - 1} → ${selectedYear}`}
             </button>
           )}
         </div>
