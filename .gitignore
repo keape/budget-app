@@ -48,3 +48,4 @@ node_modules_old/
 tmp/
 temp/
 budget365iOS/ios/build_output/
+.worktrees/
