@@ -172,8 +172,8 @@ router.put('/plan', authenticateToken, async (req, res) => {
 
     // Validate each entry
     for (const alloc of allocations) {
-      if (alloc.targetPercentage < 0 || alloc.targetPercentage > 100) {
-        return res.status(400).json({ success: false, error: 'Each targetPercentage must be between 0 and 100' });
+      if (alloc.targetPercentage == null || typeof alloc.targetPercentage !== 'number' || alloc.targetPercentage < 0 || alloc.targetPercentage > 100) {
+        return res.status(400).json({ success: false, error: 'targetPercentage must be a number between 0 and 100' });
       }
     }
 

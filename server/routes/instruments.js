@@ -77,7 +77,17 @@ router.get('/search', async (req, res) => {
       });
 
       const results = (await Promise.all(upsertPromises)).filter(Boolean);
-      return res.json({ success: true, data: results });
+
+      // Merge cached and Yahoo results, deduplicating by ticker
+      const allTickers = new Set();
+      const combined = [];
+      for (const inst of [...results, ...cached]) {
+        if (inst && !allTickers.has(inst.ticker)) {
+          allTickers.add(inst.ticker);
+          combined.push(inst);
+        }
+      }
+      return res.json({ success: true, data: combined });
     } catch (yahooErr) {
       console.error('Yahoo Finance search error, returning cached results:', yahooErr.message);
       return res.json({ success: true, data: cached });
