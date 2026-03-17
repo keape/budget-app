@@ -1,1 +1,0 @@
-// Backup della Home originale prima delle modifiche per transazioni periodiche
