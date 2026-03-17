@@ -40,7 +40,4 @@ instrumentSchema.pre('save', function(next) {
   next();
 });
 
-// Index on ticker (unique constraint already handled by field unique: true)
-instrumentSchema.index({ ticker: 1 });
-
 module.exports = mongoose.model('Instrument', instrumentSchema);
