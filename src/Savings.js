@@ -312,13 +312,6 @@ export default function Savings() {
       ),
     },
     {
-      header: 'Valuta',
-      key: 'currency',
-      render: (row) => (
-        <span className="text-gray-600 dark:text-gray-400">{row.currency ?? '—'}</span>
-      ),
-    },
-    {
       header: 'Totale Investito',
       key: 'totalAmount',
       render: (row) => (
@@ -331,6 +324,15 @@ export default function Savings() {
       render: (row) => (
         <span className="text-gray-600 dark:text-gray-400">
           {row.totalQuantity != null ? row.totalQuantity : '—'}
+        </span>
+      ),
+    },
+    {
+      header: 'Prezzo Attuale',
+      key: 'lastPrice',
+      render: (row) => (
+        <span className="text-gray-600 dark:text-gray-400">
+          {row.instrument?.lastPrice != null ? formatCurrency(row.instrument.lastPrice) : '—'}
         </span>
       ),
     },
