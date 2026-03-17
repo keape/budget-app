@@ -1,0 +1,1147 @@
+// Filtri.js
+import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend
+} from 'recharts';
+import React from 'react';
+import { useTheme } from './ThemeContext';
+import BASE_URL from './config';
+import LoadingSpinner from './components/LoadingSpinner';
+
+const GIORNI_SETTIMANA = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+function toDateStr(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function DateRangePicker({ dataInizio, dataFine, onChangeInizio, onChangeFine }) {
+  const { darkMode } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+  const [phase, setPhase] = useState('start'); // 'start' | 'end'
+  const [hoverDate, setHoverDate] = useState(null);
+  const [viewDate, setViewDate] = useState(() => {
+    const d = dataInizio ? new Date(dataInizio + 'T00:00:00') : new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setIsOpen(false);
+        setPhase('start');
+        setHoverDate(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const formatDisplay = (dateStr) => {
+    if (!dateStr) return null;
+    const [y, m, d] = dateStr.split('-');
+    return `${d} ${MESI[parseInt(m) - 1].slice(0, 3)} ${y}`;
+  };
+
+  const prevMonth = () => setViewDate(v => {
+    if (v.month === 0) return { year: v.year - 1, month: 11 };
+    return { year: v.year, month: v.month - 1 };
+  });
+
+  const nextMonth = () => setViewDate(v => {
+    if (v.month === 11) return { year: v.year + 1, month: 0 };
+    return { year: v.year, month: v.month + 1 };
+  });
+
+  const daysInMonth = new Date(viewDate.year, viewDate.month + 1, 0).getDate();
+  const firstDay = (() => {
+    const d = new Date(viewDate.year, viewDate.month, 1).getDay();
+    return d === 0 ? 6 : d - 1;
+  })();
+
+  const effectiveEnd = hoverDate && phase === 'end' ? hoverDate : dataFine;
+
+  const rangeStart = dataInizio && effectiveEnd
+    ? (dataInizio <= effectiveEnd ? dataInizio : effectiveEnd)
+    : dataInizio;
+  const rangeEnd = dataInizio && effectiveEnd
+    ? (dataInizio <= effectiveEnd ? effectiveEnd : dataInizio)
+    : null;
+
+  const handleDayClick = (dateStr) => {
+    if (phase === 'start' || (!dataInizio)) {
+      onChangeInizio(dateStr);
+      onChangeFine('');
+      setPhase('end');
+    } else {
+      if (dateStr < dataInizio) {
+        onChangeFine(dataInizio);
+        onChangeInizio(dateStr);
+      } else {
+        onChangeFine(dateStr);
+      }
+      setPhase('start');
+      setIsOpen(false);
+      setHoverDate(null);
+    }
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    onChangeInizio('');
+    onChangeFine('');
+    setPhase('start');
+    setHoverDate(null);
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const setPreset = (days) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days + 1);
+    onChangeInizio(start.toISOString().split('T')[0]);
+    onChangeFine(end.toISOString().split('T')[0]);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const setThisMonth = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    onChangeInizio(start.toISOString().split('T')[0]);
+    onChangeFine(end.toISOString().split('T')[0]);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const setLastMonth = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    onChangeInizio(start.toISOString().split('T')[0]);
+    onChangeFine(end.toISOString().split('T')[0]);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const setThisYear = () => {
+    const y = new Date().getFullYear();
+    onChangeInizio(`${y}-01-01`);
+    onChangeFine(`${y}-12-31`);
+    setPhase('start');
+    setIsOpen(false);
+  };
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const base = darkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
+  const border = darkMode ? 'border-gray-700' : 'border-gray-200';
+  const inputBg = darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300';
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <div
+        onClick={() => { setIsOpen(o => !o); if (!isOpen) setPhase(dataInizio && !dataFine ? 'end' : 'start'); }}
+        className={`flex items-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-all duration-200 ${inputBg} ${isOpen ? 'ring-2 ring-purple-500 border-transparent' : 'hover:border-purple-400'}`}
+      >
+        <svg className="w-5 h-5 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        <div className="flex-1 flex items-center gap-2 min-w-0">
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Dal</span>
+            <span className={`text-sm font-semibold truncate ${dataInizio ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              {formatDisplay(dataInizio) || 'Seleziona data'}
+            </span>
+          </div>
+          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Al</span>
+            <span className={`text-sm font-semibold truncate ${dataFine ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              {formatDisplay(dataFine) || 'Seleziona data'}
+            </span>
+          </div>
+        </div>
+        {(dataInizio || dataFine) && (
+          <button onClick={handleClear} className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center hover:bg-red-400 transition-colors">
+            <svg className="w-3 h-3 text-gray-600 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown calendar */}
+      {isOpen && (
+        <div className={`absolute top-full left-0 mt-2 z-50 rounded-2xl shadow-2xl border ${base} ${border} overflow-hidden`}
+          style={{ minWidth: '320px' }}>
+          {/* Presets */}
+          <div className={`flex flex-wrap gap-1.5 px-4 pt-3 pb-2 border-b ${border}`}>
+            {[
+              { label: 'Ultimi 7gg', action: () => setPreset(7) },
+              { label: 'Ultimi 30gg', action: () => setPreset(30) },
+              { label: 'Questo mese', action: setThisMonth },
+              { label: 'Mese scorso', action: setLastMonth },
+              { label: 'Quest\'anno', action: setThisYear },
+            ].map(p => (
+              <button key={p.label} onClick={p.action}
+                className="text-xs px-3 py-1.5 rounded-full font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors">
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Month nav */}
+          <div className="flex items-center justify-between px-4 py-3">
+            <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="font-bold text-base">{MESI[viewDate.month]} {viewDate.year}</span>
+            <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Days grid */}
+          <div className="px-3 pb-4">
+            <div className="grid grid-cols-7 mb-1">
+              {GIORNI_SETTIMANA.map(g => (
+                <div key={g} className="text-center text-xs font-semibold text-gray-400 py-1">{g}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {cells.map((d, i) => {
+                if (d === null) return <div key={`empty-${i}`} />;
+                const dateStr = toDateStr(viewDate.year, viewDate.month, d);
+                const isStart = dateStr === dataInizio;
+                const isEnd = dateStr === dataFine;
+                const inRange = rangeStart && rangeEnd && dateStr > rangeStart && dateStr < rangeEnd;
+                const isToday = dateStr === today;
+
+                let dayClass = 'relative flex items-center justify-center w-full aspect-square text-sm cursor-pointer transition-all duration-100 ';
+
+                if (isStart || isEnd) {
+                  dayClass += 'rounded-full bg-purple-600 text-white font-bold z-10 ';
+                } else if (inRange) {
+                  dayClass += 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 rounded-none ';
+                } else if (isToday) {
+                  dayClass += 'rounded-full border-2 border-purple-400 font-semibold hover:bg-purple-50 dark:hover:bg-purple-900/30 ';
+                } else {
+                  dayClass += 'rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 ';
+                }
+
+                return (
+                  <div key={dateStr}
+                    className={dayClass}
+                    onClick={() => handleDayClick(dateStr)}
+                    onMouseEnter={() => phase === 'end' && setHoverDate(dateStr)}
+                    onMouseLeave={() => setHoverDate(null)}
+                  >
+                    {d}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer hint */}
+          <div className={`border-t ${border} px-4 py-2 text-center`}>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {phase === 'start' ? 'Clicca per selezionare la data di inizio' : 'Clicca per selezionare la data di fine'}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Filtri() {
+  const [searchParams] = useSearchParams();
+  const [transazioni, setTransazioni] = useState([]);
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('tutte'); // 'entrate', 'uscite', 'tutte'
+  const [dataInizio, setDataInizio] = useState('');
+  const [dataFine, setDataFine] = useState('');
+  const [ricercaDescrizione, setRicercaDescrizione] = useState('');
+  const [categorieSpese, setCategorieSpese] = useState([]);
+  const [categorieEntrate, setCategorieEntrate] = useState([]);
+  const { darkMode } = useTheme();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [ordinamentoGrafico, setOrdinamentoGrafico] = useState('importo');
+
+
+  // Legge i parametri dall'URL all'avvio
+  useEffect(() => {
+    const categoria = searchParams.get('categoria');
+    const mese = searchParams.get('mese');
+    const anno = searchParams.get('anno');
+    const tipo = searchParams.get('tipo');
+
+    if (categoria) {
+      setFiltroCategoria(categoria);
+    }
+    if (tipo) {
+      setFiltroTipo(tipo);
+    }
+
+    // Imposta le date in base al mese e anno se presenti nell'URL
+    if (anno) {
+      if (mese) {
+        const primoDelMese = new Date(anno, parseInt(mese), 1);
+        const ultimoDelMese = new Date(anno, parseInt(mese) + 1, 0);
+        setDataInizio(primoDelMese.toISOString().split('T')[0]);
+        setDataFine(ultimoDelMese.toISOString().split('T')[0]);
+      } else {
+        const primoGiornoAnno = new Date(anno, 0, 1);
+        const ultimoGiornoAnno = new Date(anno, 11, 31);
+        setDataInizio(primoGiornoAnno.toISOString().split('T')[0]);
+        setDataFine(ultimoGiornoAnno.toISOString().split('T')[0]);
+      }
+    }
+  }, [searchParams]);
+
+  // Carica le categorie dinamicamente
+  useEffect(() => {
+    const fetchCategorie = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await axios.get(`${BASE_URL}/api/categorie`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.data && response.data.categorie) {
+          setCategorieSpese(response.data.categorie.spese || []);
+          setCategorieEntrate(response.data.categorie.entrate || []);
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento delle categorie:', error);
+      }
+    };
+
+    fetchCategorie();
+  }, []);
+
+  const caricaTransazioni = async () => {
+    setIsLoading(true);
+    try {
+      const [speseResponse, entrateResponse] = await Promise.all([
+        axios.get(`${BASE_URL}/api/spese`, {
+          params: {
+            page: 1,
+            limit: 10000 // Carica tutte le transazioni
+          }
+        }),
+        axios.get(`${BASE_URL}/api/entrate`, {
+          params: {
+            page: 1,
+            limit: 10000 // Carica tutte le transazioni
+          }
+        })
+      ]);
+
+      // Estrai le spese e le entrate direttamente dalla risposta
+      const spese = (speseResponse.data.spese || []).map(spesa => ({ ...spesa, tipo: 'uscita' }));
+      const entrate = (entrateResponse.data.entrate || []).map(entrata => ({ ...entrata, tipo: 'entrata' }));
+
+      setTransazioni([...spese, ...entrate]);
+    } catch (error) {
+      console.error('Errore nel caricamento delle transazioni:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    caricaTransazioni();
+  }, [filtroTipo, filtroCategoria, dataInizio, dataFine]);
+
+  const eliminaTransazione = async (id, tipo) => {
+    if (window.confirm('Sei sicuro di voler eliminare questa transazione?')) {
+      try {
+        const endpoint = tipo === 'entrata' ? 'entrate' : 'spese';
+        await axios.delete(`${BASE_URL}/api/${endpoint}/${id}`);
+        caricaTransazioni();
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione:', error);
+      }
+    }
+  };
+
+  const transazioniFiltrate = transazioni.filter(t => {
+    // Se il tipo non è 'tutte', filtra per tipo specifico (uscita/entrata)
+    if (filtroTipo === 'uscita' && t.tipo !== 'uscita') return false;
+    if (filtroTipo === 'entrata' && t.tipo !== 'entrata') return false;
+
+    // Se c'è una categoria selezionata, filtra per categoria
+    if (filtroCategoria && t.categoria !== filtroCategoria) return false;
+
+    // Se c'è una ricerca testuale, filtra per descrizione (case-insensitive)
+    if (ricercaDescrizione) {
+      const descrizione = t.descrizione || '';
+      const ricerca = ricercaDescrizione.toLowerCase();
+      if (!descrizione.toLowerCase().includes(ricerca)) return false;
+    }
+
+    // Se ci sono date impostate, filtra per date
+    if (dataInizio || dataFine) {
+      const dataTransazione = new Date(t.data).setHours(0, 0, 0, 0);
+
+      if (dataInizio) {
+        const inizio = new Date(dataInizio).setHours(0, 0, 0, 0);
+        if (dataTransazione < inizio) return false;
+      }
+
+      if (dataFine) {
+        const fine = new Date(dataFine).setHours(0, 0, 0, 0);
+        if (dataTransazione > fine) return false;
+      }
+    }
+
+    return true;
+  });
+
+
+
+  const totaleFiltrato = transazioniFiltrate.reduce((acc, t) => acc + Number(t.importo), 0);
+
+  const colors = [
+    '#3B82F6', // Blue
+    '#EF4444', // Red
+    '#10B981', // Emerald
+    '#F59E0B', // Amber
+    '#8B5CF6', // Purple
+    '#EC4899', // Pink
+    '#06B6D4', // Cyan
+    '#84CC16', // Lime
+    '#F97316', // Orange
+    '#6366F1', // Indigo
+    '#14B8A6', // Teal
+    '#A855F7'  // Violet
+  ];
+
+  function categoriaClasse(categoria) {
+    switch (categoria) {
+      case 'Abbigliamento': return 'border-pink-400';
+      case 'Abbonamenti': return 'border-purple-400';
+      case 'Acqua': return 'border-blue-400';
+      case 'Alimentari': return 'border-yellow-400';
+      case 'Altre spese': return 'border-gray-400';
+      case 'Bar': return 'border-rose-400';
+      case 'Cinema Mostre Cultura': return 'border-indigo-400';
+      case 'Elettricità': return 'border-amber-400';
+      case 'Giardinaggio/Agricoltura/Falegnameria': return 'border-green-400';
+      case 'Manutenzione/Arredamento casa': return 'border-orange-400';
+      case 'Mutuo': return 'border-red-400';
+      case 'Regali': return 'border-fuchsia-400';
+      case 'Ristorante': return 'border-emerald-400';
+      case 'Salute': return 'border-lime-400';
+      case 'Sport/Attrezzatura sportiva': return 'border-cyan-400';
+      case 'Tecnologia': return 'border-teal-400';
+      case 'Vacanza': return 'border-sky-400';
+      case 'Vela': return 'border-violet-400';
+      default: return 'border-slate-300';
+    }
+  }
+
+  const handleEdit = (transaction) => {
+    // Formatta la data per l'input type="date"
+    const formattedDate = transaction.data
+      ? new Date(transaction.data).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+
+    setEditingTransaction({
+      ...transaction,
+      data: formattedDate
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTransaction) return;
+
+    try {
+      const endpoint = editingTransaction.tipo === 'entrata' ? 'entrate' : 'spese';
+      await axios.put(`${BASE_URL}/api/${endpoint}/${editingTransaction._id}`, {
+        importo: editingTransaction.tipo === 'uscita' ? -Math.abs(Number(editingTransaction.importo)) : Number(editingTransaction.importo),
+        descrizione: editingTransaction.descrizione,
+        categoria: editingTransaction.categoria,
+        data: editingTransaction.data
+      });
+
+      setShowEditModal(false);
+      setEditingTransaction(null);
+      caricaTransazioni();
+    } catch (error) {
+      console.error('Errore durante il salvataggio:', error);
+    }
+  };
+
+  const downloadCSV = () => {
+    if (transazioniFiltrate.length === 0) {
+      alert('Nessuna transazione da esportare');
+      return;
+    }
+
+    // Intestazioni del CSV
+    const headers = ['Data', 'Tipo', 'Categoria', 'Descrizione', 'Importo'];
+
+    // Dati delle transazioni
+    const csvData = transazioniFiltrate.map(transazione => {
+      const data = new Date(transazione.data).toLocaleDateString('it-IT');
+      const tipo = transazione.tipo === 'entrata' ? 'Entrata' : 'Uscita';
+      const categoria = transazione.categoria || '';
+      const descrizione = (transazione.descrizione || '').replace(/,/g, ';'); // Sostituisce virgole con punto e virgola
+      const importo = Number(transazione.importo).toFixed(2);
+
+      return [data, tipo, categoria, descrizione, importo];
+    });
+
+    // Combina intestazioni e dati
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    // Crea e scarica il file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+
+    // Nome file con data corrente e informazioni sui filtri
+    let fileName = `transazioni_${new Date().toISOString().split('T')[0]}`;
+    if (filtroTipo !== 'tutte') fileName += `_${filtroTipo}`;
+    if (filtroCategoria) fileName += `_${filtroCategoria.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    fileName += '.csv';
+
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
+  return (
+    <div className={`theme-container ${darkMode ? 'dark' : ''}`}>
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4 text-indigo-600 dark:text-indigo-300">
+            Filtra Transazioni
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Trova e analizza le tue transazioni con filtri avanzati
+          </p>
+        </div>
+
+        {/* Filtri Principali */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+            </svg>
+            Filtri Principali
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Filtro Tipo */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Tipo di Transazione
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${filtroTipo === 'tutte'
+                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  onClick={() => setFiltroTipo('tutte')}
+                >
+                  Tutte
+                </button>
+                <button
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${filtroTipo === 'entrata'
+                    ? 'bg-green-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-gray-600'
+                    }`}
+                  onClick={() => setFiltroTipo('entrata')}
+                >
+                  Entrate
+                </button>
+                <button
+                  className={`px-4 py-3 rounded-lg font-medium transition-all duration-200 ${filtroTipo === 'uscita'
+                    ? 'bg-red-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-100 dark:hover:bg-gray-600'
+                    }`}
+                  onClick={() => setFiltroTipo('uscita')}
+                >
+                  Uscite
+                </button>
+              </div>
+            </div>
+
+            {/* Filtro Categoria */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Categoria
+              </label>
+              <select
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
+                value={filtroCategoria}
+                onChange={e => setFiltroCategoria(e.target.value)}
+              >
+                <option value="">Tutte le categorie</option>
+                {/* Categorie per le spese */}
+                {filtroTipo !== 'entrata' && categorieSpese.map(categoria => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+                {/* Categorie per le entrate */}
+                {filtroTipo !== 'uscita' && categorieEntrate.map(categoria => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Filtri Avanzati */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+            </svg>
+            Filtri Avanzati
+          </h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Filtro Date */}
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Intervallo Date
+              </label>
+              <DateRangePicker
+                dataInizio={dataInizio}
+                dataFine={dataFine}
+                onChangeInizio={setDataInizio}
+                onChangeFine={setDataFine}
+              />
+            </div>
+
+            {/* Ricerca Descrizione */}
+            <div className="space-y-3">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Ricerca nel Testo
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-white"
+                  type="text"
+                  placeholder="Cerca nelle descrizioni..."
+                  value={ricercaDescrizione}
+                  onChange={e => setRicercaDescrizione(e.target.value)}
+                />
+              </div>
+              {ricercaDescrizione && (
+                <p className="text-sm text-purple-600 dark:text-purple-400">
+                  Cercando: "{ricercaDescrizione}"
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Barra Risultati */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            {/* Contatore risultati */}
+            <div className="flex items-center space-x-3">
+              <div className="bg-indigo-600 text-white rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center font-bold text-base shadow-md">
+                {transazioniFiltrate.length}
+              </div>
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
+                  Transazioni & Totale
+                </p>
+                <p className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                  <span className={totaleFiltrato >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {totaleFiltrato > 0 ? '+' : ''}{totaleFiltrato.toFixed(2)} €
+                  </span>
+                </p>
+                {(filtroCategoria || ricercaDescrizione || dataInizio || dataFine || filtroTipo !== 'tutte') && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Filtri attivi:
+                    {filtroTipo !== 'tutte' && <span className="inline-block bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 px-2 py-1 rounded mr-1 text-xs">{filtroTipo}</span>}
+                    {filtroCategoria && <span className="inline-block bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded mr-1 text-xs">{filtroCategoria}</span>}
+                    {ricercaDescrizione && <span className="inline-block bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded mr-1 text-xs">testo: {ricercaDescrizione}</span>}
+                    {(dataInizio || dataFine) && <span className="inline-block bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded mr-1 text-xs">periodo</span>}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Pulsanti azioni */}
+            <div className="flex space-x-3">
+              <button
+                className="px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 flex items-center space-x-2"
+                onClick={() => {
+                  setFiltroCategoria('');
+                  setFiltroTipo('tutte');
+                  setDataInizio('');
+                  setDataFine('');
+                  setRicercaDescrizione('');
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Reset Filtri</span>
+              </button>
+
+              <button
+                className={`px-6 py-3 font-semibold rounded-lg transition-all duration-200 flex items-center space-x-2 ${transazioniFiltrate.length === 0
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105'
+                  }`}
+                onClick={downloadCSV}
+                disabled={transazioniFiltrate.length === 0}
+                title={transazioniFiltrate.length === 0 ? 'Nessuna transazione da esportare' : 'Scarica come CSV'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Download</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Grafici statistici */}
+      {transazioniFiltrate.length > 0 && (
+        <>
+          {/* Grafico a torta per distribuzione per categoria */}
+          {!filtroCategoria && (() => {
+            // Calcola i dati e prepara per il grafico
+            const categorieData = Object.entries(
+              transazioniFiltrate.reduce((acc, t) => {
+                acc[t.categoria] = (acc[t.categoria] || 0) + Math.abs(t.importo);
+                return acc;
+              }, {})
+            )
+              .map(([categoria, valore]) => ({ categoria, valore }))
+              .sort((a, b) => b.valore - a.valore);
+
+            const totaleImporti = categorieData.reduce((sum, item) => sum + item.valore, 0);
+
+            // Prendi le top 8 categorie e raggruppa il resto in "Altro"
+            const topCategorie = categorieData.slice(0, 8);
+            const altreCategorie = categorieData.slice(8);
+            const altroImporto = altreCategorie.reduce((sum, item) => sum + item.valore, 0);
+
+            const finalData = [...topCategorie];
+            if (altroImporto > 0) {
+              finalData.push({ categoria: 'Altro', valore: altroImporto });
+            }
+
+            // Filtra categorie con meno dell'1% del totale se sono troppe
+            const dataFiltered = finalData.filter(item =>
+              (item.valore / totaleImporti) >= 0.01 || item.categoria === 'Altro'
+            );
+
+            const handlePieClick = (data) => {
+              if (data && data.categoria !== 'Altro') {
+                setFiltroCategoria(data.categoria);
+              }
+            };
+
+            return (
+              <div className="mt-8 mb-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mb-2">
+                    Distribuzione Spese per Categoria
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Totale: <span className="font-semibold">{totaleImporti.toFixed(2)} €</span> •
+                    Clicca su una categoria per filtrare
+                  </p>
+                </div>
+
+                <ResponsiveContainer width="100%" height={500}>
+                  <PieChart>
+                    <Pie
+                      data={dataFiltered}
+                      dataKey="valore"
+                      nameKey="categoria"
+                      cx="50%"
+                      cy="45%"
+                      outerRadius={window.innerWidth < 768 ? 100 : 140}
+                      fill="#8884d8"
+                      onClick={handlePieClick}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {dataFiltered.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={colors[index % colors.length]}
+                          stroke={darkMode ? '#374151' : '#ffffff'}
+                          strokeWidth={2}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `${parseFloat(value).toFixed(2)} €`,
+                        name
+                      ]}
+                      labelFormatter={(label) => `Categoria: ${label}`}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0];
+                          const percent = ((data.value / totaleImporti) * 100).toFixed(1);
+                          return (
+                            <div className={`p-3 rounded-lg shadow-lg border ${darkMode
+                              ? 'bg-gray-800 border-gray-600 text-white'
+                              : 'bg-white border-gray-200 text-gray-900'
+                              }`}>
+                              <p className="font-semibold text-lg">{data.payload.categoria}</p>
+                              <p className="text-sm">
+                                <span className="font-medium">{data.value.toFixed(2)} €</span>
+                                <span className="ml-2 text-gray-500">({percent}%)</span>
+                              </p>
+                              {data.payload.categoria !== 'Altro' && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Click per filtrare
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend
+                      layout="horizontal"
+                      align="center"
+                      verticalAlign="bottom"
+                      wrapperStyle={{
+                        paddingTop: "30px",
+                        paddingBottom: "10px"
+                      }}
+                      content={({ payload }) => (
+                        <div className="flex flex-wrap justify-center gap-4 mt-4">
+                          {payload.map((entry, index) => {
+                            const percent = ((entry.payload.valore / totaleImporti) * 100).toFixed(0);
+                            return (
+                              <div
+                                key={`legend-${index}`}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                                onClick={() => entry.payload.categoria !== 'Altro' && setFiltroCategoria(entry.payload.categoria)}
+                              >
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: entry.color }}
+                                />
+                                <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'
+                                  }`}>
+                                  {entry.payload.categoria} ({percent}%)
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {altroImporto > 0 && (
+                  <div className="text-center mt-4">
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                      "Altro" include {altreCategorie.length} categorie minori per un totale di {altroImporto.toFixed(2)} €
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Grafico a barre per andamento temporale quando si filtra per categoria */}
+          {filtroCategoria && (
+            <div className="mt-8 mb-8">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+                  {filtroCategoria}
+                </h3>
+
+                <div className="flex items-center space-x-2 mt-4 md:mt-0">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ordina per:</span>
+                  <select
+                    value={ordinamentoGrafico}
+                    onChange={(e) => setOrdinamentoGrafico(e.target.value)}
+                    className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white"
+                  >
+                    <option value="importo">Importo (Decrescente)</option>
+                    <option value="cronologico">Cronologico</option>
+                  </select>
+                </div>
+              </div>
+
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={Object.entries(
+                    transazioniFiltrate.reduce((acc, t) => {
+                      // Estrai anno e mese dalla data
+                      const data = new Date(t.data);
+                      const chiave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                      acc[chiave] = (acc[chiave] || 0) + Math.abs(t.importo);
+                      return acc;
+                    }, {})
+                  )
+                    .map(([data, importo]) => ({
+                      data: new Date(data + '-01').toLocaleDateString('it-IT', {
+                        year: 'numeric',
+                        month: 'long'
+                      }),
+                      rawDate: data,
+                      importo
+                    }))
+                    .sort((a, b) => {
+                      if (ordinamentoGrafico === 'cronologico') {
+                        return a.rawDate.localeCompare(b.rawDate);
+                      }
+                      return b.importo - a.importo;
+                    })}
+                >
+                  <XAxis
+                    dataKey="data"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    tick={{ fill: darkMode ? '#e5e7eb' : '#374151' }}
+                  />
+                  <YAxis
+                    tick={{ fill: darkMode ? '#e5e7eb' : '#374151' }}
+                  />
+                  <Tooltip />
+                  <Bar
+                    dataKey="importo"
+                    fill={filtroTipo === 'entrata' ? '#48bb78' : '#ef4444'}
+                    name={filtroTipo === 'entrata' ? 'Entrata' : 'Spesa'}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Lista delle transazioni */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {transazioniFiltrate.map(transazione => {
+          const isEntrata = transazione.tipo === 'entrata';
+          const importo = Number(transazione.importo);
+          const displayImporto = Math.abs(importo);
+          const segno = isEntrata ? '+' : '-';
+
+          return (
+            <div
+              key={transazione._id}
+              className={`p-4 rounded-md shadow-sm border ${categoriaClasse(transazione.categoria)} hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800`}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{transazione.categoria}</div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${isEntrata
+                      ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100'
+                      : 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                      }`}>
+                      {isEntrata ? 'Entrata' : 'Uscita'}
+                    </span>
+                  </div>
+                  <div className={`font-semibold text-lg ${isEntrata
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                    }`}>
+                    {segno}{displayImporto.toFixed(2)} €
+                  </div>
+                  {transazione.descrizione && (
+                    <div className="italic text-gray-600 dark:text-gray-400 text-sm mt-1">{transazione.descrizione}</div>
+                  )}
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {new Date(transazione.data).toLocaleDateString('it-IT', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {/* Pulsante modifica (per tutte le transazioni) */}
+                  <button
+                    onClick={() => handleEdit(transazione)}
+                    className="px-4 py-2 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => eliminaTransazione(transazione._id, transazione.tipo)}
+                    className="px-4 py-2 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105"
+                    title="Elimina transazione"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Modal di modifica */}
+      {showEditModal && editingTransaction && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+              Modifica {editingTransaction.tipo === 'entrata' ? 'Entrata' : 'Spesa'}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Importo
+                </label>
+                <input
+                  type="number"
+                  value={Math.abs(editingTransaction.importo)}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    importo: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Descrizione
+                </label>
+                <input
+                  type="text"
+                  value={editingTransaction.descrizione || ''}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    descrizione: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  value={editingTransaction.data ? new Date(editingTransaction.data).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    data: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Categoria
+                </label>
+                <select
+                  value={editingTransaction.categoria}
+                  onChange={(e) => setEditingTransaction({
+                    ...editingTransaction,
+                    categoria: e.target.value
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  {editingTransaction.tipo === 'entrata'
+                    ? categorieEntrate.map(categoria => (
+                      <option key={categoria} value={categoria}>
+                        {categoria}
+                      </option>
+                    ))
+                    : categorieSpese.map(categoria => (
+                      <option key={categoria} value={categoria}>
+                        {categoria}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105 mr-2"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-lg transition-colors duration-200 transform hover:scale-105"
+              >
+                Salva
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <LoadingSpinner
+          size="lg"
+          text="Caricamento transazioni..."
+          className="py-8"
+        />
+      )}
+    </div>
+  );
+}
+
+export default Filtri;
