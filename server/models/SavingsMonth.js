@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
-const savingsMonthSchema = new mongoose.Schema({
+const savingsMonthSchema = new mongoose.Schema(
+  {
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -34,7 +35,9 @@ const savingsMonthSchema = new mongoose.Schema({
   closedAt: {
     type: Date
   }
-});
+  },
+  { timestamps: true }
+);
 
 // Compound index without unique constraint
 savingsMonthSchema.index({ userId: 1, anno: 1, mese: 1 });

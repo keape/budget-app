@@ -9,6 +9,7 @@ const allocationPlanSchema = new mongoose.Schema({
   },
   allocations: [
     {
+      _id: false,
       instrumentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Instrument',

@@ -4,7 +4,9 @@ const instrumentSchema = new mongoose.Schema({
   ticker: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    trim: true,
+    uppercase: true
   },
   name: {
     type: String,
@@ -13,7 +15,8 @@ const instrumentSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ['azioni', 'obbligazioni', 'etf_fondi', 'conto_corrente', 'altro'],
-    default: 'altro'
+    default: 'altro',
+    required: true
   },
   currency: {
     type: String
