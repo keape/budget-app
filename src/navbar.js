@@ -59,8 +59,8 @@ function Navbar() {
           >
             Ricerca e Filtri
           </Link>
-          <Link 
-            to="/budget" 
+          <Link
+            to="/budget"
             className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
               location.pathname === '/budget'
                 ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
@@ -69,6 +69,17 @@ function Navbar() {
             aria-current={location.pathname === '/budget' ? 'page' : undefined}
           >
             Budget
+          </Link>
+          <Link
+            to="/savings"
+            className={`px-4 py-2 rounded-lg transition-colors duration-200 ${
+              location.pathname === '/savings'
+                ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200'
+                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+            }`}
+            aria-current={location.pathname === '/savings' ? 'page' : undefined}
+          >
+            Risparmio
           </Link>
         </nav>
         
