@@ -171,7 +171,7 @@ const AppNavigator = () => {
               options={{
                 headerShown: true,
                 title: 'Risparmio & Portfolio',
-                headerStyle: { backgroundColor: '#4F46E5' },
+                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
                 headerTintColor: '#fff',
                 headerTitleStyle: { fontWeight: 'bold' },
               }}

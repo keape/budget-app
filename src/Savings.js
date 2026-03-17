@@ -118,7 +118,7 @@ export default function Savings() {
         name: selectedInstrument.name,
         amount: parseFloat(newAmount),
         quantity: newQuantity ? parseFloat(newQuantity) : undefined,
-        price: newPrice ? parseFloat(newPrice) : undefined,
+        priceAtAllocation: newPrice ? parseFloat(newPrice) : undefined,
       };
       await axios.post(
         `${BASE_URL}/api/savings/months/${savingsMonth._id}/allocations`,
@@ -162,7 +162,7 @@ export default function Savings() {
           ticker: planInstrument.ticker,
           name: planInstrument.name,
           instrumentId: planInstrument._id,
-          targetPct: parseFloat(planPct),
+          targetPercentage: parseFloat(planPct),
         },
       ];
       await axios.put(`${BASE_URL}/api/savings/plan`, { allocations: updated });
@@ -191,7 +191,7 @@ export default function Savings() {
 
   // ------ Derived values ------
   const totalPct = (plan?.allocations ?? []).reduce(
-    (sum, a) => sum + (a.targetPct ?? 0),
+    (sum, a) => sum + (a.targetPercentage ?? 0),
     0
   );
 
@@ -275,10 +275,10 @@ export default function Savings() {
     },
     {
       header: 'Target %',
-      key: 'targetPct',
+      key: 'targetPercentage',
       render: (row) => (
         <span className="font-semibold text-indigo-700 dark:text-indigo-300">
-          {row.targetPct ?? 0}%
+          {row.targetPercentage ?? 0}%
         </span>
       ),
     },
@@ -467,13 +467,13 @@ export default function Savings() {
                   <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
                     <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Entrate</p>
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {formatCurrency(savingsMonth.totalIncome)}
+                      {formatCurrency(savingsMonth.income)}
                     </p>
                   </div>
                   <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
                     <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Uscite</p>
                     <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      {formatCurrency(savingsMonth.totalExpenses)}
+                      {formatCurrency(savingsMonth.expenses)}
                     </p>
                   </div>
                   <div className="bg-white dark:bg-gray-800 rounded-xl p-5 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -620,15 +620,15 @@ export default function Savings() {
                     </h2>
                     <div className="space-y-4">
                       {comparisonData.map((item, idx) => {
-                        const diff = item.actualPct - (item.targetPct ?? 0);
+                        const diff = item.actualPct - (item.targetPercentage ?? 0);
                         const color =
-                          item.actualPct >= (item.targetPct ?? 0)
+                          item.actualPct >= (item.targetPercentage ?? 0)
                             ? 'text-green-600 dark:text-green-400'
                             : diff >= -10
                             ? 'text-orange-500 dark:text-orange-400'
                             : 'text-red-600 dark:text-red-400';
                         const barColor =
-                          item.actualPct >= (item.targetPct ?? 0)
+                          item.actualPct >= (item.targetPercentage ?? 0)
                             ? 'bg-green-500'
                             : diff >= -10
                             ? 'bg-orange-400'
@@ -641,7 +641,7 @@ export default function Savings() {
                                 {item.ticker ?? item.name}
                               </span>
                               <span className={`text-sm font-semibold ${color}`}>
-                                {item.actualPct}% / {item.targetPct}%
+                                {item.actualPct}% / {item.targetPercentage}%
                               </span>
                             </div>
                             <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -844,7 +844,7 @@ export default function Savings() {
                 <ResponsiveContainer width="100%" height={320}>
                   <BarChart
                     data={portfolio.map(p => ({
-                      ticker: p.ticker ?? p.name ?? 'N/D',
+                      ticker: p.instrument?.ticker ?? p.instrument?.name ?? 'N/D',
                       importo: p.totalAmount ?? 0,
                     }))}
                     margin={{ top: 10, right: 20, left: 10, bottom: 60 }}

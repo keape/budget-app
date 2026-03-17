@@ -83,7 +83,8 @@ const MONTHS = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
 ];
 
-const YEARS = [2023, 2024, 2025, 2026, 2027];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - 3 + i);
 
 const TICKER_COLORS = [
   '#4F46E5', '#059669', '#DC2626', '#D97706', '#7C3AED',
