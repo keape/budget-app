@@ -14,6 +14,7 @@ import BudgetScreen from './src/screens/BudgetScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import PeriodicTransactionsScreen from './src/screens/PeriodicTransactionsScreen';
+import SavingsScreen from './src/screens/SavingsScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SettingsProvider, useSettings } from './src/context/SettingsContext';
 
@@ -161,6 +162,18 @@ const AppNavigator = () => {
                 title: 'Recurring Transactions',
                 headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
                 headerTintColor: '#fff'
+              }}
+            />
+
+            <Stack.Screen
+              name="Savings"
+              component={SavingsScreen}
+              options={{
+                headerShown: true,
+                title: 'Risparmio & Portfolio',
+                headerStyle: { backgroundColor: '#4F46E5' },
+                headerTintColor: '#fff',
+                headerTitleStyle: { fontWeight: 'bold' },
               }}
             />
           </>
