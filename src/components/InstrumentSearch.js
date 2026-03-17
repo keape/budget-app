@@ -45,7 +45,6 @@ export default function InstrumentSearch({ onSelect, placeholder = 'Cerca ticker
       {results.length > 0 && (
         <div
           className="absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
-          style={{ position: 'absolute' }}
         >
           {results.map((instrument, index) => (
             <button

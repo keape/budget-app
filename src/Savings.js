@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import BASE_URL from './config';
 import {
@@ -139,6 +139,7 @@ export default function Savings() {
 
   const handleDeleteAllocation = async (allocId) => {
     if (!savingsMonth) return;
+    if (!window.confirm('Confermi la rimozione?')) return;
     try {
       await axios.delete(
         `${BASE_URL}/api/savings/months/${savingsMonth._id}/allocations/${allocId}`
@@ -177,6 +178,7 @@ export default function Savings() {
   };
 
   const handleDeletePlanEntry = async (index) => {
+    if (!window.confirm('Confermi la rimozione?')) return;
     const existing = plan?.allocations ?? [];
     const updated = existing.filter((_, i) => i !== index);
     try {
@@ -199,7 +201,7 @@ export default function Savings() {
   }, 0);
 
   // Comparison data: match plan allocations with actual
-  const comparisonData = () => {
+  const comparisonData = useMemo(() => {
     if (!plan?.allocations?.length || !allocations.length) return [];
     const totalAllocated = allocations.reduce((s, a) => s + (a.amount ?? 0), 0);
     return plan.allocations.map(pa => {
@@ -208,7 +210,7 @@ export default function Savings() {
       const actualPct = totalAllocated > 0 ? (actualAmount / totalAllocated) * 100 : 0;
       return { ...pa, actualPct: Math.round(actualPct * 10) / 10 };
     });
-  };
+  }, [allocations, plan]);
 
   // ------ Allocations table columns ------
   const allocColumns = [
@@ -283,7 +285,7 @@ export default function Savings() {
     {
       header: '',
       key: 'delete',
-      render: (row, index) => (
+      render: (row) => (
         <button
           onClick={() => handleDeletePlanEntry(row._originalIndex)}
           className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors text-sm px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -359,7 +361,7 @@ export default function Savings() {
   // RENDER
   // ========================
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div>
       <div className="max-w-6xl mx-auto">
         {/* Page Header */}
         <div className="mb-6">
@@ -617,7 +619,7 @@ export default function Savings() {
                       Piano vs Reale
                     </h2>
                     <div className="space-y-4">
-                      {comparisonData().map((item, idx) => {
+                      {comparisonData.map((item, idx) => {
                         const diff = item.actualPct - (item.targetPct ?? 0);
                         const color =
                           item.actualPct >= (item.targetPct ?? 0)
@@ -633,7 +635,7 @@ export default function Savings() {
                             : 'bg-red-500';
 
                         return (
-                          <div key={idx}>
+                          <div key={item.ticker ?? idx}>
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 {item.ticker ?? item.name}

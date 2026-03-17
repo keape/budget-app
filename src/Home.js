@@ -143,10 +143,10 @@ function Home() {
         const allocRes = await axios.get(`${BASE_URL}/api/savings/months/${latest._id}/allocations`).catch(() => null);
         let allocatedPercent = 0;
         if (allocRes?.data?.success && latest.savings > 0) {
-          const total = allocRes.data.data.reduce((sum, a) => sum + a.amount, 0);
+          const total = allocRes.data.data.reduce((sum, a) => sum + Number(a.amount ?? 0), 0);
           allocatedPercent = Math.min(100, Math.round(total / latest.savings * 100));
         }
-        setSavingsInfo({ savings: latest.savings, allocatedPercent });
+        setSavingsInfo({ savings: Number(latest.savings ?? 0), allocatedPercent });
       }
 
     } catch (err) {
