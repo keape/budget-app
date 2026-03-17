@@ -145,7 +145,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             fetch(`${BASE_URL}/api/savings/auto-close`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-                signal,
+                // no signal — intentionally fire-and-forget
             }).catch(() => {}); // ignore errors
 
             // Fetch savings months
@@ -153,21 +153,27 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 headers: { 'Authorization': `Bearer ${userToken}` },
                 signal,
             });
-            const savingsJson = await savingsRes.json();
-            if (savingsJson.success && savingsJson.data.length > 0) {
-                const latestMonth = savingsJson.data[0]; // already sorted desc
-                // Fetch allocations for this month to compute allocated %
-                const allocRes = await fetch(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
-                    headers: { 'Authorization': `Bearer ${userToken}` },
-                    signal,
-                });
-                const allocJson = await allocRes.json();
-                let allocatedPercent = 0;
-                if (allocJson.success && latestMonth.savings > 0) {
-                    const totalAllocated = allocJson.data.reduce((sum: number, a: any) => sum + a.amount, 0);
-                    allocatedPercent = Math.min(100, Math.round((totalAllocated / latestMonth.savings) * 100));
+            if (savingsRes.ok) {
+                const savingsJson = await savingsRes.json();
+                if (signal?.aborted) return;
+                if (savingsJson.success && savingsJson.data.length > 0) {
+                    const latestMonth = savingsJson.data[0]; // already sorted desc
+                    // Fetch allocations for this month to compute allocated %
+                    const allocRes = await fetch(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
+                        headers: { 'Authorization': `Bearer ${userToken}` },
+                        signal,
+                    });
+                    if (allocRes.ok) {
+                        const allocJson = await allocRes.json();
+                        if (signal?.aborted) return;
+                        let allocatedPercent = 0;
+                        if (allocJson.success && latestMonth.savings > 0) {
+                            const totalAllocated = allocJson.data.reduce((sum: number, a: any) => sum + a.amount, 0);
+                            allocatedPercent = Math.min(100, Math.round((totalAllocated / latestMonth.savings) * 100));
+                        }
+                        setSavingsData({ savings: latestMonth.savings, allocatedPercent, monthId: latestMonth._id });
+                    }
                 }
-                setSavingsData({ savings: latestMonth.savings, allocatedPercent, monthId: latestMonth._id });
             }
 
         } catch (error: any) {
@@ -288,7 +294,9 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         💰 Risparmio mensile
                     </Text>
                     <Text style={[styles.savingsAmount, { color: savingsData.savings >= 0 ? '#10B981' : '#EF4444' }]}>
-                        {savingsData.savings >= 0 ? '+' : ''}{savingsData.savings.toFixed(2)}€
+                        {showBalance
+                            ? `${savingsData.savings >= 0 ? '+' : '-'}${currency}${Math.abs(savingsData.savings).toFixed(2)}`
+                            : '****'}
                     </Text>
                     <Text style={[styles.savingsSubtitle, { color: isDarkMode ? '#6B7280' : '#9CA3AF' }]}>
                         {savingsData.allocatedPercent}% allocato →
