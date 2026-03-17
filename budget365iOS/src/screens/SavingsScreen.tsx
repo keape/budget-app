@@ -299,13 +299,17 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await fetch(
+            const response = await fetch(
               `${BASE_URL}/api/savings/months/${savingsMonth._id}/allocations/${allId}`,
               {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${userToken}` },
               },
             );
+            if (!response.ok) {
+              Alert.alert('Errore', "Impossibile eliminare l'allocazione. Riprova.");
+              return;
+            }
             reloadData();
           } catch (e) {
             console.error(e);
@@ -352,7 +356,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
   const savePlan = async (allocationsArr: any[]) => {
     try {
-      await fetch(`${BASE_URL}/api/savings/plan`, {
+      const response = await fetch(`${BASE_URL}/api/savings/plan`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${userToken}`,
@@ -360,6 +364,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         },
         body: JSON.stringify({ allocations: allocationsArr }),
       });
+      if (!response.ok) {
+        Alert.alert('Errore', 'Impossibile salvare il piano. Riprova.');
+        return;
+      }
     } catch (e) {
       console.error('savePlan error:', e);
     }
