@@ -23,8 +23,59 @@ const BASE_URL = API_URL;
 
 type ActiveTab = 'mese' | 'piano' | 'portfolio';
 
+// ============================================================
+// TypeScript Interfaces
+// ============================================================
+interface InstrumentData {
+  _id: string;
+  ticker: string;
+  name: string;
+  type: string;
+  currency?: string;
+  exchange?: string;
+  country?: string;
+  lastPrice?: number;
+}
+
+interface AllocationData {
+  _id: string;
+  instrumentId: InstrumentData;
+  amount: number;
+  quantity?: number;
+  priceAtAllocation?: number;
+  savingsMonthId: string;
+}
+
+interface PlanAllocation {
+  instrumentId: InstrumentData;
+  targetPercentage: number;
+}
+
+interface PlanData {
+  _id: string;
+  userId: string;
+  allocations: PlanAllocation[];
+}
+
+interface PortfolioItem {
+  instrument: InstrumentData;
+  totalAmount: number;
+  totalQuantity: number;
+  estimatedCurrentValue: number | null;
+}
+
+interface SavingsMonthData {
+  _id: string;
+  anno: number;
+  mese: number;
+  income: number;
+  expenses: number;
+  savings: number;
+  status: string;
+}
+
 interface SavingsScreenProps {
-  navigation: any;
+  navigation: { navigate: (screen: string, params?: any) => void; goBack: () => void };
 }
 
 const MONTHS = [
@@ -61,10 +112,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const [showYearPicker, setShowYearPicker] = useState(false);
 
   // --- Data ---
-  const [savingsMonth, setSavingsMonth] = useState<any>(null);
-  const [allocations, setAllocations] = useState<any[]>([]);
-  const [plan, setPlan] = useState<any>(null);
-  const [portfolio, setPortfolio] = useState<any[]>([]);
+  const [savingsMonth, setSavingsMonth] = useState<SavingsMonthData | null>(null);
+  const [allocations, setAllocations] = useState<AllocationData[]>([]);
+  const [plan, setPlan] = useState<PlanData | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
 
   // --- Loading / Refreshing ---
   const [isLoading, setIsLoading] = useState(false);
@@ -73,8 +124,8 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // --- Add Allocation Modal ---
   const [showAddAllocationModal, setShowAddAllocationModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedInstrument, setSelectedInstrument] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<InstrumentData[]>([]);
+  const [selectedInstrument, setSelectedInstrument] = useState<InstrumentData | null>(null);
   const [newAmount, setNewAmount] = useState('');
   const [newQuantity, setNewQuantity] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -82,8 +133,8 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // --- Add Plan Modal ---
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [planSearchQuery, setPlanSearchQuery] = useState('');
-  const [planSearchResults, setPlanSearchResults] = useState<any[]>([]);
-  const [planSelectedInstrument, setPlanSelectedInstrument] = useState<any>(null);
+  const [planSearchResults, setPlanSearchResults] = useState<InstrumentData[]>([]);
+  const [planSelectedInstrument, setPlanSelectedInstrument] = useState<InstrumentData | null>(null);
   const [pianoPct, setPianoPct] = useState('');
 
   // --- AbortController ---
@@ -183,6 +234,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       };
     }, [userToken, activeTab, selectedMonth, selectedYear]),
   );
+
+  // Clean up debounce timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      if (planSearchDebounceRef.current) clearTimeout(planSearchDebounceRef.current);
+    };
+  }, []);
 
   const onRefresh = () => {
     abortControllerRef.current?.abort();
@@ -380,12 +439,12 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     showBalance ? `${currency}${val.toFixed(2)}` : '****';
 
   const totalPlanPct = (plan?.allocations ?? []).reduce(
-    (sum: number, a: any) => sum + (a.targetPercentage ?? 0),
+    (sum: number, a: PlanAllocation) => sum + (a.targetPercentage ?? 0),
     0,
   );
 
   const portfolioTotalValue = portfolio.reduce(
-    (sum: number, item: any) =>
+    (sum: number, item: PortfolioItem) =>
       sum + (item.estimatedCurrentValue ?? item.totalAmount ?? 0),
     0,
   );
@@ -590,10 +649,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 Nessuna allocazione
               </Text>
             ) : (
-              allocations.map((alloc: any) => {
-                const ticker = alloc.instrument?.ticker ?? alloc.ticker ?? '?';
-                const name = alloc.instrument?.name ?? alloc.name ?? ticker;
-                const type = alloc.instrument?.type ?? alloc.type ?? '';
+              allocations.map((alloc: AllocationData) => {
+                const ticker = alloc.instrumentId?.ticker ?? '?';
+                const name = alloc.instrumentId?.name ?? ticker;
+                const type = alloc.instrumentId?.type ?? '';
                 return (
                   <View
                     key={alloc._id}
@@ -650,26 +709,20 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
                   Piano vs Reale
                 </Text>
-                {(plan.allocations ?? []).map((pEntry: any, idx: number) => {
-                  const ticker =
-                    pEntry.instrument?.ticker ?? pEntry.ticker ?? '?';
-                  const name =
-                    pEntry.instrument?.name ?? pEntry.name ?? ticker;
+                {(plan.allocations ?? []).map((pEntry: PlanAllocation, idx: number) => {
+                  const ticker = pEntry.instrumentId?.ticker ?? '?';
+                  const name = pEntry.instrumentId?.name ?? ticker;
                   const targetPct: number = pEntry.targetPercentage ?? 0;
 
                   // Find actual allocation for this instrument
-                  const instrId =
-                    pEntry.instrumentId?._id ?? pEntry.instrumentId ?? pEntry.instrument?._id;
+                  const instrId = pEntry.instrumentId?._id;
                   const totalAlloc = allocations.reduce(
-                    (s: number, a: any) => s + (a.amount ?? 0),
+                    (s: number, a: AllocationData) => s + (a.amount ?? 0),
                     0,
                   );
                   const instrAlloc = allocations
-                    .filter(
-                      (a: any) =>
-                        (a.instrumentId?._id ?? a.instrumentId) === instrId,
-                    )
-                    .reduce((s: number, a: any) => s + (a.amount ?? 0), 0);
+                    .filter((a: AllocationData) => a.instrumentId?._id === instrId)
+                    .reduce((s: number, a: AllocationData) => s + (a.amount ?? 0), 0);
                   const actualPct =
                     totalAlloc > 0 ? (instrAlloc / totalAlloc) * 100 : 0;
 
@@ -723,7 +776,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // Render: Tab "Piano"
   // ============================================================
   const renderPianoTab = () => {
-    const planAllocations: any[] = plan?.allocations ?? [];
+    const planAllocations: PlanAllocation[] = plan?.allocations ?? [];
     const isNoData = !plan || planAllocations.length === 0;
 
     return (
@@ -746,11 +799,9 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           </View>
         ) : (
           <>
-            {planAllocations.map((pEntry: any, idx: number) => {
-              const ticker =
-                pEntry.instrument?.ticker ?? pEntry.ticker ?? '?';
-              const name =
-                pEntry.instrument?.name ?? pEntry.name ?? ticker;
+            {planAllocations.map((pEntry: PlanAllocation, idx: number) => {
+              const ticker = pEntry.instrumentId?.ticker ?? '?';
+              const name = pEntry.instrumentId?.name ?? ticker;
               const targetPct: number = pEntry.targetPercentage ?? 0;
 
               return (
@@ -837,16 +888,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         </View>
       ) : (
         <>
-          {portfolio.map((item: any, idx: number) => {
-            const ticker = item.ticker ?? item.instrument?.ticker ?? '?';
-            const name = item.name ?? item.instrument?.name ?? ticker;
-            const itemCurrency = item.currency ?? '';
+          {portfolio.map((item: PortfolioItem, idx: number) => {
+            const ticker = item.instrument?.ticker ?? '?';
+            const name = item.instrument?.name ?? ticker;
+            const itemCurrency = item.instrument?.currency ?? '';
             const totalAmount: number = item.totalAmount ?? 0;
             const totalQuantity: number = item.totalQuantity ?? 0;
-            const estValue: number | null =
-              item.estimatedCurrentValue != null
-                ? item.estimatedCurrentValue
-                : null;
+            const estValue: number | null = item.estimatedCurrentValue ?? null;
 
             return (
               <View
@@ -948,7 +996,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 />
                 {searchResults.length > 0 && (
                   <ScrollView style={styles.searchResultsContainer} nestedScrollEnabled>
-                    {searchResults.map((item: any) => (
+                    {searchResults.map((item: InstrumentData) => (
                       <TouchableOpacity
                         key={item._id}
                         style={[styles.searchResultRow, isDarkMode && { borderBottomColor: '#374151' }]}
@@ -1074,7 +1122,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 />
                 {planSearchResults.length > 0 && (
                   <ScrollView style={styles.searchResultsContainer} nestedScrollEnabled>
-                    {planSearchResults.map((item: any) => (
+                    {planSearchResults.map((item: InstrumentData) => (
                       <TouchableOpacity
                         key={item._id}
                         style={[styles.searchResultRow, isDarkMode && { borderBottomColor: '#374151' }]}
