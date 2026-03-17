@@ -75,7 +75,7 @@ router.post('/auto-close', authenticateToken, async (req, res) => {
       }
     }
 
-    return res.json({ success: true, data: savedMonth });
+    return res.json({ success: true, data: savedMonth, alreadyClosed: false });
   } catch (err) {
     console.error('Error in auto-close:', err);
     res.status(500).json({ success: false, error: 'Error closing month' });
@@ -104,6 +104,11 @@ router.post('/months/:id/allocations', authenticateToken, async (req, res) => {
     const userId = req.user.userId;
     const id = req.params.id;
     const { instrumentId, amount, quantity, priceAtAllocation } = req.body;
+
+    // Validate required fields
+    if (!instrumentId || amount == null) {
+      return res.status(400).json({ success: false, error: 'instrumentId and amount are required' });
+    }
 
     const month = await SavingsMonth.findOne({ _id: id, userId });
     if (!month) {

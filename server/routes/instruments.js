@@ -28,15 +28,24 @@ router.get('/search', async (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
+    // Enforce max query length to prevent ReDoS
+    if (q.length > 50) {
+      return res.status(400).json({ success: false, error: 'Query too long' });
+    }
+
+    // Escape regex metacharacters to prevent ReDoS
+    const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     // Query MongoDB for cached results
     const cached = await Instrument.find({
       $or: [
-        { ticker: { $regex: q, $options: 'i' } },
-        { name: { $regex: q, $options: 'i' } }
+        { ticker: { $regex: escapedQ, $options: 'i' } },
+        { name: { $regex: escapedQ, $options: 'i' } }
       ]
     }).limit(10);
 
-    // Use cache if we have >=3 results and all are fresh
+    // Require at least 3 cached results to avoid serving a too-sparse local cache
+    // (e.g. a DB with only 1-2 seeded instruments should still hit Yahoo for richer results)
     const allFresh = cached.length >= 3 && cached.every(inst => !isStale(inst.lastUpdated));
     if (allFresh) {
       return res.json({ success: true, data: cached });
