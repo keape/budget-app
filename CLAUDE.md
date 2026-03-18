@@ -112,6 +112,13 @@ Import as: `import BASE_URL from '../config';`
 - `/api/categorie` - Category management
 - `/api/transazioni-periodiche` - Recurring transactions CRUD
 - `/api/automation` - Automation/integrations (Google Sheets webhook)
+- `/api/savings/months` - List all SavingsMonth documents for the user
+- `/api/savings/ensure-month` - POST `{ anno, mese }`: creates SavingsMonth for any past month by computing income/expenses from transactions (idempotent)
+- `/api/savings/auto-close` - POST: creates/updates SavingsMonth for the previous month (called fire-and-forget from HomeScreen)
+- `/api/savings/months/:id/allocations` - GET/POST instrument allocations for a savings month
+- `/api/savings/months/:id/allocations/:allId` - DELETE a specific allocation
+- `/api/savings/plan` - GET/PUT user's target allocation plan
+- `/api/savings/portfolio` - GET cumulative portfolio view across all months
 
 **Authentication Middleware**:
 ```js
@@ -138,6 +145,9 @@ const { authenticateToken } = require('./routes/auth');
 | `Entrata` | userId (ref User), descrizione, importo (**positive**), categoria, data; index `{userId, data}` |
 | `BudgetSettings` | userId, anno, mese (0–11 JS convention), spese (Map<category,amount>), entrate (Map<category,amount>) |
 | `TransazionePeriodica` | userId, importo, categoria, descrizione, tipo_ripetizione (8 types), configurazione, data_inizio, data_fine, attiva, transazioni_generate |
+| `SavingsMonth` | userId, anno, mese (0-indexed), income, expenses, savings, status ('closed'), closedAt |
+| `InstrumentAllocation` | userId, savingsMonthId, instrumentId, amount, quantity?, priceAtAllocation? |
+| `AllocationPlan` | userId, allocations [{instrumentId, targetPercentage}] |
 | `Otp` | OTP code storage for email verification |
 
 **importo convention**: `Spesa.importo` is always **negative**; `Entrata.importo` is always **positive**.
@@ -173,11 +183,12 @@ budget365iOS/
 
 **Navigation** (`App.tsx`):
 - Bottom tab navigator (tabs hidden) → Home, Transactions, Budget, Stats
-- Stack screens: AddTransaction, Settings, PeriodicTransactions
+- Stack screens: AddTransaction, Settings, PeriodicTransactions, Savings
 - Auth flow: Login, Register (when not authenticated)
 
 **Screens** (`src/screens/`):
-- `HomeScreen` — Dashboard: monthly balance, income/expenses cards, Performance vs Budget chart (bar), top categories, last 5 transactions. Quick-action buttons "Add Expense" / "Add Income".
+- `HomeScreen` — Dashboard: monthly balance, income/expenses cards, Performance vs Budget chart (bar), top categories, last 5 transactions. Quick-action buttons "Add Expense" / "Add Income". Quick-nav row: Transactions, Budget, **Savings**, Stats. Savings card shows latest month's savings and % allocated.
+- `SavingsScreen` — Savings & investment tracker. Three internal tabs: **Month** (income/expenses/savings mini-cards, "Available to allocate" banner, per-instrument allocations), **Plan** (target % allocation plan per instrument), **Portfolio** (cumulative investment totals with estimated current value). Defaults to previous month. Auto-creates SavingsMonth document for any past month on first visit via `ensure-month` endpoint. Fully in English.
 - `TransactionsScreen` — Full transaction list with text search, filters (type/category/date range), running total of filtered results, per-row edit and delete.
 - `AddTransactionScreen` — Add/edit transaction. One-time or Recurring mode toggle. Native date picker (iOS modal spinner, Android default). Edit mode changes header to "Edit Transaction".
 - `PeriodicTransactionsScreen` — Recurring transactions list: frequency, start date, active/paused badge. Pause/resume and delete buttons. Pull-to-refresh.

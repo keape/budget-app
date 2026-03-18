@@ -252,6 +252,10 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     <Text style={styles.quickNavIcon}>📈</Text>
                     <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Budget</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Savings' as never)}>
+                    <Text style={styles.quickNavIcon}>💰</Text>
+                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Savings</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Stats')}>
                     <Text style={styles.quickNavIcon}>📊</Text>
                     <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Stats</Text>
@@ -291,7 +295,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     onPress={() => navigation.navigate('Savings' as never)}
                 >
                     <Text style={[styles.savingsLabel, { color: isDarkMode ? '#9CA3AF' : '#6B7280' }]}>
-                        💰 Risparmio mensile
+                        💰 Monthly savings
                     </Text>
                     <Text style={[styles.savingsAmount, { color: savingsData.savings >= 0 ? '#10B981' : '#EF4444' }]}>
                         {showBalance
@@ -299,7 +303,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             : '****'}
                     </Text>
                     <Text style={[styles.savingsSubtitle, { color: isDarkMode ? '#6B7280' : '#9CA3AF' }]}>
-                        {savingsData.allocatedPercent}% allocato →
+                        {savingsData.allocatedPercent}% allocated →
                     </Text>
                 </TouchableOpacity>
             )}

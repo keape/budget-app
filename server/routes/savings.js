@@ -19,6 +19,64 @@ router.get('/months', authenticateToken, async (req, res) => {
   }
 });
 
+// POST /api/savings/ensure-month
+// Creates (or updates) a SavingsMonth for any given past month by computing income/expenses from transactions.
+router.post('/ensure-month', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { anno, mese } = req.body;
+
+    if (anno == null || mese == null) {
+      return res.status(400).json({ success: false, error: 'anno and mese are required' });
+    }
+
+    const targetAnno = parseInt(anno, 10);
+    const targetMese = parseInt(mese, 10);
+
+    // Don't allow current or future months
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    if (targetAnno > currentYear || (targetAnno === currentYear && targetMese >= currentMonth)) {
+      return res.status(400).json({ success: false, error: 'Cannot ensure a current or future month' });
+    }
+
+    // Return existing if already present
+    const existing = await SavingsMonth.findOne({ userId, anno: targetAnno, mese: targetMese });
+    if (existing) {
+      return res.json({ success: true, data: existing, alreadyExists: true });
+    }
+
+    // Compute income and expenses from transactions
+    const startDate = new Date(targetAnno, targetMese, 1);
+    const endDate = new Date(targetAnno, targetMese + 1, 1);
+
+    const entrate = await Entrata.find({ userId, data: { $gte: startDate, $lt: endDate } });
+    const income = entrate.reduce((sum, e) => sum + e.importo, 0);
+
+    const spese = await Spesa.find({ userId, data: { $gte: startDate, $lt: endDate } });
+    const expenses = spese.reduce((sum, s) => sum + Math.abs(s.importo), 0);
+
+    const savings = income - expenses;
+
+    const savedMonth = await SavingsMonth.create({
+      userId,
+      anno: targetAnno,
+      mese: targetMese,
+      income,
+      expenses,
+      savings,
+      status: 'closed',
+      closedAt: new Date(),
+    });
+
+    return res.status(201).json({ success: true, data: savedMonth, alreadyExists: false });
+  } catch (err) {
+    console.error('Error in ensure-month:', err);
+    res.status(500).json({ success: false, error: 'Error ensuring month' });
+  }
+});
+
 // POST /api/savings/auto-close
 router.post('/auto-close', authenticateToken, async (req, res) => {
   try {
