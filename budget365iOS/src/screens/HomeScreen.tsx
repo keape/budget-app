@@ -40,6 +40,12 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         budgetEntrateMese: 0
     });
 
+    const [savingsData, setSavingsData] = useState<{
+        savings: number;
+        allocatedPercent: number;
+        monthId: string | null;
+    } | null>(null);
+
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => (
@@ -134,6 +140,41 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 budgetSpeseMese: totBudgetSpese,
                 budgetEntrateMese: totBudgetEntrate
             });
+
+            // Fire-and-forget auto-close — don't await, don't block rendering
+            fetch(`${BASE_URL}/api/savings/auto-close`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                // no signal — intentionally fire-and-forget
+            }).catch(() => {}); // ignore errors
+
+            // Fetch savings months
+            const savingsRes = await fetch(`${BASE_URL}/api/savings/months`, {
+                headers: { 'Authorization': `Bearer ${userToken}` },
+                signal,
+            });
+            if (savingsRes.ok) {
+                const savingsJson = await savingsRes.json();
+                if (signal?.aborted) return;
+                if (savingsJson.success && savingsJson.data.length > 0) {
+                    const latestMonth = savingsJson.data[0]; // already sorted desc
+                    // Fetch allocations for this month to compute allocated %
+                    const allocRes = await fetch(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
+                        headers: { 'Authorization': `Bearer ${userToken}` },
+                        signal,
+                    });
+                    if (allocRes.ok) {
+                        const allocJson = await allocRes.json();
+                        if (signal?.aborted) return;
+                        let allocatedPercent = 0;
+                        if (allocJson.success && latestMonth.savings > 0) {
+                            const totalAllocated = allocJson.data.reduce((sum: number, a: any) => sum + a.amount, 0);
+                            allocatedPercent = Math.min(100, Math.round((totalAllocated / latestMonth.savings) * 100));
+                        }
+                        setSavingsData({ savings: latestMonth.savings, allocatedPercent, monthId: latestMonth._id });
+                    }
+                }
+            }
 
         } catch (error: any) {
             if (error?.name !== 'AbortError') {
@@ -242,6 +283,26 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     <Text style={[styles.cardValue, { color: '#3B82F6' }]}>{riepilogoData.numeroTransazioniMese}</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Savings Card */}
+            {savingsData && (
+                <TouchableOpacity
+                    style={[styles.savingsCard, { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }]}
+                    onPress={() => navigation.navigate('Savings' as never)}
+                >
+                    <Text style={[styles.savingsLabel, { color: isDarkMode ? '#9CA3AF' : '#6B7280' }]}>
+                        💰 Risparmio mensile
+                    </Text>
+                    <Text style={[styles.savingsAmount, { color: savingsData.savings >= 0 ? '#10B981' : '#EF4444' }]}>
+                        {showBalance
+                            ? `${savingsData.savings >= 0 ? '+' : '-'}${currency}${Math.abs(savingsData.savings).toFixed(2)}`
+                            : '****'}
+                    </Text>
+                    <Text style={[styles.savingsSubtitle, { color: isDarkMode ? '#6B7280' : '#9CA3AF' }]}>
+                        {savingsData.allocatedPercent}% allocato →
+                    </Text>
+                </TouchableOpacity>
+            )}
 
             {/* Budget Summary Charts */}
             <TouchableOpacity style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Budget')}>
@@ -448,6 +509,30 @@ const styles = StyleSheet.create({
     cardValue: {
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    savingsCard: {
+        marginHorizontal: 16,
+        marginBottom: 16,
+        padding: 16,
+        borderRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    savingsLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginBottom: 4,
+    },
+    savingsAmount: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    savingsSubtitle: {
+        fontSize: 12,
     },
     sectionContainer: {
         margin: 16,

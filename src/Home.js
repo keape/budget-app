@@ -27,7 +27,9 @@ function Home() {
     budgetSpeseMese: 0,
     budgetEntrateMese: 0
   });
-  
+
+  const [savingsInfo, setSavingsInfo] = useState({ savings: 0, allocatedPercent: 0 });
+
   const { addMultipleNotifications } = useNotifications();
 
   useEffect(() => {
@@ -133,6 +135,20 @@ function Home() {
         }
       });
 
+      // Savings integration
+      axios.post(`${BASE_URL}/api/savings/auto-close`).catch(() => {});
+      const savingsRes = await axios.get(`${BASE_URL}/api/savings/months`).catch(() => null);
+      if (savingsRes?.data?.success && savingsRes.data.data.length > 0) {
+        const latest = savingsRes.data.data[0];
+        const allocRes = await axios.get(`${BASE_URL}/api/savings/months/${latest._id}/allocations`).catch(() => null);
+        let allocatedPercent = 0;
+        if (allocRes?.data?.success && latest.savings > 0) {
+          const total = allocRes.data.data.reduce((sum, a) => sum + Number(a.amount ?? 0), 0);
+          allocatedPercent = Math.min(100, Math.round(total / latest.savings * 100));
+        }
+        setSavingsInfo({ savings: Number(latest.savings ?? 0), allocatedPercent });
+      }
+
     } catch (err) {
       console.error('Errore nel caricamento del riepilogo:', err);
       setError('Errore nel caricamento dei dati di riepilogo');
@@ -231,8 +247,18 @@ function Home() {
                   <span className="text-2xl">📝</span>
                 </div>
               </div>
+              <div
+                onClick={() => navigate('/savings')}
+                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow cursor-pointer hover:shadow-md transition-shadow"
+              >
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">💰 Risparmio Mensile</h3>
+                <p className={`text-2xl font-bold mt-1 ${savingsInfo.savings >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {savingsInfo.savings >= 0 ? '+' : ''}{savingsInfo.savings.toFixed(2)}€
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{savingsInfo.allocatedPercent}% allocato →</p>
+              </div>
             </div>
-            
+
             {/* Grafico Andamento vs Budget */}
             <div className="mt-6">
               <MonthlySummaryChart
