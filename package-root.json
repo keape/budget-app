@@ -1,9 +1,0 @@
-{
-  "name": "budget-app-root",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "npm run build",
-    "start": "npm start"
-  },
-  "dependencies": {}
-}
