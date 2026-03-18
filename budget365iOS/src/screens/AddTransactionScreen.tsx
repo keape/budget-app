@@ -371,8 +371,8 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
             placeholder={`Amount (${currency} e.g. 12.50)`}
             value={importo}
-            onChangeText={setImporto}
-            keyboardType="numeric"
+            onChangeText={(text) => setImporto(text.replace(',', '.'))}
+            keyboardType="decimal-pad"
             placeholderTextColor="#9CA3AF"
             inputAccessoryViewID="importoAccessory"
           />

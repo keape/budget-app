@@ -79,8 +79,8 @@ interface SavingsScreenProps {
 }
 
 const MONTHS = [
-  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -105,8 +105,16 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
   // --- Navigation / Tab state ---
   const [activeTab, setActiveTab] = useState<ActiveTab>('mese');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.getMonth();
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.getFullYear();
+  });
 
   // --- Month/Year picker modals ---
   const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -166,10 +174,31 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         const monthsJson = await monthsRes.json();
         if (signal.aborted) return;
 
-        const month =
+        let month =
           monthsJson.data?.find(
             (m: any) => m.anno === selectedYear && m.mese === selectedMonth,
           ) ?? null;
+
+        // If no document yet, ask the backend to compute and create it for this past month
+        if (!month) {
+          const now = new Date();
+          const isFutureOrCurrent =
+            selectedYear > now.getFullYear() ||
+            (selectedYear === now.getFullYear() && selectedMonth >= now.getMonth());
+          if (!isFutureOrCurrent) {
+            const ensureRes = await fetch(`${BASE_URL}/api/savings/ensure-month`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ anno: selectedYear, mese: selectedMonth }),
+              signal,
+            });
+            if (!signal.aborted && ensureRes.ok) {
+              const ensureJson = await ensureRes.json();
+              if (!signal.aborted) month = ensureJson.data ?? null;
+            }
+          }
+        }
+
         setSavingsMonth(month);
 
         if (month) {
@@ -340,7 +369,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         reloadData();
       } else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert('Errore', errJson.error ?? 'Impossibile aggiungere allocazione');
+        Alert.alert('Error', errJson.error ?? 'Could not add allocation');
       }
     } catch (e) {
       console.error(e);
@@ -352,10 +381,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // ============================================================
   const handleDeleteAllocation = (allId: string) => {
     if (!savingsMonth) return;
-    Alert.alert('Elimina', 'Eliminare questa allocazione?', [
-      { text: 'Annulla', style: 'cancel' },
+    Alert.alert('Delete', 'Delete this allocation?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Elimina',
+        text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           try {
@@ -367,7 +396,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               },
             );
             if (!response.ok) {
-              Alert.alert('Errore', "Impossibile eliminare l'allocazione. Riprova.");
+              Alert.alert('Error', 'Could not delete allocation. Please try again.');
               return;
             }
             reloadData();
@@ -386,7 +415,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     if (!planSelectedInstrument || !pianoPct) return;
     const pct = parseFloat(pianoPct);
     if (isNaN(pct) || pct <= 0) {
-      Alert.alert('Errore', 'Inserire una percentuale valida');
+      Alert.alert('Error', 'Please enter a valid percentage');
       return;
     }
     const currentAllocations: any[] = plan?.allocations ?? [];
@@ -425,7 +454,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         body: JSON.stringify({ allocations: allocationsArr }),
       });
       if (!response.ok) {
-        Alert.alert('Errore', 'Impossibile salvare il piano. Riprova.');
+        Alert.alert('Error', 'Could not save plan. Please try again.');
         return;
       }
     } catch (e) {
@@ -482,7 +511,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       <View style={styles.pickerOverlay}>
         <View style={[styles.pickerContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
           <Text style={[styles.pickerTitle, isDarkMode && { color: '#F9FAFB' }]}>
-            Seleziona Mese
+            Select Month
           </Text>
           <ScrollView>
             {MONTHS.map((m, idx) => (
@@ -514,7 +543,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             style={styles.pickerClose}
             onPress={() => setShowMonthPicker(false)}
           >
-            <Text style={styles.pickerCloseText}>Chiudi</Text>
+            <Text style={styles.pickerCloseText}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -529,7 +558,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       <View style={styles.pickerOverlay}>
         <View style={[styles.pickerContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
           <Text style={[styles.pickerTitle, isDarkMode && { color: '#F9FAFB' }]}>
-            Seleziona Anno
+            Select Year
           </Text>
           <ScrollView>
             {YEARS.map(y => (
@@ -561,7 +590,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             style={styles.pickerClose}
             onPress={() => setShowYearPicker(false)}
           >
-            <Text style={styles.pickerCloseText}>Chiudi</Text>
+            <Text style={styles.pickerCloseText}>Close</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -583,9 +612,9 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // Render: Tab "Mese"
   // ============================================================
   const renderMeseTab = () => {
-    const income = savingsMonth?.totaleEntrate ?? 0;
-    const expenses = savingsMonth?.totaleSpese ?? 0;
-    const risparmio = income - expenses;
+    const income = savingsMonth?.income ?? 0;
+    const expenses = savingsMonth?.expenses ?? 0;
+    const risparmio = savingsMonth?.savings ?? (income - expenses);
 
     return (
       <ScrollView
@@ -600,7 +629,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         {savingsMonth === null ? (
           <View style={[styles.emptyCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
             <Text style={[styles.emptyText, isDarkMode && { color: '#9CA3AF' }]}>
-              Nessun dato per questo mese
+              No data for this month
             </Text>
             <Text style={[styles.emptySubText, isDarkMode && { color: '#6B7280' }]}>
               {MONTHS[selectedMonth]} {selectedYear}
@@ -612,7 +641,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             <View style={styles.miniCardsRow}>
               <View style={[styles.miniCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
                 <Text style={[styles.miniCardLabel, isDarkMode && { color: '#9CA3AF' }]}>
-                  Entrate
+                  Income
                 </Text>
                 <Text style={[styles.miniCardValue, { color: '#10B981' }]}>
                   {formatCurrency(income)}
@@ -620,7 +649,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </View>
               <View style={[styles.miniCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
                 <Text style={[styles.miniCardLabel, isDarkMode && { color: '#9CA3AF' }]}>
-                  Uscite
+                  Expenses
                 </Text>
                 <Text style={[styles.miniCardValue, { color: '#EF4444' }]}>
                   {formatCurrency(expenses)}
@@ -628,7 +657,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </View>
               <View style={[styles.miniCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
                 <Text style={[styles.miniCardLabel, isDarkMode && { color: '#9CA3AF' }]}>
-                  Risparmio
+                  Savings
                 </Text>
                 <Text
                   style={[
@@ -641,13 +670,34 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </View>
             </View>
 
+            {/* Available to allocate */}
+            {(() => {
+              const totalAllocated = allocations.reduce((s: number, a: AllocationData) => s + (a.amount ?? 0), 0);
+              const available = risparmio - totalAllocated;
+              return (
+                <View style={[styles.availableCard, { backgroundColor: available >= 0 ? (isDarkMode ? '#064E3B' : '#ECFDF5') : (isDarkMode ? '#450A0A' : '#FEF2F2') }]}>
+                  <Text style={[styles.availableLabel, { color: isDarkMode ? '#6EE7B7' : '#065F46' }]}>
+                    Available to allocate
+                  </Text>
+                  <Text style={[styles.availableAmount, { color: available >= 0 ? '#10B981' : '#EF4444' }]}>
+                    {showBalance ? `${available >= 0 ? '' : '-'}${currency}${Math.abs(available).toFixed(2)}` : '****'}
+                  </Text>
+                  {totalAllocated > 0 && (
+                    <Text style={[styles.availableSub, { color: isDarkMode ? '#6B7280' : '#9CA3AF' }]}>
+                      {currency}{totalAllocated.toFixed(2)} already allocated
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
+
             {/* Allocations List */}
             <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
-              Allocazioni
+              Allocations
             </Text>
             {allocations.length === 0 ? (
               <Text style={[styles.emptyText, isDarkMode && { color: '#9CA3AF' }]}>
-                Nessuna allocazione
+                No allocations
               </Text>
             ) : (
               allocations.map((alloc: AllocationData) => {
@@ -700,7 +750,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               onPress={() => setShowAddAllocationModal(true)}
             >
               <Text style={[styles.addButtonText, isDarkMode && { color: '#e0e7ff' }]}>
-                + Aggiungi allocazione
+                + Add allocation
               </Text>
             </TouchableOpacity>
 
@@ -708,7 +758,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {plan && (plan.allocations?.length ?? 0) > 0 && allocations.length > 0 && (
               <>
                 <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
-                  Piano vs Reale
+                  Plan vs Actual
                 </Text>
                 {(plan.allocations ?? []).map((pEntry: PlanAllocation, idx: number) => {
                   const ticker = pEntry.instrumentId?.ticker ?? '?';
@@ -760,7 +810,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                         />
                       </View>
                       <Text style={[styles.pianoRealeActual, isDarkMode && { color: '#9CA3AF' }]}>
-                        Reale: {actualPct.toFixed(1)}%
+                        Actual: {actualPct.toFixed(1)}%
                       </Text>
                     </View>
                   );
@@ -789,13 +839,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         }
       >
         <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
-          Piano di allocazione
+          Allocation plan
         </Text>
 
         {isNoData ? (
           <View style={[styles.emptyCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
             <Text style={[styles.emptyText, isDarkMode && { color: '#9CA3AF' }]}>
-              Nessun piano impostato
+              No plan set
             </Text>
           </View>
         ) : (
@@ -837,7 +887,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* Total percentage */}
             <View style={[styles.totalPctRow, isDarkMode && { backgroundColor: '#1F2937' }]}>
               <Text style={[styles.totalPctLabel, isDarkMode && { color: '#9CA3AF' }]}>
-                Totale allocato:
+                Total allocated:
               </Text>
               <Text
                 style={[
@@ -850,7 +900,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             </View>
             {totalPlanPct > 100 && (
               <Text style={styles.overAllocWarning}>
-                Attenzione: totale superiore al 100%
+                Warning: total exceeds 100%
               </Text>
             )}
           </>
@@ -861,7 +911,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           onPress={() => setShowAddPlanModal(true)}
         >
           <Text style={[styles.addButtonText, isDarkMode && { color: '#e0e7ff' }]}>
-            + Aggiungi strumento
+            + Add instrument
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -878,13 +928,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
-        Portafoglio investimenti
+        Investment portfolio
       </Text>
 
       {portfolio.length === 0 ? (
         <View style={[styles.emptyCard, isDarkMode && { backgroundColor: '#1F2937' }]}>
           <Text style={[styles.emptyText, isDarkMode && { color: '#9CA3AF' }]}>
-            Nessun investimento registrato
+            No investments recorded
           </Text>
         </View>
       ) : (
@@ -931,8 +981,8 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                       { color: estValue != null ? '#4F46E5' : '#9CA3AF' },
                     ]}
                   >
-                    Val. attuale:{' '}
-                    {estValue != null ? formatCurrency(estValue) : 'N/D'}
+                    Current value:{' '}
+                    {estValue != null ? formatCurrency(estValue) : 'N/A'}
                   </Text>
                 </View>
               </View>
@@ -944,7 +994,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             style={[styles.portfolioTotalRow, isDarkMode && { backgroundColor: '#1F2937' }]}
           >
             <Text style={[styles.portfolioTotalLabel, isDarkMode && { color: '#9CA3AF' }]}>
-              Valore totale portafoglio:
+              Total portfolio value:
             </Text>
             <Text style={[styles.portfolioTotalValue, { color: '#4F46E5' }]}>
               {formatCurrency(portfolioTotalValue)}
@@ -972,7 +1022,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
             <Text style={[styles.modalTitle, isDarkMode && { color: '#F9FAFB' }]}>
-              Aggiungi allocazione
+              Add allocation
             </Text>
 
             {/* Instrument Search */}
@@ -990,7 +1040,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               <>
                 <TextInput
                   style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Cerca strumento (es. VWCE, BTC...)"
+                  placeholder="Search instrument (e.g. VWCE, BTC...)"
                   placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
                   value={searchQuery}
                   onChangeText={handleSearchChange}
@@ -1024,7 +1074,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* Amount */}
             <TextInput
               style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-              placeholder={`Importo (${currency})`}
+              placeholder={`Amount (${currency})`}
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={newAmount}
@@ -1034,7 +1084,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* Quantity (optional) */}
             <TextInput
               style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Quantita' (opzionale)"
+              placeholder="Quantity (optional)"
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={newQuantity}
@@ -1044,7 +1094,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* Price at allocation (optional) */}
             <TextInput
               style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Prezzo al momento (opzionale)"
+              placeholder="Price at time (optional)"
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={newPrice}
@@ -1065,14 +1115,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 }}
               >
                 <Text style={[styles.modalBtnTextCancel, isDarkMode && { color: '#D1D5DB' }]}>
-                  Annulla
+                  Cancel
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}
                 onPress={handleSaveAllocation}
               >
-                <Text style={styles.modalBtnTextSave}>Salva</Text>
+                <Text style={styles.modalBtnTextSave}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1098,7 +1148,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, isDarkMode && { backgroundColor: '#1F2937' }]}>
             <Text style={[styles.modalTitle, isDarkMode && { color: '#F9FAFB' }]}>
-              Aggiungi strumento al piano
+              Add instrument to plan
             </Text>
 
             {/* Instrument Search */}
@@ -1116,7 +1166,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               <>
                 <TextInput
                   style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Cerca strumento..."
+                  placeholder="Search instrument..."
                   placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
                   value={planSearchQuery}
                   onChangeText={handlePlanSearchChange}
@@ -1150,7 +1200,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* Target Percentage */}
             <TextInput
               style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Percentuale target (es. 30)"
+              placeholder="Target percentage (e.g. 30)"
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={pianoPct}
@@ -1169,14 +1219,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 }}
               >
                 <Text style={[styles.modalBtnTextCancel, isDarkMode && { color: '#D1D5DB' }]}>
-                  Annulla
+                  Cancel
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}
                 onPress={handleSavePlanEntry}
               >
-                <Text style={styles.modalBtnTextSave}>Salva</Text>
+                <Text style={styles.modalBtnTextSave}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1210,7 +1260,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 activeTab === tab && isDarkMode && { color: '#818CF8' },
               ]}
             >
-              {tab === 'mese' ? 'Mese' : tab === 'piano' ? 'Piano' : 'Portfolio'}
+              {tab === 'mese' ? 'Month' : tab === 'piano' ? 'Plan' : 'Portfolio'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -1379,6 +1429,29 @@ const styles = StyleSheet.create({
   miniCardValue: {
     fontSize: 14,
     fontWeight: '700',
+  },
+
+  // Available to allocate banner
+  availableCard: {
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  availableLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  availableAmount: {
+    fontSize: 26,
+    fontWeight: '800',
+  },
+  availableSub: {
+    fontSize: 12,
+    marginTop: 4,
   },
 
   // Ticker Badge
