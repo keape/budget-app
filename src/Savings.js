@@ -85,7 +85,6 @@ export default function Savings() {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, selectedMonth, selectedYear]);
 
   // ------ Month navigation helpers ------
