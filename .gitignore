@@ -49,3 +49,12 @@ tmp/
 temp/
 budget365iOS/ios/build_output/
 .worktrees/
+
+# Claude/tooling internals
+.claude/commands/
+.claude/worktrees/
+.superpowers/
+
+# iOS duplicate lock files
+"budget365iOS/ios/Podfile 3.lock"
+budget365iOS/ios/Podfile\ 3.lock
