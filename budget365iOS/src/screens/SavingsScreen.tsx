@@ -252,18 +252,29 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     }
   };
 
+  const isFocusedRef = useRef(false);
+
   useFocusEffect(
     useCallback(() => {
+      isFocusedRef.current = true;
       if (userToken) {
         abortControllerRef.current?.abort();
         abortControllerRef.current = new AbortController();
         loadData(abortControllerRef.current.signal);
       }
       return () => {
+        isFocusedRef.current = false;
         abortControllerRef.current?.abort();
       };
-    }, [userToken, activeTab, selectedMonth, selectedYear]),
+    }, [userToken]),
   );
+
+  useEffect(() => {
+    if (!isFocusedRef.current || !userToken) return;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    loadData(abortControllerRef.current.signal);
+  }, [activeTab, selectedMonth, selectedYear]);
 
   // Clean up debounce timeouts on unmount
   useEffect(() => {
