@@ -151,6 +151,9 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // --- AbortController ---
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Tracks whether the Add Allocation modal is open — guards the async fallback price fetch
+  const allocationModalOpenRef = useRef(false);
+
   // --- Debounce refs ---
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const planSearchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,6 +326,30 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     }, 300);
   };
 
+  const handleSelectInstrument = (item: InstrumentData) => {
+    setSelectedInstrument(item);
+    setSearchQuery('');
+    setSearchResults([]);
+
+    if (item.lastPrice != null) {
+      setNewPrice(item.lastPrice.toFixed(2));
+    } else {
+      // Fallback: fetch fresh price only if not present in search result
+      fetch(`${BASE_URL}/api/instruments/${encodeURIComponent(item.ticker)}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(json => {
+          const price = json?.data?.lastPrice;
+          if (price != null && allocationModalOpenRef.current) {
+            // Only set if user hasn't already typed a price
+            setNewPrice(prev => (prev === '' ? price.toFixed(2) : prev));
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
   // ============================================================
   // Instrument Search — Plan Modal
   // ============================================================
@@ -351,6 +378,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // Reset Allocation Modal
   // ============================================================
   const resetAllocationModal = () => {
+    allocationModalOpenRef.current = false;
     setShowAddAllocationModal(false);
     setSelectedInstrument(null);
     setNewAmount('');
@@ -768,7 +796,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* Add Allocation Button */}
             <TouchableOpacity
               style={[styles.addButton, isDarkMode && { backgroundColor: '#312e81', borderColor: '#4338ca' }]}
-              onPress={() => setShowAddAllocationModal(true)}
+              onPress={() => {
+                allocationModalOpenRef.current = true;
+                setShowAddAllocationModal(true);
+              }}
             >
               <Text style={[styles.addButtonText, isDarkMode && { color: '#e0e7ff' }]}>
                 + Add allocation
@@ -1072,11 +1103,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                       <TouchableOpacity
                         key={item._id}
                         style={[styles.searchResultRow, isDarkMode && { borderBottomColor: '#374151' }]}
-                        onPress={() => {
-                          setSelectedInstrument(item);
-                          setSearchQuery('');
-                          setSearchResults([]);
-                        }}
+                        onPress={() => handleSelectInstrument(item)}
                       >
                         <TickerBadge ticker={item.ticker ?? '?'} />
                         <Text style={[styles.searchResultText, isDarkMode && { color: '#F9FAFB' }]} numberOfLines={1}>
