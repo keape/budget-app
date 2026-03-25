@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { AllocationMode, deriveOnAmountChange, deriveOnQuantityChange, deriveOnPriceChange } from '../utils/allocationCalc';
 
 const BASE_URL = API_URL;
 
@@ -138,6 +139,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const [newAmount, setNewAmount] = useState('');
   const [newQuantity, setNewQuantity] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [allocationMode, setAllocationMode] = useState<AllocationMode>('amount');
 
   // --- Add Plan Modal ---
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
@@ -346,6 +348,20 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   };
 
   // ============================================================
+  // Reset Allocation Modal
+  // ============================================================
+  const resetAllocationModal = () => {
+    setShowAddAllocationModal(false);
+    setSelectedInstrument(null);
+    setNewAmount('');
+    setNewQuantity('');
+    setNewPrice('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setAllocationMode('amount');
+  };
+
+  // ============================================================
   // Save Allocation
   // ============================================================
   const handleSaveAllocation = async () => {
@@ -370,13 +386,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         },
       );
       if (res.ok) {
-        setShowAddAllocationModal(false);
-        setSelectedInstrument(null);
-        setNewAmount('');
-        setNewQuantity('');
-        setNewPrice('');
-        setSearchQuery('');
-        setSearchResults([]);
+        resetAllocationModal();
         reloadData();
       } else {
         const errJson = await res.json().catch(() => ({}));
@@ -1024,7 +1034,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       visible={showAddAllocationModal}
       transparent
       animationType="slide"
-      onRequestClose={() => setShowAddAllocationModal(false)}
+      onRequestClose={resetAllocationModal}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -1115,15 +1125,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnCancel, isDarkMode && { backgroundColor: '#374151' }]}
-                onPress={() => {
-                  setShowAddAllocationModal(false);
-                  setSelectedInstrument(null);
-                  setNewAmount('');
-                  setNewQuantity('');
-                  setNewPrice('');
-                  setSearchQuery('');
-                  setSearchResults([]);
-                }}
+                onPress={resetAllocationModal}
               >
                 <Text style={[styles.modalBtnTextCancel, isDarkMode && { color: '#D1D5DB' }]}>
                   Cancel
