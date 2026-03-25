@@ -1175,34 +1175,81 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </>
             )}
 
+            {/* Mode Toggle — always visible */}
+            <View style={[styles.modeToggleContainer, isDarkMode && { borderColor: '#4B5563' }]}>
+              <TouchableOpacity
+                style={[
+                  styles.modeToggleBtn,
+                  allocationMode === 'amount' && styles.modeToggleBtnActive,
+                  isDarkMode && allocationMode !== 'amount' && { backgroundColor: '#374151' },
+                ]}
+                onPress={() => setAllocationMode('amount')}
+              >
+                <Text style={[
+                  styles.modeToggleBtnText,
+                  allocationMode === 'amount' && styles.modeToggleBtnTextActive,
+                  isDarkMode && allocationMode !== 'amount' && { color: '#D1D5DB' },
+                ]}>
+                  Amount
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modeToggleBtn,
+                  allocationMode === 'quantity' && styles.modeToggleBtnActive,
+                  isDarkMode && allocationMode !== 'quantity' && { backgroundColor: '#374151' },
+                ]}
+                onPress={() => setAllocationMode('quantity')}
+              >
+                <Text style={[
+                  styles.modeToggleBtnText,
+                  allocationMode === 'quantity' && styles.modeToggleBtnTextActive,
+                  isDarkMode && allocationMode !== 'quantity' && { color: '#D1D5DB' },
+                ]}>
+                  Quantity
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Amount */}
             <TextInput
-              style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
+              style={[
+                styles.modalInput,
+                isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB', borderColor: 'transparent' },
+                allocationMode === 'amount' && styles.modalInputPrimary,
+              ]}
               placeholder={`Amount (${currency})`}
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={newAmount}
-              onChangeText={setNewAmount}
+              onChangeText={handleAmountChange}
             />
 
-            {/* Quantity (optional) */}
+            {/* Quantity */}
             <TextInput
-              style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Quantity (optional)"
+              style={[
+                styles.modalInput,
+                isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB', borderColor: 'transparent' },
+                allocationMode === 'quantity' && styles.modalInputPrimary,
+              ]}
+              placeholder="Quantity"
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={newQuantity}
-              onChangeText={setNewQuantity}
+              onChangeText={handleQuantityChange}
             />
 
-            {/* Price at allocation (optional) */}
+            {/* Price */}
             <TextInput
-              style={[styles.modalInput, isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB' }]}
-              placeholder="Price at time (optional)"
+              style={[
+                styles.modalInput,
+                isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB', borderColor: 'transparent' },
+              ]}
+              placeholder={`Price (${currency})`}
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
               value={newPrice}
-              onChangeText={setNewPrice}
+              onChangeText={handlePriceChange}
             />
 
             <View style={styles.modalActions}>
@@ -1814,6 +1861,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 12,
     color: '#111827',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  modalInputPrimary: {
+    borderColor: '#4F46E5',
+    borderWidth: 2,
+  },
+  modeToggleContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  modeToggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  modeToggleBtnActive: {
+    backgroundColor: '#4F46E5',
+  },
+  modeToggleBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  modeToggleBtnTextActive: {
+    color: '#FFFFFF',
   },
   modalActions: {
     flexDirection: 'row',
