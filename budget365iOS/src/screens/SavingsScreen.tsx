@@ -351,6 +351,41 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   };
 
   // ============================================================
+  // Live Calculation Handlers
+  // ============================================================
+  // Quantity mode: user types Amount → derive Quantity = amount / price
+  // Amount mode:  user types Amount → it's the primary field, no recalculation
+  const handleAmountChange = (text: string) => {
+    setNewAmount(text);
+    if (allocationMode === 'quantity') {
+      const derivedQty = deriveOnAmountChange(text, newPrice); // returns quantity string
+      if (derivedQty !== null) setNewQuantity(derivedQty);
+    }
+  };
+
+  // Amount mode: user types Quantity → derive Price = amount / quantity
+  // Quantity mode: user types Quantity → it's the primary field, no recalculation
+  const handleQuantityChange = (text: string) => {
+    setNewQuantity(text);
+    if (allocationMode === 'amount') {
+      const derivedPrice = deriveOnQuantityChange(newAmount, text); // returns price string
+      if (derivedPrice !== null) setNewPrice(derivedPrice);
+    }
+  };
+
+  // Both modes: user types Price → derive the non-primary field
+  // Amount mode:  derives Quantity = amount / price
+  // Quantity mode: derives Amount  = quantity * price
+  const handlePriceChange = (text: string) => {
+    setNewPrice(text);
+    const result = deriveOnPriceChange(newAmount, newQuantity, text, allocationMode);
+    if (result !== null) {
+      if (result.field === 'quantity') setNewQuantity(result.value);
+      else setNewAmount(result.value);
+    }
+  };
+
+  // ============================================================
   // Instrument Search — Plan Modal
   // ============================================================
   const handlePlanSearchChange = (text: string) => {
@@ -394,10 +429,31 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // ============================================================
   const handleSaveAllocation = async () => {
     if (!selectedInstrument || !newAmount || !savingsMonth) return;
+
+    const parsedAmount = parseFloat(newAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount greater than 0');
+      return;
+    }
+    if (newQuantity) {
+      const q = parseFloat(newQuantity);
+      if (isNaN(q) || q <= 0) {
+        Alert.alert('Error', 'Quantity must be greater than 0');
+        return;
+      }
+    }
+    if (newPrice) {
+      const p = parseFloat(newPrice);
+      if (isNaN(p) || p <= 0) {
+        Alert.alert('Error', 'Price must be greater than 0');
+        return;
+      }
+    }
+
     try {
       const body: any = {
         instrumentId: selectedInstrument._id,
-        amount: parseFloat(newAmount),
+        amount: parsedAmount,
       };
       if (newQuantity) body.quantity = parseFloat(newQuantity);
       if (newPrice) body.priceAtAllocation = parseFloat(newPrice);
