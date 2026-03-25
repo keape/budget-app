@@ -10,7 +10,6 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
