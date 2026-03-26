@@ -1105,8 +1105,20 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             const name = item.instrument?.name ?? ticker;
             const itemCurrency = item.instrument?.currency ?? '';
             const totalAmount: number = item.totalAmount ?? 0;
-            const totalQuantity: number = item.totalQuantity ?? 0;
             const estValue: number | null = item.estimatedCurrentValue ?? null;
+            const returnAbs = estValue != null ? estValue - totalAmount : null;
+            const returnPct =
+              returnAbs != null && totalAmount > 0
+                ? (returnAbs / totalAmount) * 100
+                : null;
+            const returnColor =
+              returnAbs == null
+                ? '#9CA3AF'
+                : returnAbs > 0
+                ? '#059669'
+                : returnAbs < 0
+                ? '#DC2626'
+                : '#6B7280';
 
             return (
               <View
@@ -1127,24 +1139,35 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                     </Text>
                   ) : null}
                 </View>
-                <View style={styles.portfolioValues}>
-                  <Text style={[styles.portfolioAmount, isDarkMode && { color: '#F9FAFB' }]}>
-                    {formatCurrency(totalAmount)}
-                  </Text>
-                  {totalQuantity > 0 && (
-                    <Text style={[styles.portfolioMeta, isDarkMode && { color: '#9CA3AF' }]}>
-                      Q: {totalQuantity.toFixed(4)}
+                <View style={styles.portfolioDetail}>
+                  <View style={styles.portfolioDetailRow}>
+                    <Text style={[styles.portfolioDetailLabel, isDarkMode && { color: '#9CA3AF' }]}>
+                      Invested
                     </Text>
+                    <Text style={[styles.portfolioDetailValue, isDarkMode && { color: '#F9FAFB' }]}>
+                      {formatCurrency(totalAmount)}
+                    </Text>
+                  </View>
+                  {estValue != null && returnAbs != null && returnPct != null && (
+                    <>
+                      <View style={styles.portfolioDetailRow}>
+                        <Text style={[styles.portfolioDetailLabel, isDarkMode && { color: '#9CA3AF' }]}>
+                          Curr. value
+                        </Text>
+                        <Text style={[styles.portfolioDetailValue, isDarkMode && { color: '#F9FAFB' }]}>
+                          {formatCurrency(estValue)}
+                        </Text>
+                      </View>
+                      <View style={styles.portfolioDetailRow}>
+                        <Text style={[styles.portfolioDetailLabel, isDarkMode && { color: '#9CA3AF' }]}>
+                          Return
+                        </Text>
+                        <Text style={[styles.portfolioDetailValue, { color: returnColor }]}>
+                          {formatReturnAbs(returnAbs)}{'  '}{formatReturnPct(returnPct)}
+                        </Text>
+                      </View>
+                    </>
                   )}
-                  <Text
-                    style={[
-                      styles.portfolioEstValue,
-                      { color: estValue != null ? '#4F46E5' : '#9CA3AF' },
-                    ]}
-                  >
-                    Current value:{' '}
-                    {estValue != null ? formatCurrency(estValue) : 'N/A'}
-                  </Text>
                 </View>
               </View>
             );
