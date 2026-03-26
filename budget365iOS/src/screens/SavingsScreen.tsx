@@ -593,6 +593,17 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const formatCurrency = (val: number) =>
     showBalance ? `${currency}${val.toFixed(2)}` : '****';
 
+  const formatReturnAbs = (abs: number): string => {
+    if (!showBalance) return '****';
+    const sign = abs >= 0 ? '+' : '-';
+    return `${sign}${currency}${Math.abs(abs).toFixed(2)}`;
+  };
+
+  const formatReturnPct = (pct: number): string => {
+    const sign = pct >= 0 ? '+' : '';
+    return `${sign}${pct.toFixed(1)}%`;
+  };
+
   const totalPlanPct = (plan?.allocations ?? []).reduce(
     (sum: number, a: PlanAllocation) => sum + (a.targetPercentage ?? 0),
     0,
@@ -603,6 +614,28 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       sum + (item.estimatedCurrentValue ?? item.totalAmount ?? 0),
     0,
   );
+
+  const portfolioTotalInvested = portfolio.reduce(
+    (sum: number, item: PortfolioItem) => sum + (item.totalAmount ?? 0),
+    0,
+  );
+
+  const pricedItems = portfolio.filter(
+    (item: PortfolioItem) => item.estimatedCurrentValue != null,
+  );
+  const portfolioTotalCurrentValue = pricedItems.reduce(
+    (sum: number, item: PortfolioItem) => sum + (item.estimatedCurrentValue as number),
+    0,
+  );
+  const portfolioTotalPricedInvested = pricedItems.reduce(
+    (sum: number, item: PortfolioItem) => sum + (item.totalAmount ?? 0),
+    0,
+  );
+  const portfolioTotalReturnAbs = portfolioTotalCurrentValue - portfolioTotalPricedInvested;
+  const portfolioTotalReturnPct =
+    portfolioTotalPricedInvested > 0
+      ? (portfolioTotalReturnAbs / portfolioTotalPricedInvested) * 100
+      : null;
 
   // ============================================================
   // Render: Month/Year Selector
@@ -882,69 +915,6 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </Text>
             </TouchableOpacity>
 
-            {/* Piano vs Reale */}
-            {plan && (plan.allocations?.length ?? 0) > 0 && allocations.length > 0 && (
-              <>
-                <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
-                  Plan vs Actual
-                </Text>
-                {(plan.allocations ?? []).map((pEntry: PlanAllocation, idx: number) => {
-                  const ticker = pEntry.instrumentId?.ticker ?? '?';
-                  const name = pEntry.instrumentId?.name ?? ticker;
-                  const targetPct: number = pEntry.targetPercentage ?? 0;
-
-                  // Find actual allocation for this instrument
-                  const instrId = pEntry.instrumentId?._id;
-                  const totalAlloc = allocations.reduce(
-                    (s: number, a: AllocationData) => s + (a.amount ?? 0),
-                    0,
-                  );
-                  const instrAlloc = allocations
-                    .filter((a: AllocationData) => a.instrumentId?._id === instrId)
-                    .reduce((s: number, a: AllocationData) => s + (a.amount ?? 0), 0);
-                  const actualPct =
-                    totalAlloc > 0 ? (instrAlloc / totalAlloc) * 100 : 0;
-
-                  return (
-                    <View
-                      key={idx}
-                      style={[styles.pianoRealeRow, isDarkMode && { backgroundColor: '#1F2937' }]}
-                    >
-                      <View style={styles.pianoRealeHeader}>
-                        <TickerBadge ticker={ticker} />
-                        <Text
-                          style={[styles.pianoRealeName, isDarkMode && { color: '#F9FAFB' }]}
-                          numberOfLines={1}
-                        >
-                          {name}
-                        </Text>
-                        <Text style={[styles.pianoRealeTarget, isDarkMode && { color: '#9CA3AF' }]}>
-                          Target: {targetPct.toFixed(1)}%
-                        </Text>
-                      </View>
-                      {/* Target bar (gray outline) */}
-                      <View style={styles.progressTrackOuter}>
-                        <View
-                          style={[
-                            styles.progressTarget,
-                            { width: `${Math.min(targetPct, 100)}%` },
-                          ]}
-                        />
-                        <View
-                          style={[
-                            styles.progressActual,
-                            { width: `${Math.min(actualPct, 100)}%` },
-                          ]}
-                        />
-                      </View>
-                      <Text style={[styles.pianoRealeActual, isDarkMode && { color: '#9CA3AF' }]}>
-                        Actual: {actualPct.toFixed(1)}%
-                      </Text>
-                    </View>
-                  );
-                })}
-              </>
-            )}
           </>
         )}
       </ScrollView>
@@ -1042,6 +1012,68 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             + Add instrument
           </Text>
         </TouchableOpacity>
+
+        {/* Plan vs Actual */}
+        {plan && (plan.allocations?.length ?? 0) > 0 && allocations.length > 0 && (
+          <>
+            <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>
+              Plan vs Actual
+            </Text>
+            {(plan.allocations ?? []).map((pEntry: PlanAllocation, idx: number) => {
+              const ticker = pEntry.instrumentId?.ticker ?? '?';
+              const name = pEntry.instrumentId?.name ?? ticker;
+              const targetPct: number = pEntry.targetPercentage ?? 0;
+
+              const instrId = pEntry.instrumentId?._id;
+              const totalAlloc = allocations.reduce(
+                (s: number, a: AllocationData) => s + (a.amount ?? 0),
+                0,
+              );
+              const instrAlloc = allocations
+                .filter((a: AllocationData) => a.instrumentId?._id === instrId)
+                .reduce((s: number, a: AllocationData) => s + (a.amount ?? 0), 0);
+              const actualPct =
+                totalAlloc > 0 ? (instrAlloc / totalAlloc) * 100 : 0;
+
+              return (
+                <View
+                  key={idx}
+                  style={[styles.pianoRealeRow, isDarkMode && { backgroundColor: '#1F2937' }]}
+                >
+                  <View style={styles.pianoRealeHeader}>
+                    <TickerBadge ticker={ticker} />
+                    <Text
+                      style={[styles.pianoRealeName, isDarkMode && { color: '#F9FAFB' }]}
+                      numberOfLines={1}
+                    >
+                      {name}
+                    </Text>
+                    <Text style={[styles.pianoRealeTarget, isDarkMode && { color: '#9CA3AF' }]}>
+                      Target: {targetPct.toFixed(1)}%
+                    </Text>
+                  </View>
+                  <View style={styles.progressTrackOuter}>
+                    <View
+                      style={[
+                        styles.progressTarget,
+                        { width: `${Math.min(targetPct, 100)}%` },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.progressActual,
+                        { width: `${Math.min(actualPct, 100)}%` },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.pianoRealeActual, isDarkMode && { color: '#9CA3AF' }]}>
+                    Actual: {actualPct.toFixed(1)}%
+                  </Text>
+                </View>
+              );
+            })}
+          </>
+        )}
       </ScrollView>
     );
   };
