@@ -107,6 +107,57 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// GET /api/instruments/:ticker/price
+// Always returns a fresh price (cache TTL: 15 min). Fetches from Yahoo Finance if stale/missing.
+const PRICE_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function isPriceStale(instrument) {
+  if (instrument.lastPrice == null) return true;
+  if (!instrument.priceUpdatedAt) return true;
+  return Date.now() - new Date(instrument.priceUpdatedAt).getTime() > PRICE_CACHE_TTL_MS;
+}
+
+router.get('/:ticker/price', async (req, res) => {
+  try {
+    const ticker = req.params.ticker.toUpperCase();
+    const instrument = await Instrument.findOne({ ticker });
+
+    if (!instrument) {
+      return res.status(404).json({ success: false, error: 'Instrument not found' });
+    }
+
+    if (!isPriceStale(instrument)) {
+      return res.json({ success: true, data: { price: instrument.lastPrice, currency: instrument.currency } });
+    }
+
+    // Fetch fresh price from Yahoo Finance
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1d&interval=1d`;
+    const response = await fetch(url, { headers: { 'User-Agent': YAHOO_USER_AGENT } });
+    const json = await response.json();
+    const meta = json?.chart?.result?.[0]?.meta;
+    const price = meta?.regularMarketPrice;
+    const currency = meta?.currency;
+
+    if (price != null) {
+      instrument.lastPrice = price;
+      instrument.priceUpdatedAt = new Date();
+      if (currency) instrument.currency = currency;
+      await instrument.save();
+      return res.json({ success: true, data: { price, currency } });
+    }
+
+    // Return stale price if available
+    if (instrument.lastPrice != null) {
+      return res.json({ success: true, data: { price: instrument.lastPrice, currency: instrument.currency } });
+    }
+
+    return res.status(404).json({ success: false, error: 'Price not available for this instrument' });
+  } catch (err) {
+    console.error('Error fetching instrument price:', err);
+    res.status(500).json({ success: false, error: 'Error fetching price' });
+  }
+});
+
 // GET /api/instruments/:ticker
 router.get('/:ticker', async (req, res) => {
   try {

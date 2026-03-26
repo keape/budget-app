@@ -138,6 +138,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const [newAmount, setNewAmount] = useState('');
   const [newQuantity, setNewQuantity] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [isPriceFetching, setIsPriceFetching] = useState(false);
   const [allocationMode, setAllocationMode] = useState<AllocationMode>('amount');
 
   // --- Add Plan Modal ---
@@ -329,46 +330,65 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     setSelectedInstrument(item);
     setSearchQuery('');
     setSearchResults([]);
+    setNewPrice('');
+    setIsPriceFetching(true);
 
-    if (item.lastPrice != null) {
-      setNewPrice(item.lastPrice.toFixed(2));
-    } else {
-      // Fallback: fetch fresh price only if not present in search result
-      fetch(`${BASE_URL}/api/instruments/${encodeURIComponent(item.ticker)}`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      })
-        .then(res => res.ok ? res.json() : null)
-        .then(json => {
-          const price = json?.data?.lastPrice;
-          if (price != null && allocationModalOpenRef.current) {
-            // Only set if user hasn't already typed a price
+    fetch(`${BASE_URL}/api/instruments/${encodeURIComponent(item.ticker)}/price`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(json => {
+        const price = json?.data?.price;
+        if (allocationModalOpenRef.current) {
+          setIsPriceFetching(false);
+          if (price != null) {
             setNewPrice(prev => (prev === '' ? price.toFixed(2) : prev));
           }
-        })
-        .catch(() => {});
-    }
+        }
+      })
+      .catch(() => {
+        if (allocationModalOpenRef.current) setIsPriceFetching(false);
+      });
   };
 
   // ============================================================
   // Live Calculation Handlers
   // ============================================================
-  // Quantity mode: user types Amount → derive Quantity = amount / price
-  // Amount mode:  user types Amount → it's the primary field, no recalculation
+  // Amount changes: if price is known → derive quantity; else if quantity is known → derive price.
   const handleAmountChange = (text: string) => {
     setNewAmount(text);
-    if (allocationMode === 'quantity') {
-      const derivedQty = deriveOnAmountChange(text, newPrice); // returns quantity string
-      if (derivedQty !== null) setNewQuantity(derivedQty);
+    const a = parseFloat(text);
+    const p = parseFloat(newPrice);
+    const q = parseFloat(newQuantity);
+    if (!isNaN(a) && a > 0) {
+      if (!isNaN(p) && p > 0) {
+        setNewQuantity((a / p).toFixed(6));
+      } else if (!isNaN(q) && q > 0) {
+        setNewPrice((a / q).toFixed(2));
+      }
     }
   };
 
-  // Amount mode: user types Quantity → derive Price = amount / quantity
-  // Quantity mode: user types Quantity → it's the primary field, no recalculation
+  // Quantity changes:
+  //   Amount mode (quantity = secondary): derive price = amount / quantity; fallback: derive amount if price known
+  //   Quantity mode (quantity = primary): derive amount = quantity × price; fallback: derive price if amount known
   const handleQuantityChange = (text: string) => {
     setNewQuantity(text);
+    const q = parseFloat(text);
+    const a = parseFloat(newAmount);
+    const p = parseFloat(newPrice);
     if (allocationMode === 'amount') {
-      const derivedPrice = deriveOnQuantityChange(newAmount, text); // returns price string
-      if (derivedPrice !== null) setNewPrice(derivedPrice);
+      if (!isNaN(q) && q > 0 && !isNaN(a) && a > 0) {
+        setNewPrice((a / q).toFixed(2));
+      } else if (!isNaN(q) && !isNaN(p) && p > 0) {
+        setNewAmount((q * p).toFixed(2));
+      }
+    } else {
+      if (!isNaN(q) && !isNaN(p) && p > 0) {
+        setNewAmount((q * p).toFixed(2));
+      } else if (!isNaN(q) && q > 0 && !isNaN(a) && a > 0) {
+        setNewPrice((a / q).toFixed(2));
+      }
     }
   };
 
@@ -418,6 +438,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     setNewAmount('');
     setNewQuantity('');
     setNewPrice('');
+    setIsPriceFetching(false);
     setSearchQuery('');
     setSearchResults([]);
     setAllocationMode('amount');
@@ -1175,6 +1196,9 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             )}
 
             {/* Mode Toggle — always visible */}
+            <Text style={[styles.modeToggleLabel, isDarkMode && { color: '#9CA3AF' }]}>
+              What do you want to enter?
+            </Text>
             <View style={[styles.modeToggleContainer, isDarkMode && { borderColor: '#4B5563' }]}>
               <TouchableOpacity
                 style={[
@@ -1209,16 +1233,21 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
             </View>
+            <Text style={[styles.modeToggleHint, isDarkMode && { color: '#6B7280' }]}>
+              Fill in the highlighted field — the other is auto-calculated
+            </Text>
 
             {/* Amount */}
             <TextInput
               style={[
                 styles.modalInput,
                 isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB', borderColor: 'transparent' },
+                allocationMode !== 'amount' && styles.modalInputSecondary,
+                allocationMode !== 'amount' && isDarkMode && { backgroundColor: '#2D3748' },
                 allocationMode === 'amount' && styles.modalInputPrimary,
               ]}
-              placeholder={`Amount (${currency})`}
-              placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
+              placeholder={allocationMode === 'amount' ? `Amount (${currency})` : `Amount (${currency}) — auto`}
+              placeholderTextColor={isDarkMode ? '#4B5563' : '#C4C9D4'}
               keyboardType="numeric"
               value={newAmount}
               onChangeText={handleAmountChange}
@@ -1229,10 +1258,12 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               style={[
                 styles.modalInput,
                 isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB', borderColor: 'transparent' },
+                allocationMode !== 'quantity' && styles.modalInputSecondary,
+                allocationMode !== 'quantity' && isDarkMode && { backgroundColor: '#2D3748' },
                 allocationMode === 'quantity' && styles.modalInputPrimary,
               ]}
-              placeholder="Quantity"
-              placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
+              placeholder={allocationMode === 'quantity' ? 'Quantity' : 'Quantity — auto'}
+              placeholderTextColor={isDarkMode ? '#4B5563' : '#C4C9D4'}
               keyboardType="numeric"
               value={newQuantity}
               onChangeText={handleQuantityChange}
@@ -1243,10 +1274,12 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               style={[
                 styles.modalInput,
                 isDarkMode && { backgroundColor: '#374151', color: '#F9FAFB', borderColor: 'transparent' },
+                isPriceFetching && { opacity: 0.6 },
               ]}
-              placeholder={`Price (${currency})`}
+              placeholder={isPriceFetching ? 'Fetching price…' : `Price (${currency})`}
               placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
               keyboardType="numeric"
+              editable={!isPriceFetching}
               value={newPrice}
               onChangeText={handlePriceChange}
             />
@@ -1866,6 +1899,23 @@ const styles = StyleSheet.create({
   modalInputPrimary: {
     borderColor: '#4F46E5',
     borderWidth: 2,
+  },
+  modalInputSecondary: {
+    backgroundColor: '#EAECF0',
+    opacity: 0.75,
+  },
+  modeToggleLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  modeToggleHint: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: -6,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   modeToggleContainer: {
     flexDirection: 'row',
