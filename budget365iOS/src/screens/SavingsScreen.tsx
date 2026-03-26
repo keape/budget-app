@@ -1839,7 +1839,7 @@ const styles = StyleSheet.create({
   // Portfolio row
   portfolioRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 12,
@@ -1863,22 +1863,29 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
   },
-  portfolioValues: {
+  portfolioDetail: {
     alignItems: 'flex-end',
   },
-  portfolioAmount: {
-    fontSize: 13,
+  portfolioDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  portfolioDetailLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginRight: 6,
+    width: 62,
+    textAlign: 'right',
+  },
+  portfolioDetailValue: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#111827',
+    minWidth: 80,
+    textAlign: 'right',
   },
-  portfolioEstValue: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  portfolioTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  portfolioSummaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 16,
@@ -1888,13 +1895,29 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  portfolioTotalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+  portfolioSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  portfolioSummaryReturnRow: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
+  },
+  portfolioSummaryLabel: {
+    fontSize: 13,
     color: '#6B7280',
   },
-  portfolioTotalValue: {
-    fontSize: 20,
+  portfolioSummaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  portfolioSummaryReturnValue: {
+    fontSize: 15,
     fontWeight: '700',
   },
 
