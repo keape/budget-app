@@ -610,12 +610,6 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     0,
   );
 
-  const portfolioTotalValue = portfolio.reduce(
-    (sum: number, item: PortfolioItem) =>
-      sum + (item.estimatedCurrentValue ?? item.totalAmount ?? 0),
-    0,
-  );
-
   const portfolioTotalInvested = portfolio.reduce(
     (sum: number, item: PortfolioItem) => sum + (item.totalAmount ?? 0),
     0,
@@ -1173,16 +1167,54 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             );
           })}
 
-          {/* Total Portfolio Value */}
+          {/* Portfolio Summary */}
           <View
-            style={[styles.portfolioTotalRow, isDarkMode && { backgroundColor: '#1F2937' }]}
+            style={[styles.portfolioSummaryCard, isDarkMode && { backgroundColor: '#1F2937' }]}
           >
-            <Text style={[styles.portfolioTotalLabel, isDarkMode && { color: '#9CA3AF' }]}>
-              Total portfolio value:
-            </Text>
-            <Text style={[styles.portfolioTotalValue, { color: '#4F46E5' }]}>
-              {formatCurrency(portfolioTotalValue)}
-            </Text>
+            <View style={styles.portfolioSummaryRow}>
+              <Text style={[styles.portfolioSummaryLabel, isDarkMode && { color: '#9CA3AF' }]}>
+                Total invested
+              </Text>
+              <Text style={[styles.portfolioSummaryValue, isDarkMode && { color: '#F9FAFB' }]}>
+                {formatCurrency(portfolioTotalInvested)}
+              </Text>
+            </View>
+            {pricedItems.length > 0 && (
+              <>
+                <View style={styles.portfolioSummaryRow}>
+                  <Text style={[styles.portfolioSummaryLabel, isDarkMode && { color: '#9CA3AF' }]}>
+                    Total curr. value
+                  </Text>
+                  <Text style={[styles.portfolioSummaryValue, isDarkMode && { color: '#F9FAFB' }]}>
+                    {formatCurrency(portfolioTotalCurrentValue)}
+                  </Text>
+                </View>
+                <View style={[styles.portfolioSummaryRow, styles.portfolioSummaryReturnRow]}>
+                  <Text style={[styles.portfolioSummaryLabel, isDarkMode && { color: '#9CA3AF' }]}>
+                    Total return
+                  </Text>
+                  <Text
+                    style={[
+                      styles.portfolioSummaryReturnValue,
+                      {
+                        color:
+                          portfolioTotalReturnAbs > 0
+                            ? '#059669'
+                            : portfolioTotalReturnAbs < 0
+                            ? '#DC2626'
+                            : '#6B7280',
+                      },
+                    ]}
+                  >
+                    {formatReturnAbs(portfolioTotalReturnAbs)}
+                    {'  '}
+                    {portfolioTotalReturnPct != null
+                      ? formatReturnPct(portfolioTotalReturnPct)
+                      : ''}
+                  </Text>
+                </View>
+              </>
+            )}
           </View>
         </>
       )}
