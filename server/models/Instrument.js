@@ -32,6 +32,9 @@ const instrumentSchema = new mongoose.Schema({
   },
   lastUpdated: {
     type: Date
+  },
+  priceUpdatedAt: {
+    type: Date
   }
 });
 
