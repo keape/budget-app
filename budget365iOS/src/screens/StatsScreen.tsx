@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { warmupBackend } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
@@ -83,6 +84,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
     const loadStats = async () => {
         setIsLoading(true);
         try {
+            await warmupBackend();
             // 1. Budget settings
             const budgetUrl = periodMode === 'year'
                 ? `${BASE_URL}/api/budget-settings?anno=${selectedYear}`

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { warmupBackend } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
@@ -29,6 +30,10 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const { isDarkMode } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    warmupBackend(); // sveglia il backend mentre l'utente compila il form
+  }, []);
 
   const handleSendOtp = async () => {
     if (!username || !email || !password || !confirmPassword) {

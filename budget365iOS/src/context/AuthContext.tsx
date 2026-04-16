@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { warmupBackend } from '../utils/apiClient';
 
 interface AuthContextData {
     isLoading: boolean;
@@ -33,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             const token = await AsyncStorage.getItem('token');
             setUserToken(token);
+            if (token) warmupBackend(); // avvia il warmup in anticipo, senza bloccare il rendering
         } catch (e) {
             console.error(e);
         } finally {

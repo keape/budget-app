@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { warmupBackend } from '../utils/apiClient';
 import { useFocusEffect } from '@react-navigation/native';
 
 const BASE_URL = API_URL;
@@ -71,6 +72,8 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
     const caricaDati = async (signal?: AbortSignal) => {
         try {
+            await warmupBackend();
+            if (signal?.aborted) return;
             const oggi = new Date();
             const meseCorrente = oggi.getMonth();
             const annoCorrente = oggi.getFullYear();
