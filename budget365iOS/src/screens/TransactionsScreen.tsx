@@ -15,6 +15,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { warmupBackend } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
@@ -81,6 +82,8 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const loadData = async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
+      await warmupBackend();
+      if (signal?.aborted) return;
       // Fetch Categories
       const catRes = await fetch(`${BASE_URL}/api/categorie`, {
         headers: { 'Authorization': `Bearer ${userToken}` },

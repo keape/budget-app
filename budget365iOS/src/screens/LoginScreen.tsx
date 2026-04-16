@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { warmupBackend } from '../utils/apiClient';
 
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
@@ -35,6 +36,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     GoogleSignin.configure({
       iosClientId: '717541750569-brfd9c3iig0l09id6bs6l2i99t8r082c.apps.googleusercontent.com',
     });
+    warmupBackend(); // sveglia il backend mentre l'utente inserisce le credenziali
   }, []);
 
   const socialLogin = async (payload: any) => {
