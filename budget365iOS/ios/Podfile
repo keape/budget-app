@@ -49,6 +49,14 @@ post_install do |installer|
         config.build_settings['PRODUCT_NAME'] = 'React-Core-Common-Privacy'
       end
     end
+
+    # Fix fmt incompatibility with Xcode 26 LLVM: consteval not constant expression.
+    # fmt uses consteval (C++20) but has a bug with newer Clang — force C++17 for fmt only.
+    if target.name == 'fmt'
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+      end
+    end
   end
 
   # Fix pods where source directories are named with a trailing " 2" suffix.

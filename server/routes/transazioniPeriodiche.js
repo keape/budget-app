@@ -209,21 +209,19 @@ router.patch('/:id/stato', authenticateToken, async (req, res) => {
   }
 });
 
-// DELETE - Elimina/disattiva una transazione periodica
+// DELETE - Elimina una transazione periodica
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const transazione = await TransazionePeriodica.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.userId },
-      { attiva: false },
-      { new: true }
+    const transazione = await TransazionePeriodica.findOneAndDelete(
+      { _id: req.params.id, userId: req.user.userId }
     );
-    
+
     if (!transazione) {
       return res.status(404).json({ message: 'Transazione periodica non trovata' });
     }
-    
-    console.log(`❌ Abbonamento disattivato: ${transazione.descrizione}`);
-    res.json({ message: 'Transazione periodica disattivata' });
+
+    console.log(`❌ Transazione periodica eliminata: ${transazione.descrizione}`);
+    res.json({ message: 'Transazione periodica eliminata' });
   } catch (error) {
     console.error('Errore nella cancellazione transazione periodica:', error);
     res.status(500).json({ message: 'Errore del server' });

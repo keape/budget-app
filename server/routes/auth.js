@@ -124,7 +124,7 @@ router.post('/register', async (req, res) => {
     console.log('✅ DEBUG: Password hashata con successo');
 
     console.log('🔍 DEBUG: Creazione nuovo utente...');
-    const user = new User({ username, password: hashedPassword, email });
+    const user = new User({ username, password: hashedPassword, email, emailVerified: true });
 
     console.log('🔍 DEBUG: Salvataggio utente nel database...');
     await user.save();
@@ -358,6 +358,7 @@ router.post('/social-login', async (req, res) => {
         username,
         email,
         password: hashedPassword,
+        emailVerified: true,
         googleId: provider === 'google' ? socialId : undefined,
         appleId: provider === 'apple' ? socialId : undefined
       });
