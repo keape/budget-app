@@ -33,8 +33,8 @@ router.get('/', authenticateToken, async (req, res) => {
     res.json({ 
       spese: filteredSpese, 
       currentPage: page, 
-      totalPages: Math.ceil(filteredSpese.length / limit), 
-      totalItems: filteredSpese.length 
+      totalPages: Math.ceil(totalSpese / limit), 
+      totalItems: totalSpese 
     });
   } catch (err) {
     console.error('❌ Errore nel recupero delle spese:', err);
