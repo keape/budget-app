@@ -210,7 +210,7 @@ router.post('/login', async (req, res) => {
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      console.log('❌ LOGIN: Password non valida per:', username);
+      console.log('❌ LOGIN: Password non valida per:', identifier);
       return res.status(401).json({ message: "Credenziali non valide" });
     }
 
@@ -489,7 +489,17 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 ora
     await user.save();
 
-    console.log(`Token di reset per ${username}: ${resetToken}`);
+    // Invia email con link di reset
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://budget-app-keape.vercel.app'}/reset-password?token=${resetToken}`;
+    const emailSent = await sendEmail(
+      user.email,
+      'Budget365 - Reset Password',
+      `Hai richiesto il reset della password.\n\nClicca sul link per reimpostarla:\n${resetUrl}\n\nIl link scade tra 1 ora.\n\nSe non hai richiesto il reset, ignora questa email.`
+    );
+
+    if (!emailSent) {
+      console.warn('⚠️ Forgot-password: reset token salvato ma email non inviata a:', user.email);
+    }
 
     res.json({
       message: "Se l'utente esiste, riceverai le istruzioni per il reset"

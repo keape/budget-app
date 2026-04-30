@@ -31,8 +31,8 @@ router.get('/', authenticateToken, async (req, res) => {
     res.json({ 
       entrate: filteredEntrate, 
       currentPage: page, 
-      totalPages: Math.ceil(filteredEntrate.length / limit), 
-      totalItems: filteredEntrate.length 
+      totalPages: Math.ceil(totalEntrate / limit), 
+      totalItems: totalEntrate 
     });
   } catch (err) {
     console.error('❌ Errore nel recupero delle entrate:', err);
