@@ -204,7 +204,7 @@ export default function Savings() {
     if (!plan?.allocations?.length || !allocations.length) return [];
     const totalAllocated = allocations.reduce((s, a) => s + (a.amount ?? 0), 0);
     return plan.allocations.map(pa => {
-      const actual = allocations.filter(a => a.ticker === pa.ticker);
+      const actual = allocations.filter(a => a.instrumentId?.ticker === pa.instrumentId?.ticker);
       const actualAmount = actual.reduce((s, a) => s + (a.amount ?? 0), 0);
       const actualPct = totalAllocated > 0 ? (actualAmount / totalAllocated) * 100 : 0;
       return { ...pa, actualPct: Math.round(actualPct * 10) / 10 };
