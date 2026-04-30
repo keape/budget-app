@@ -11,7 +11,13 @@ services:
       - key: PORT
         value: 5001
       - key: MONGODB_URI
-        value: mongodb+srv://keape86:trombino86@budgetapp.enqupoz.mongodb.net/budget-app?retryWrites=true&w=majority&appName=budgetapp
+        sync: false
       - key: JWT_SECRET
-        value: mySecretKey123
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
     healthCheckPath: /api/health

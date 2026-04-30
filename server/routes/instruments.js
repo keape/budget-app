@@ -1,5 +1,6 @@
 const express = require('express');
 const Instrument = require('../models/Instrument');
+const { authenticateToken } = require('./auth');
 const router = express.Router();
 
 const YAHOO_USER_AGENT = 'Mozilla/5.0 (compatible)';
@@ -21,7 +22,7 @@ function mapQuoteType(quoteType) {
 }
 
 // GET /api/instruments/search?q=
-router.get('/search', async (req, res) => {
+router.get('/search', authenticateToken, async (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     if (!q) {
@@ -117,7 +118,7 @@ function isPriceStale(instrument) {
   return Date.now() - new Date(instrument.priceUpdatedAt).getTime() > PRICE_CACHE_TTL_MS;
 }
 
-router.get('/:ticker/price', async (req, res) => {
+router.get('/:ticker/price', authenticateToken, async (req, res) => {
   try {
     const ticker = req.params.ticker.toUpperCase();
     const instrument = await Instrument.findOne({ ticker });
@@ -159,7 +160,7 @@ router.get('/:ticker/price', async (req, res) => {
 });
 
 // GET /api/instruments/:ticker
-router.get('/:ticker', async (req, res) => {
+router.get('/:ticker', authenticateToken, async (req, res) => {
   try {
     const ticker = req.params.ticker.toUpperCase();
     const instrument = await Instrument.findOne({ ticker });
