@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // URL del backend - Vercel deployment
 const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://budget-app-three-gules.vercel.app'  // Vercel URL
+  ? 'https://budget-app-ao5r.onrender.com'  // Render backend
   : 'http://localhost:5001';  // Local development
 
 // Test: Aggiungi logging per vedere se è un problema di URL
