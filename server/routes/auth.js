@@ -210,7 +210,7 @@ router.post('/login', async (req, res) => {
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      console.log('❌ LOGIN: Password non valida per:', username);
+      console.log('❌ LOGIN: Password non valida per:', identifier);
       return res.status(401).json({ message: "Credenziali non valide" });
     }
 
