@@ -10,7 +10,6 @@ const entrateRoutes = require('./routes/entrate');
 const budgetSettingsRoutes = require('./routes/budgetSettings');
 const categorieRoutes = require('./routes/categorie');
 const transazioniPeriodicheRoutes = require('./routes/transazioniPeriodiche');
-const automationRoutes = require('./routes/automation');
 const savingsRoutes = require('./routes/savings');
 const instrumentsRoutes = require('./routes/instruments');
 
@@ -104,7 +103,6 @@ app.use('/api/entrate', entrateRoutes);
 app.use('/api/budget-settings', budgetSettingsRoutes);
 app.use('/api/categorie', categorieRoutes);
 app.use('/api/transazioni-periodiche', transazioniPeriodicheRoutes);
-app.use('/api/automation', automationRoutes);
 app.use('/api/savings', savingsRoutes);
 app.use('/api/instruments', instrumentsRoutes);
 

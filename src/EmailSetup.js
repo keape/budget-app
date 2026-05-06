@@ -16,27 +16,11 @@ function EmailSetup() {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Sessione scaduta. Effettua nuovamente il login.');
-        return;
-      }
-
-      const response = await axios.post(`${BASE_URL}/api/auth/configure-email`, {
-        email
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      setSuccess(response.data.message);
+      const response = await axios.post(`${BASE_URL}/api/auth/update-email`, { email });
+      setSuccess(response.data.message || 'Email collegata con successo');
       setEmail('');
-    } catch (error) {
-      console.error('Errore configurazione email:', error);
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
-      } else {
-        setError('Errore durante la configurazione email');
-      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Errore durante il collegamento email');
     } finally {
       setLoading(false);
     }
@@ -47,26 +31,17 @@ function EmailSetup() {
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
         <div className="text-center">
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-            🔐 Configura 2FA
+            Collega Email
           </h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Aggiungi la tua email per abilitare l'autenticazione a due fattori
+            Aggiungi un'email al tuo account per recuperare la password e ricevere notifiche
           </p>
         </div>
 
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                <strong>Perché il 2FA?</strong> Aumenta significativamente la sicurezza del tuo account richiedendo un codice via email oltre alla password.
-              </p>
-            </div>
-          </div>
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            <strong>Perché collegare un'email?</strong> Ti permetterà di recuperare l'account in caso di password dimenticata e ricevere codici di verifica.
+          </p>
         </div>
 
         {success && (
@@ -117,23 +92,20 @@ function EmailSetup() {
               disabled={loading || !email}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Configurazione...' : 'Configura 2FA'}
+              {loading ? 'Salvataggio...' : 'Collega Email'}
             </button>
           </div>
 
           <div className="text-center">
-            <Link 
-              to="/" 
-              className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
-              ← Salta per ora (meno sicuro)
+            <Link to="/" className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+              ← Torna alla dashboard
             </Link>
           </div>
         </form>
 
         <div className="text-xs text-center text-gray-500 dark:text-gray-400 space-y-1">
-          <p>🔒 La tua email sarà utilizzata solo per l'invio dei codici OTP</p>
-          <p>📧 Potrai cambiarla in qualsiasi momento dalle impostazioni</p>
+          <p>La tua email sarà utilizzata solo per il recupero account e le notifiche</p>
+          <p>Potrai aggiornarla in qualsiasi momento da questa pagina</p>
         </div>
       </div>
     </div>

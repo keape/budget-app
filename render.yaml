@@ -1,4 +1,30 @@
 services:
+  - type: worker
+    name: budget365-social-agent
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    rootDir: ./social-agent
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: X_API_KEY
+        sync: false
+      - key: X_API_SECRET
+        sync: false
+      - key: X_ACCESS_TOKEN
+        sync: false
+      - key: X_ACCESS_SECRET
+        sync: false
+      - key: FACEBOOK_PAGE_TOKEN
+        sync: false
+      - key: FACEBOOK_GROUP_ID
+        sync: false
+      - key: NTFY_TOPIC
+        sync: false
+      - key: API_BASE_URL
+        value: https://budget-app-ios-backend.onrender.com
+
   - type: web
     name: budget-app-backend
     env: node
