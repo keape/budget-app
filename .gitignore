@@ -55,6 +55,10 @@ budget365iOS/ios/build_output/
 .claude/worktrees/
 .superpowers/
 
+# Social agent generated drafts
+social-agent/reddit-drafts/*.md
+social-agent/node_modules/
+
 # iOS duplicate lock files
 "budget365iOS/ios/Podfile 3.lock"
 budget365iOS/ios/Podfile\ 3.lock

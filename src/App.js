@@ -8,6 +8,7 @@ import Filtri from './Filtri';
 import Login from './Login';
 import Register from './Register';
 import ChangePassword from './ChangePassword';
+import EmailSetup from './EmailSetup';
 import ForgotPassword from './ForgotPassword';
 import ResetPassword from './ResetPassword';
 import AboutUs from './AboutUs';
@@ -33,6 +34,11 @@ function App() {
             <Route path="/change-password" element={
               <ProtectedRoute>
                 <ChangePassword />
+              </ProtectedRoute>
+            } />
+            <Route path="/email-setup" element={
+              <ProtectedRoute>
+                <EmailSetup />
               </ProtectedRoute>
             } />
             <Route path="/about-us" element={
