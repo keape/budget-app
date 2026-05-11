@@ -343,15 +343,20 @@ router.get('/portfolio', authenticateToken, async (req, res) => {
     let matchStage = { userId: new mongoose.Types.ObjectId(req.user.userId) };
 
     if (anno != null && mese != null) {
-      const savingsMonth = await SavingsMonth.findOne({
+      const targetAnno = Number(anno);
+      const targetMese = Number(mese);
+      // All months up to and including the selected month
+      const months = await SavingsMonth.find({
         userId: req.user.userId,
-        anno: Number(anno),
-        mese: Number(mese),
-      });
-      if (!savingsMonth) {
+        $or: [
+          { anno: { $lt: targetAnno } },
+          { anno: targetAnno, mese: { $lte: targetMese } },
+        ],
+      }).select('_id');
+      if (months.length === 0) {
         return res.json({ success: true, data: [] });
       }
-      matchStage.savingsMonthId = savingsMonth._id;
+      matchStage.savingsMonthId = { $in: months.map(m => m._id) };
     }
 
     const results = await InstrumentAllocation.aggregate([
