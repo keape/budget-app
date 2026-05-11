@@ -228,6 +228,9 @@ router.put('/plan', authenticateToken, async (req, res) => {
       if (alloc.targetPercentage == null || typeof alloc.targetPercentage !== 'number' || alloc.targetPercentage < 0 || alloc.targetPercentage > 100) {
         return res.status(400).json({ success: false, error: 'targetPercentage must be a number between 0 and 100' });
       }
+      if (alloc.targetAmount != null && (typeof alloc.targetAmount !== 'number' || alloc.targetAmount < 0)) {
+        return res.status(400).json({ success: false, error: 'targetAmount must be a non-negative number' });
+      }
     }
 
     const total = allocations.reduce((sum, a) => sum + (a.targetPercentage || 0), 0);
@@ -247,6 +250,46 @@ router.put('/plan', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error updating allocation plan:', err);
     res.status(500).json({ success: false, error: 'Error updating allocation plan' });
+  }
+});
+
+// GET /api/savings/year-summary?year=YYYY
+router.get('/year-summary', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const year = parseInt(req.query.year, 10);
+    if (!year) return res.status(400).json({ success: false, error: 'year is required' });
+
+    const months = await SavingsMonth.find({ userId, anno: year });
+    const totalSavings = months.reduce((s, m) => s + (m.savings || 0), 0);
+    const totalIncome = months.reduce((s, m) => s + (m.income || 0), 0);
+    const totalExpenses = months.reduce((s, m) => s + (m.expenses || 0), 0);
+    const monthIds = months.map(m => m._id);
+
+    const byInstrument = await InstrumentAllocation.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId), savingsMonthId: { $in: monthIds } } },
+      { $group: { _id: '$instrumentId', totalAmount: { $sum: '$amount' } } },
+      { $lookup: { from: 'instruments', localField: '_id', foreignField: '_id', as: 'instrument' } },
+      { $unwind: '$instrument' },
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        totalSavings,
+        totalIncome,
+        totalExpenses,
+        monthCount: months.length,
+        byInstrument: byInstrument.map(b => ({
+          instrumentId: b._id,
+          instrument: b.instrument,
+          totalAmount: b.totalAmount,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('Error fetching year summary:', err);
+    res.status(500).json({ success: false, error: 'Error fetching year summary' });
   }
 });
 
