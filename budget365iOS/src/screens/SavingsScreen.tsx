@@ -639,15 +639,21 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     } catch (e) { console.error('savePlan error:', e); }
   };
 
-  const handleSaveTargetSavings = async () => {
-    setIsEditingTargetSavings(false);
+  const handleConfirmTargetSavings = async () => {
     const val = targetSavingsInput.trim() === '' ? null : parseFloat(targetSavingsInput);
-    if (val !== null && (isNaN(val) || val < 0)) return;
-    await savePlan(plan?.allocations?.map((a: any) => ({
-      instrumentId: a.instrumentId?._id ?? a.instrumentId,
-      targetPercentage: a.targetPercentage,
-      ...(a.targetAmount != null ? { targetAmount: a.targetAmount } : {}),
-    })) ?? [], val);
+    if (val !== null && (isNaN(val) || val < 0)) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+    setIsEditingTargetSavings(false);
+    await savePlan(
+      plan?.allocations?.map((a: any) => ({
+        instrumentId: a.instrumentId?._id ?? a.instrumentId,
+        targetPercentage: a.targetPercentage,
+        ...(a.targetAmount != null ? { targetAmount: a.targetAmount } : {}),
+      })) ?? [],
+      val,
+    );
     reloadData();
   };
 
@@ -881,11 +887,22 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     const pctColor =
       totalPlanPct === 100 ? ACCENT : totalPlanPct > 100 ? t.neg : t.text;
 
-    // Data sources based on planView
     const activeTotalAllocAmount =
       planView === 'month'
         ? planMonthAllocations.reduce((s, a) => s + (a.amount ?? 0), 0)
         : (planYearSummary?.byInstrument.reduce((s, b) => s + b.totalAmount, 0) ?? 0);
+
+    // Savings goal computed values
+    const planTargetSavings = plan?.targetSavings ?? null;
+    const actualSavingsForGoal = planView === 'month'
+      ? planMonthSavings
+      : (planYearSummary?.totalSavings ?? 0);
+    const displayGoalTarget = planTargetSavings != null
+      ? (planView === 'year' ? planTargetSavings * 12 : planTargetSavings)
+      : null;
+    const goalPct = displayGoalTarget != null && displayGoalTarget > 0
+      ? Math.min((actualSavingsForGoal / displayGoalTarget) * 100, 100) : 0;
+    const goalMet = displayGoalTarget != null && actualSavingsForGoal >= displayGoalTarget;
 
     return (
       <ScrollView
@@ -905,14 +922,12 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 styles.planViewBtn,
                 planView === v && { backgroundColor: t.surface },
               ]}
-              onPress={() => setPlanView(v)}
+              onPress={() => {
+                if (isEditingTargetSavings) setIsEditingTargetSavings(false);
+                setPlanView(v);
+              }}
             >
-              <Text
-                style={[
-                  styles.planViewBtnText,
-                  { color: planView === v ? t.text : t.text3 },
-                ]}
-              >
+              <Text style={[styles.planViewBtnText, { color: planView === v ? t.text : t.text3 }]}>
                 {v === 'month' ? 'Month' : 'Year'}
               </Text>
             </TouchableOpacity>
@@ -920,72 +935,94 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         </View>
 
         {/* ── Savings goal card ── */}
-        {(() => {
-          const ts = plan?.targetSavings ?? null;
-          const actualSavings = planView === 'month' ? planMonthSavings : (planYearSummary?.totalSavings ?? 0);
-          const displayTarget = ts != null ? (planView === 'year' ? ts * 12 : ts) : null;
-          const goalPct = displayTarget != null && displayTarget > 0
-            ? Math.min((actualSavings / displayTarget) * 100, 100)
-            : 0;
-          const goalMet = displayTarget != null && actualSavings >= displayTarget;
-          return (
-            <View style={[styles.card, { backgroundColor: t.surface, borderColor: isEditingTargetSavings ? ACCENT : t.line }]}>
-              <View style={styles.rowBetween}>
-                <Text style={[styles.microLabel, { color: t.text3 }]}>
-                  {planView === 'year' ? 'ANNUAL SAVINGS GOAL' : 'MONTHLY SAVINGS GOAL'}
+        <View style={[styles.card, { backgroundColor: t.surface, borderColor: isEditingTargetSavings ? ACCENT : t.line }]}>
+          <Text style={[styles.microLabel, { color: t.text3 }]}>
+            {planView === 'year' ? 'ANNUAL SAVINGS GOAL' : 'MONTHLY SAVINGS GOAL'}
+          </Text>
+
+          {isEditingTargetSavings ? (
+            <>
+              <View style={[styles.field, { backgroundColor: t.surface2, borderColor: ACCENT, marginTop: 14, marginBottom: 0 }]}>
+                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>
+                  {planView === 'year' ? 'Annual goal' : 'Monthly goal'}
                 </Text>
-                {!isEditingTargetSavings && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setTargetSavingsInput(ts != null ? ts.toString() : '');
-                      setIsEditingTargetSavings(true);
-                    }}
-                  >
-                    <Text style={[{ fontSize: 12, color: t.text3 }]}>✎</Text>
-                  </TouchableOpacity>
-                )}
+                <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
+                <TextInput
+                  style={[styles.fieldInput, { color: t.text }]}
+                  placeholder="0.00"
+                  placeholderTextColor={t.text3}
+                  keyboardType="numeric"
+                  value={targetSavingsInput}
+                  onChangeText={setTargetSavingsInput}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleConfirmTargetSavings}
+                />
               </View>
-              {isEditingTargetSavings ? (
-                <View style={[styles.field, { backgroundColor: t.surface2, borderColor: ACCENT, marginTop: 10, marginBottom: 0 }]}>
-                  <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
-                  <TextInput
-                    style={[styles.fieldInput, { color: t.text }]}
-                    placeholder="0.00"
-                    placeholderTextColor={t.text3}
-                    keyboardType="numeric"
-                    value={targetSavingsInput}
-                    onChangeText={setTargetSavingsInput}
-                    autoFocus
-                    onBlur={handleSaveTargetSavings}
-                    returnKeyType="done"
-                    onSubmitEditing={handleSaveTargetSavings}
-                  />
-                </View>
-              ) : (
-                <Text style={[styles.heroAmount, { fontSize: 32, marginBottom: 0, marginTop: 6, color: t.text }]}>
-                  {displayTarget != null
-                    ? formatCurrency(displayTarget)
-                    : <Text style={[{ color: t.text3, fontSize: 14, fontWeight: '400' }]}>Tap ✎ to set a goal</Text>}
+              <View style={[styles.sheetActions, { marginTop: 14 }]}>
+                <TouchableOpacity
+                  style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
+                  onPress={() => setIsEditingTargetSavings(false)}
+                >
+                  <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sheetSave, { backgroundColor: ACCENT }]}
+                  onPress={handleConfirmTargetSavings}
+                >
+                  <Text style={styles.sheetSaveText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : displayGoalTarget != null ? (
+            <>
+              <View style={[styles.rowBetween, { marginTop: 10 }]}>
+                <Text style={[styles.heroAmount, { fontSize: 32, marginBottom: 0, color: t.text }]}>
+                  {formatCurrency(displayGoalTarget)}
                 </Text>
-              )}
-              {displayTarget != null && !isEditingTargetSavings && (
-                <>
-                  <View style={[styles.track, { backgroundColor: t.surface2, marginTop: 12 }]}>
-                    <View style={[styles.trackFill, { width: `${goalPct}%` as any, backgroundColor: goalMet ? t.pos : ACCENT }]} />
-                  </View>
-                  <View style={[styles.rowBetween, { marginTop: 8 }]}>
-                    <Text style={[styles.microLabel, { color: t.text3 }]}>
-                      {planView === 'year' ? 'SAVED THIS YEAR' : 'SAVED THIS MONTH'}
-                    </Text>
-                    <Text style={[{ fontSize: 12, fontWeight: '600', color: goalMet ? t.pos : t.text2 }]}>
-                      {formatCurrency(actualSavings)} / {formatCurrency(displayTarget)}  {goalPct.toFixed(0)}%
-                    </Text>
-                  </View>
-                </>
-              )}
-            </View>
-          );
-        })()}
+                <TouchableOpacity
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: t.surface2, borderRadius: 8 }}
+                  onPress={() => {
+                    setTargetSavingsInput(planTargetSavings!.toString());
+                    setIsEditingTargetSavings(true);
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: t.text2 }}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.track, { backgroundColor: t.surface2, marginTop: 14 }]}>
+                <View style={[styles.trackFill, { width: `${goalPct}%` as any, backgroundColor: goalMet ? t.pos : ACCENT }]} />
+              </View>
+              <View style={[styles.rowBetween, { marginTop: 8 }]}>
+                <Text style={[styles.microLabel, { color: t.text3 }]}>
+                  {planView === 'year' ? 'SAVED THIS YEAR' : 'SAVED THIS MONTH'}
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: goalMet ? t.pos : t.text2 }}>
+                  {formatCurrency(actualSavingsForGoal)} / {formatCurrency(displayGoalTarget)} · {goalPct.toFixed(0)}%
+                </Text>
+              </View>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={{
+                marginTop: 12,
+                paddingVertical: 14,
+                alignItems: 'center',
+                backgroundColor: t.surface2,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderStyle: 'dashed',
+                borderColor: t.line2,
+              }}
+              onPress={() => {
+                setTargetSavingsInput('');
+                setIsEditingTargetSavings(true);
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: t.text3 }}>+ Set savings goal</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* ── Year hero ── */}
         {planView === 'year' && planYearSummary && planYearSummary.monthCount > 0 && (
