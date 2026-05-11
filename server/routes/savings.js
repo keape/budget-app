@@ -217,10 +217,14 @@ router.get('/plan', authenticateToken, async (req, res) => {
 router.put('/plan', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { allocations } = req.body;
+    const { allocations, targetSavings } = req.body;
 
     if (!Array.isArray(allocations)) {
       return res.status(400).json({ success: false, error: 'allocations must be an array' });
+    }
+
+    if (targetSavings != null && (typeof targetSavings !== 'number' || targetSavings < 0)) {
+      return res.status(400).json({ success: false, error: 'targetSavings must be a non-negative number' });
     }
 
     // Validate each entry
@@ -236,9 +240,12 @@ router.put('/plan', authenticateToken, async (req, res) => {
     const total = allocations.reduce((sum, a) => sum + (a.targetPercentage || 0), 0);
     const warning = total < 100 ? `Total allocation is ${total}% (partial plan)` : undefined;
 
+    const updateFields = { allocations };
+    if (targetSavings !== undefined) updateFields.targetSavings = targetSavings ?? null;
+
     const plan = await AllocationPlan.findOneAndUpdate(
       { userId },
-      { $set: { allocations } },
+      { $set: updateFields },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 

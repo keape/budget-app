@@ -81,6 +81,7 @@ interface PlanYearSummary {
 interface PlanData {
   _id: string;
   userId: string;
+  targetSavings?: number | null;
   allocations: PlanAllocation[];
 }
 
@@ -202,6 +203,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const [planSelectedInstrument, setPlanSelectedInstrument] = useState<InstrumentData | null>(null);
   const [pianoPct, setPianoPct] = useState('');
   const [pianoTargetAmount, setPianoTargetAmount] = useState('');
+
+  // Target savings editing
+  const [isEditingTargetSavings, setIsEditingTargetSavings] = useState(false);
+  const [targetSavingsInput, setTargetSavingsInput] = useState('');
 
   // Plan tab view
   const [planView, setPlanView] = useState<'month' | 'year'>('month');
@@ -620,15 +625,30 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     reloadData();
   };
 
-  const savePlan = async (allocationsArr: any[]) => {
+  const savePlan = async (allocationsArr: any[], ts?: number | null) => {
     try {
+      const body: any = { allocations: allocationsArr };
+      const effectiveTs = ts !== undefined ? ts : (plan?.targetSavings ?? undefined);
+      if (effectiveTs !== undefined) body.targetSavings = effectiveTs;
       const response = await fetch(`${BASE_URL}/api/savings/plan`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ allocations: allocationsArr }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) Alert.alert('Error', 'Could not save plan.');
     } catch (e) { console.error('savePlan error:', e); }
+  };
+
+  const handleSaveTargetSavings = async () => {
+    setIsEditingTargetSavings(false);
+    const val = targetSavingsInput.trim() === '' ? null : parseFloat(targetSavingsInput);
+    if (val !== null && (isNaN(val) || val < 0)) return;
+    await savePlan(plan?.allocations?.map((a: any) => ({
+      instrumentId: a.instrumentId?._id ?? a.instrumentId,
+      targetPercentage: a.targetPercentage,
+      ...(a.targetAmount != null ? { targetAmount: a.targetAmount } : {}),
+    })) ?? [], val);
+    reloadData();
   };
 
   // ============================================================
@@ -898,6 +918,74 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* ── Savings goal card ── */}
+        {(() => {
+          const ts = plan?.targetSavings ?? null;
+          const actualSavings = planView === 'month' ? planMonthSavings : (planYearSummary?.totalSavings ?? 0);
+          const displayTarget = ts != null ? (planView === 'year' ? ts * 12 : ts) : null;
+          const goalPct = displayTarget != null && displayTarget > 0
+            ? Math.min((actualSavings / displayTarget) * 100, 100)
+            : 0;
+          const goalMet = displayTarget != null && actualSavings >= displayTarget;
+          return (
+            <View style={[styles.card, { backgroundColor: t.surface, borderColor: isEditingTargetSavings ? ACCENT : t.line }]}>
+              <View style={styles.rowBetween}>
+                <Text style={[styles.microLabel, { color: t.text3 }]}>
+                  {planView === 'year' ? 'ANNUAL SAVINGS GOAL' : 'MONTHLY SAVINGS GOAL'}
+                </Text>
+                {!isEditingTargetSavings && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTargetSavingsInput(ts != null ? ts.toString() : '');
+                      setIsEditingTargetSavings(true);
+                    }}
+                  >
+                    <Text style={[{ fontSize: 12, color: t.text3 }]}>✎</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {isEditingTargetSavings ? (
+                <View style={[styles.field, { backgroundColor: t.surface2, borderColor: ACCENT, marginTop: 10, marginBottom: 0 }]}>
+                  <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
+                  <TextInput
+                    style={[styles.fieldInput, { color: t.text }]}
+                    placeholder="0.00"
+                    placeholderTextColor={t.text3}
+                    keyboardType="numeric"
+                    value={targetSavingsInput}
+                    onChangeText={setTargetSavingsInput}
+                    autoFocus
+                    onBlur={handleSaveTargetSavings}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveTargetSavings}
+                  />
+                </View>
+              ) : (
+                <Text style={[styles.heroAmount, { fontSize: 32, marginBottom: 0, marginTop: 6, color: t.text }]}>
+                  {displayTarget != null
+                    ? formatCurrency(displayTarget)
+                    : <Text style={[{ color: t.text3, fontSize: 14, fontWeight: '400' }]}>Tap ✎ to set a goal</Text>}
+                </Text>
+              )}
+              {displayTarget != null && !isEditingTargetSavings && (
+                <>
+                  <View style={[styles.track, { backgroundColor: t.surface2, marginTop: 12 }]}>
+                    <View style={[styles.trackFill, { width: `${goalPct}%` as any, backgroundColor: goalMet ? t.pos : ACCENT }]} />
+                  </View>
+                  <View style={[styles.rowBetween, { marginTop: 8 }]}>
+                    <Text style={[styles.microLabel, { color: t.text3 }]}>
+                      {planView === 'year' ? 'SAVED THIS YEAR' : 'SAVED THIS MONTH'}
+                    </Text>
+                    <Text style={[{ fontSize: 12, fontWeight: '600', color: goalMet ? t.pos : t.text2 }]}>
+                      {formatCurrency(actualSavings)} / {formatCurrency(displayTarget)}  {goalPct.toFixed(0)}%
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
+          );
+        })()}
 
         {/* ── Year hero ── */}
         {planView === 'year' && planYearSummary && planYearSummary.monthCount > 0 && (
