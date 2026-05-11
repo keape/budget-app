@@ -7,6 +7,11 @@ const allocationPlanSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  targetSavings: {
+    type: Number,
+    min: 0,
+    default: null
+  },
   allocations: [
     {
       _id: false,
