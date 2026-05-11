@@ -336,11 +336,26 @@ router.get('/year-summary', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/savings/portfolio
+// GET /api/savings/portfolio?anno=&mese=
 router.get('/portfolio', authenticateToken, async (req, res) => {
   try {
+    const { anno, mese } = req.query;
+    let matchStage = { userId: new mongoose.Types.ObjectId(req.user.userId) };
+
+    if (anno != null && mese != null) {
+      const savingsMonth = await SavingsMonth.findOne({
+        userId: req.user.userId,
+        anno: Number(anno),
+        mese: Number(mese),
+      });
+      if (!savingsMonth) {
+        return res.json({ success: true, data: [] });
+      }
+      matchStage.savingsMonthId = savingsMonth._id;
+    }
+
     const results = await InstrumentAllocation.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(req.user.userId) } },
+      { $match: matchStage },
       {
         $group: {
           _id: '$instrumentId',

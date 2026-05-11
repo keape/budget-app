@@ -367,10 +367,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       }
 
       if (activeTab === 'portfolio') {
-        const portRes = await fetch(`${BASE_URL}/api/savings/portfolio`, {
-          headers: { Authorization: `Bearer ${userToken}` },
-          signal,
-        });
+        const portRes = await fetch(
+          `${BASE_URL}/api/savings/portfolio?anno=${selectedYear}&mese=${selectedMonth}`,
+          { headers: { Authorization: `Bearer ${userToken}` }, signal },
+        );
         if (signal.aborted) return;
         if (portRes.ok) {
           const portJson = await portRes.json();
