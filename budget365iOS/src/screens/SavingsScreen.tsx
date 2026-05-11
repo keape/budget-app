@@ -61,6 +61,21 @@ interface AllocationData {
 interface PlanAllocation {
   instrumentId: InstrumentData;
   targetPercentage: number;
+  targetAmount?: number;
+}
+
+interface YearSummaryByInstrument {
+  instrumentId: string;
+  instrument: InstrumentData;
+  totalAmount: number;
+}
+
+interface PlanYearSummary {
+  totalSavings: number;
+  totalIncome: number;
+  totalExpenses: number;
+  monthCount: number;
+  byInstrument: YearSummaryByInstrument[];
 }
 
 interface PlanData {
@@ -186,6 +201,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const [planSearchResults, setPlanSearchResults] = useState<InstrumentData[]>([]);
   const [planSelectedInstrument, setPlanSelectedInstrument] = useState<InstrumentData | null>(null);
   const [pianoPct, setPianoPct] = useState('');
+  const [pianoTargetAmount, setPianoTargetAmount] = useState('');
+
+  // Plan tab view
+  const [planView, setPlanView] = useState<'month' | 'year'>('month');
+  const [planYearSummary, setPlanYearSummary] = useState<PlanYearSummary | null>(null);
+  const [planMonthAllocations, setPlanMonthAllocations] = useState<AllocationData[]>([]);
+  const [planMonthSavings, setPlanMonthSavings] = useState(0);
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -289,6 +311,48 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           if (signal.aborted) return;
           setPlan(planJson.data);
         }
+
+        // Month data for plan tab (actual vs target)
+        const nowP = new Date();
+        const isFutureOrCurrentP =
+          selectedYear > nowP.getFullYear() ||
+          (selectedYear === nowP.getFullYear() && selectedMonth >= nowP.getMonth());
+        if (!isFutureOrCurrentP) {
+          const ensureRes = await fetch(`${BASE_URL}/api/savings/ensure-month`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ anno: selectedYear, mese: selectedMonth }),
+            signal,
+          });
+          if (!signal.aborted && ensureRes.ok) {
+            const ensureJson = await ensureRes.json();
+            const monthData = ensureJson.data;
+            if (!signal.aborted && monthData) {
+              setPlanMonthSavings(monthData.savings ?? 0);
+              const allocRes = await fetch(
+                `${BASE_URL}/api/savings/months/${monthData._id}/allocations`,
+                { headers: { Authorization: `Bearer ${userToken}` }, signal },
+              );
+              if (!signal.aborted && allocRes.ok) {
+                const allocJson = await allocRes.json();
+                if (!signal.aborted) setPlanMonthAllocations(allocJson.data ?? []);
+              }
+            }
+          }
+        } else {
+          setPlanMonthSavings(0);
+          setPlanMonthAllocations([]);
+        }
+
+        // Year summary
+        const yearRes = await fetch(`${BASE_URL}/api/savings/year-summary?year=${selectedYear}`, {
+          headers: { Authorization: `Bearer ${userToken}` },
+          signal,
+        });
+        if (!signal.aborted && yearRes.ok) {
+          const yearJson = await yearRes.json();
+          if (!signal.aborted) setPlanYearSummary(yearJson.data ?? null);
+        }
       }
 
       if (activeTab === 'portfolio') {
@@ -333,7 +397,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
     loadData(abortControllerRef.current.signal);
-  }, [activeTab, selectedMonth, selectedYear]);
+  }, [activeTab, selectedMonth, selectedYear, planView]);
 
   useEffect(() => {
     return () => {
@@ -535,11 +599,16 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     const pct = parseFloat(pianoPct);
     if (isNaN(pct) || pct <= 0) { Alert.alert('Error', 'Please enter a valid percentage'); return; }
     const currentAllocations: any[] = plan?.allocations ?? [];
-    const newEntry = { instrumentId: planSelectedInstrument._id, targetPercentage: pct };
+    const newEntry: any = { instrumentId: planSelectedInstrument._id, targetPercentage: pct };
+    if (pianoTargetAmount) {
+      const amt = parseFloat(pianoTargetAmount);
+      if (!isNaN(amt) && amt > 0) newEntry.targetAmount = amt;
+    }
     await savePlan([...currentAllocations, newEntry]);
     setShowAddPlanModal(false);
     setPlanSelectedInstrument(null);
     setPianoPct('');
+    setPianoTargetAmount('');
     setPlanSearchQuery('');
     setPlanSearchResults([]);
     reloadData();
@@ -789,9 +858,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   // ============================================================
   const renderPianoTab = () => {
     const planAllocations: PlanAllocation[] = plan?.allocations ?? [];
-    const totalAllocAmount = allocations.reduce((s, a) => s + (a.amount ?? 0), 0);
     const pctColor =
       totalPlanPct === 100 ? ACCENT : totalPlanPct > 100 ? t.neg : t.text;
+
+    // Data sources based on planView
+    const activeTotalAllocAmount =
+      planView === 'month'
+        ? planMonthAllocations.reduce((s, a) => s + (a.amount ?? 0), 0)
+        : (planYearSummary?.byInstrument.reduce((s, b) => s + b.totalAmount, 0) ?? 0);
 
     return (
       <ScrollView
@@ -802,6 +876,62 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} />
         }
       >
+        {/* ── Month / Year toggle ── */}
+        <View style={[styles.planViewToggle, { backgroundColor: t.surface2 }]}>
+          {(['month', 'year'] as const).map(v => (
+            <TouchableOpacity
+              key={v}
+              style={[
+                styles.planViewBtn,
+                planView === v && { backgroundColor: t.surface },
+              ]}
+              onPress={() => setPlanView(v)}
+            >
+              <Text
+                style={[
+                  styles.planViewBtnText,
+                  { color: planView === v ? t.text : t.text3 },
+                ]}
+              >
+                {v === 'month' ? 'Month' : 'Year'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ── Year hero ── */}
+        {planView === 'year' && planYearSummary && planYearSummary.monthCount > 0 && (
+          <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
+            <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
+              Year savings · {selectedYear}
+            </Text>
+            <Text style={[styles.heroAmount, { color: t.text }]}>
+              {formatCurrency(planYearSummary.totalSavings)}
+            </Text>
+            <View style={[styles.flowRow, { backgroundColor: t.surface2 }]}>
+              <View style={styles.flowCell}>
+                <View style={[styles.flowDot, { backgroundColor: t.pos }]} />
+                <View>
+                  <Text style={[styles.flowLabel, { color: t.text3 }]}>INCOME</Text>
+                  <Text style={[styles.flowVal, { color: t.pos }]}>
+                    {formatCurrency(planYearSummary.totalIncome)}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.flowDivider, { backgroundColor: t.line2 }]} />
+              <View style={styles.flowCell}>
+                <View style={[styles.flowDot, { backgroundColor: t.neg }]} />
+                <View>
+                  <Text style={[styles.flowLabel, { color: t.text3 }]}>EXPENSES</Text>
+                  <Text style={[styles.flowVal, { color: t.neg }]}>
+                    {formatCurrency(planYearSummary.totalExpenses)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* ── Plan summary circle + stacked bar ── */}
         {planAllocations.length > 0 && (
           <View
@@ -850,14 +980,39 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             const name = p.instrumentId?.name ?? ticker;
             const target = p.targetPercentage ?? 0;
             const instrId = p.instrumentId?._id;
-            const instrAlloc = allocations
-              .filter(a => a.instrumentId?._id === instrId)
-              .reduce((s, a) => s + (a.amount ?? 0), 0);
-            const actualPct = totalAllocAmount > 0 ? (instrAlloc / totalAllocAmount) * 100 : 0;
-            const drift = actualPct - target;
             const segColor = PLAN_COLORS[idx % PLAN_COLORS.length];
+
+            // Actual allocated amount for this instrument (month or year)
+            let instrAllocAmount = 0;
+            if (planView === 'month') {
+              instrAllocAmount = planMonthAllocations
+                .filter(a => a.instrumentId?._id === instrId)
+                .reduce((s, a) => s + (a.amount ?? 0), 0);
+            } else {
+              const yearEntry = planYearSummary?.byInstrument.find(
+                b => b.instrumentId.toString() === instrId,
+              );
+              instrAllocAmount = yearEntry?.totalAmount ?? 0;
+            }
+
+            const actualPct =
+              activeTotalAllocAmount > 0 ? (instrAllocAmount / activeTotalAllocAmount) * 100 : 0;
+            const drift = actualPct - target;
             const driftColor =
               Math.abs(drift) < 0.5 ? t.pos : drift > 0 ? '#f59e0b' : t.text3;
+
+            // Target amount display
+            const monthlyTarget = p.targetAmount ?? null;
+            const displayTarget =
+              monthlyTarget != null
+                ? planView === 'year'
+                  ? monthlyTarget * 12
+                  : monthlyTarget
+                : null;
+            const targetAmountPct =
+              displayTarget != null && displayTarget > 0
+                ? Math.min((instrAllocAmount / displayTarget) * 100, 100)
+                : null;
 
             return (
               <View key={idx} style={[styles.planRow, { backgroundColor: t.surface, borderColor: t.line }]}>
@@ -905,6 +1060,36 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                     {drift > 0 ? '↑' : drift < 0 ? '↓' : '·'} {Math.abs(drift).toFixed(1)}%
                   </Text>
                 </View>
+
+                {/* Target amount row */}
+                {displayTarget != null && (
+                  <View style={[styles.planGoalRow, { borderTopColor: t.line }]}>
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <View style={styles.rowBetween}>
+                        <Text style={[styles.planActualLabel, { color: t.text3 }]}>
+                          {planView === 'year' ? 'Annual goal' : 'Monthly goal'}
+                        </Text>
+                        <Text style={[styles.planActualLabel, { color: t.text2 }]}>
+                          {formatCurrency(instrAllocAmount)} / {formatCurrency(displayTarget)}
+                        </Text>
+                      </View>
+                      <View style={[styles.planTrack, { backgroundColor: t.surface2 }]}>
+                        <View
+                          style={[
+                            styles.planTrackActual,
+                            {
+                              width: `${targetAmountPct ?? 0}%` as any,
+                              backgroundColor:
+                                (targetAmountPct ?? 0) >= 100
+                                  ? t.pos
+                                  : segColor,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             );
           })
@@ -1348,6 +1533,19 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               />
             </View>
 
+            <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line }]}>
+              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Monthly goal (optional)</Text>
+              <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
+              <TextInput
+                style={[styles.fieldInput, { color: t.text }]}
+                placeholder="e.g. 500"
+                placeholderTextColor={t.text3}
+                keyboardType="numeric"
+                value={pianoTargetAmount}
+                onChangeText={setPianoTargetAmount}
+              />
+            </View>
+
             <View style={styles.sheetActions}>
               <TouchableOpacity
                 style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
@@ -1355,6 +1553,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                   setShowAddPlanModal(false);
                   setPlanSelectedInstrument(null);
                   setPianoPct('');
+                  setPianoTargetAmount('');
                   setPlanSearchQuery('');
                   setPlanSearchResults([]);
                 }}
@@ -1804,6 +2003,34 @@ const styles = StyleSheet.create({
     color: '#0c0c0c',
     lineHeight: 34,
     marginTop: -2,
+  },
+
+  // Plan view toggle
+  planViewToggle: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 4,
+  },
+  planViewBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  planViewBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+
+  // Plan goal row
+  planGoalRow: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   // Plan
