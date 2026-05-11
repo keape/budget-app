@@ -95,7 +95,24 @@ interface PortfolioItem {
   instrument: InstrumentData;
   totalAmount: number;
   totalQuantity: number;
+  totalQuantitySold: number;
+  currentQuantity: number;
+  remainingCostBasis: number;
   estimatedCurrentValue: number | null;
+  unrealizedGain: number | null;
+  realizedGain: number;
+}
+
+interface SaleData {
+  _id: string;
+  instrumentId: InstrumentData;
+  quantity: number;
+  priceAtSale: number;
+  proceeds: number;
+  costBasis: number;
+  capitalGain: number;
+  savingsMonthId: string;
+  createdAt: string;
 }
 
 interface SavingsMonthData {
@@ -185,6 +202,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
   const [savingsMonth, setSavingsMonth] = useState<SavingsMonthData | null>(null);
   const [allocations, setAllocations] = useState<AllocationData[]>([]);
+  const [sales, setSales] = useState<SaleData[]>([]);
   const [plan, setPlan] = useState<PlanData | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
 
@@ -209,6 +227,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const [planSelectedInstrument, setPlanSelectedInstrument] = useState<InstrumentData | null>(null);
   const [pianoPct, setPianoPct] = useState('');
   const [pianoTargetAmount, setPianoTargetAmount] = useState('');
+
+  // Sell modal
+  const [showSellModal, setShowSellModal] = useState(false);
+  const [sellItem, setSellItem] = useState<PortfolioItem | null>(null);
+  const [sellQuantity, setSellQuantity] = useState('');
+  const [sellPrice, setSellPrice] = useState('');
+  const [isSavingSell, setIsSavingSell] = useState(false);
 
   // Target savings editing
   const [isEditingTargetSavings, setIsEditingTargetSavings] = useState(false);
@@ -296,18 +321,26 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         setSavingsMonth(month);
 
         if (month) {
-          const allocRes = await fetch(
-            `${BASE_URL}/api/savings/months/${month._id}/allocations`,
-            { headers: { Authorization: `Bearer ${userToken}` }, signal },
-          );
+          const [allocRes, salesRes] = await Promise.all([
+            fetch(`${BASE_URL}/api/savings/months/${month._id}/allocations`, {
+              headers: { Authorization: `Bearer ${userToken}` }, signal,
+            }),
+            fetch(`${BASE_URL}/api/savings/months/${month._id}/sales`, {
+              headers: { Authorization: `Bearer ${userToken}` }, signal,
+            }),
+          ]);
           if (signal.aborted) return;
           if (allocRes.ok) {
             const allocJson = await allocRes.json();
-            if (signal.aborted) return;
-            setAllocations(allocJson.data ?? []);
+            if (!signal.aborted) setAllocations(allocJson.data ?? []);
+          }
+          if (salesRes.ok) {
+            const salesJson = await salesRes.json();
+            if (!signal.aborted) setSales(salesJson.data ?? []);
           }
         } else {
           setAllocations([]);
+          setSales([]);
         }
       }
 
@@ -603,6 +636,86 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   };
 
   // ============================================================
+  // Sell
+  // ============================================================
+  const handleOpenSell = (item: PortfolioItem) => {
+    setSellItem(item);
+    setSellQuantity('');
+    setSellPrice(item.instrument?.lastPrice != null ? String(item.instrument.lastPrice) : '');
+    setShowSellModal(true);
+  };
+
+  const handleConfirmSell = async () => {
+    if (!sellItem) return;
+    const qty = parseFloat(sellQuantity);
+    const price = parseFloat(sellPrice);
+    if (!qty || qty <= 0 || qty > (sellItem.currentQuantity ?? 0) + 1e-9) {
+      Alert.alert('Error', `Quantity must be between 0 and ${sellItem.currentQuantity}`);
+      return;
+    }
+    if (!price || price <= 0) {
+      Alert.alert('Error', 'Enter a valid sale price');
+      return;
+    }
+    setIsSavingSell(true);
+    try {
+      // Ensure month exists to get savingsMonthId
+      const ensureRes = await fetch(`${BASE_URL}/api/savings/ensure-month`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anno: selectedYear, mese: selectedMonth }),
+      });
+      if (!ensureRes.ok) { Alert.alert('Error', 'Could not prepare month record'); return; }
+      const ensureJson = await ensureRes.json();
+      const monthId = ensureJson.data?._id;
+      if (!monthId) { Alert.alert('Error', 'Could not get month ID'); return; }
+
+      const saleRes = await fetch(`${BASE_URL}/api/savings/months/${monthId}/sales`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instrumentId: sellItem.instrument._id,
+          quantity: qty,
+          priceAtSale: price,
+        }),
+      });
+      if (!saleRes.ok) {
+        const errJson = await saleRes.json().catch(() => ({}));
+        Alert.alert('Error', errJson.error ?? 'Could not save sale');
+        return;
+      }
+      setShowSellModal(false);
+      setSellItem(null);
+      reloadData();
+    } catch (e) {
+      console.error('handleConfirmSell error:', e);
+      Alert.alert('Error', 'Network error');
+    } finally {
+      setIsSavingSell(false);
+    }
+  };
+
+  const handleDeleteSale = (saleId: string, monthId: string) => {
+    Alert.alert('Delete sale', 'Delete this sale record?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              `${BASE_URL}/api/savings/months/${monthId}/sales/${saleId}`,
+              { method: 'DELETE', headers: { Authorization: `Bearer ${userToken}` } },
+            );
+            if (!res.ok) { Alert.alert('Error', 'Could not delete sale.'); return; }
+            reloadData();
+          } catch (e) { console.error(e); }
+        },
+      },
+    ]);
+  };
+
+  // ============================================================
   // Save / Delete — Plan
   // ============================================================
   const handleSavePlanEntry = async () => {
@@ -691,13 +804,17 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const portfolioTotalCurrentValue = pricedItems.reduce(
     (sum: number, item: PortfolioItem) => sum + (item.estimatedCurrentValue as number), 0,
   );
-  const portfolioTotalPricedInvested = pricedItems.reduce(
-    (sum: number, item: PortfolioItem) => sum + (item.totalAmount ?? 0), 0,
+  const portfolioTotalPricedCostBasis = pricedItems.reduce(
+    (sum: number, item: PortfolioItem) => sum + (item.remainingCostBasis ?? 0), 0,
   );
-  const portfolioTotalReturnAbs = portfolioTotalCurrentValue - portfolioTotalPricedInvested;
+  const portfolioTotalUnrealizedGain = portfolioTotalCurrentValue - portfolioTotalPricedCostBasis;
+  const portfolioTotalRealizedGain = portfolio.reduce(
+    (sum: number, item: PortfolioItem) => sum + (item.realizedGain ?? 0), 0,
+  );
+  const portfolioTotalReturnAbs = portfolioTotalUnrealizedGain;
   const portfolioTotalReturnPct =
-    portfolioTotalPricedInvested > 0
-      ? (portfolioTotalReturnAbs / portfolioTotalPricedInvested) * 100
+    portfolioTotalPricedCostBasis > 0
+      ? (portfolioTotalUnrealizedGain / portfolioTotalPricedCostBasis) * 100
       : null;
 
   // ============================================================
@@ -876,6 +993,57 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             >
               <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add allocation</Text>
             </TouchableOpacity>
+
+            {/* ── Sales ── */}
+            {sales.length > 0 && (
+              <>
+                <View style={[styles.sectionHead, { marginTop: 16 }]}>
+                  <Text style={[styles.sectionTitle, { color: t.text3 }]}>SALES</Text>
+                  <Text style={[styles.sectionMeta, { color: t.text3 }]}>{sales.length} items</Text>
+                </View>
+                {sales.map(sale => {
+                  const ticker = sale.instrumentId?.ticker ?? '?';
+                  const name = sale.instrumentId?.name ?? ticker;
+                  const gain = sale.capitalGain ?? 0;
+                  const gainPos = gain >= 0;
+                  return (
+                    <View
+                      key={sale._id}
+                      style={[
+                        styles.allocRow,
+                        { backgroundColor: t.surface, borderColor: t.line, borderLeftWidth: 3, borderLeftColor: gainPos ? t.pos : t.neg },
+                      ]}
+                    >
+                      <TickerChip ticker={ticker} />
+                      <View style={styles.allocMid}>
+                        <View style={styles.rowBetween}>
+                          <Text style={[styles.allocName, { color: t.text }]} numberOfLines={1}>
+                            {name}
+                          </Text>
+                          <Text style={[styles.allocAmt, { color: gainPos ? t.pos : t.neg }]}>
+                            {formatReturnAbs(gain)}
+                          </Text>
+                        </View>
+                        <View style={styles.rowBetween}>
+                          <Text style={[styles.allocMeta, { color: t.text3 }]}>
+                            ×{sale.quantity} @ {currency}{sale.priceAtSale?.toFixed(2)}
+                          </Text>
+                          <Text style={[styles.allocPct, { color: t.text2 }]}>
+                            {formatCurrency(sale.proceeds)} proceeds
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={() => handleDeleteSale(sale._id, sale.savingsMonthId)}
+                      >
+                        <Text style={[styles.deleteBtnText, { color: t.text3 }]}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -1318,14 +1486,15 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               const ticker = item.instrument?.ticker ?? '?';
               const name = item.instrument?.name ?? ticker;
               const itemCurrency = item.instrument?.currency ?? '';
-              const totalAmount = item.totalAmount ?? 0;
               const estValue = item.estimatedCurrentValue ?? null;
-              const returnAbs = estValue != null ? estValue - totalAmount : null;
-              const returnPct =
-                returnAbs != null && totalAmount > 0
-                  ? (returnAbs / totalAmount) * 100
+              const unrealized = item.unrealizedGain ?? null;
+              const unrealizedPct =
+                unrealized != null && (item.remainingCostBasis ?? 0) > 0
+                  ? (unrealized / item.remainingCostBasis) * 100
                   : null;
-              const positive = returnAbs == null ? true : returnAbs >= 0;
+              const unrealizedPos = unrealized == null ? true : unrealized >= 0;
+              const realized = item.realizedGain ?? 0;
+              const isClosed = (item.currentQuantity ?? 0) < 1e-9;
 
               return (
                 <View
@@ -1340,17 +1509,33 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                     <Text style={[styles.portMeta, { color: t.text3 }]}>
                       {ticker}
                       {itemCurrency ? ` · ${itemCurrency}` : ''}
+                      {isClosed ? ' · CLOSED' : item.currentQuantity > 0 ? ` · ×${item.currentQuantity.toFixed(4)}` : ''}
                     </Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.portCur, { color: t.text }]}>
-                      {formatCurrency(estValue ?? totalAmount)}
-                    </Text>
-                    {returnPct != null && (
-                      <Text style={[styles.portRet, { color: positive ? t.pos : t.neg }]}>
-                        {positive ? '+' : ''}
-                        {returnPct.toFixed(1)}%
+                    {realized !== 0 && (
+                      <Text style={[styles.portMeta, { color: realized >= 0 ? t.pos : t.neg }]}>
+                        Realized {formatReturnAbs(realized)}
                       </Text>
+                    )}
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    {!isClosed && (
+                      <Text style={[styles.portCur, { color: t.text }]}>
+                        {formatCurrency(estValue ?? item.remainingCostBasis)}
+                      </Text>
+                    )}
+                    {unrealizedPct != null && (
+                      <Text style={[styles.portRet, { color: unrealizedPos ? t.pos : t.neg }]}>
+                        {unrealizedPos ? '+' : ''}
+                        {unrealizedPct.toFixed(1)}%
+                      </Text>
+                    )}
+                    {!isClosed && (
+                      <TouchableOpacity
+                        style={[styles.sellBtn, { borderColor: t.neg }]}
+                        onPress={() => handleOpenSell(item)}
+                      >
+                        <Text style={[styles.sellBtnText, { color: t.neg }]}>Sell</Text>
+                      </TouchableOpacity>
                     )}
                   </View>
                 </View>
@@ -1366,41 +1551,39 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 </Text>
               </View>
               {hasValue && (
-                <>
-                  <View style={[styles.rowBetween, { marginTop: 6 }]}>
-                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Current value</Text>
-                    <Text style={[styles.summaryVal, { color: t.text }]}>
-                      {formatCurrency(portfolioTotalCurrentValue)}
-                    </Text>
-                  </View>
-                  <View
+                <View style={[styles.rowBetween, { marginTop: 6 }]}>
+                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>Current value</Text>
+                  <Text style={[styles.summaryVal, { color: t.text }]}>
+                    {formatCurrency(portfolioTotalCurrentValue)}
+                  </Text>
+                </View>
+              )}
+              {hasValue && (
+                <View style={[styles.rowBetween, { marginTop: 6 }]}>
+                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>Unrealized P&L</Text>
+                  <Text style={[styles.summaryReturnVal, { color: portfolioTotalUnrealizedGain >= 0 ? t.pos : t.neg }]}>
+                    {formatReturnAbs(portfolioTotalUnrealizedGain)}
+                    {portfolioTotalReturnPct != null ? `  ${formatReturnPct(portfolioTotalReturnPct)}` : ''}
+                  </Text>
+                </View>
+              )}
+              {portfolioTotalRealizedGain !== 0 && (
+                <View
+                  style={[
+                    styles.rowBetween,
+                    { borderTopColor: t.line, marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
+                  ]}
+                >
+                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>Realized P&L</Text>
+                  <Text
                     style={[
-                      styles.rowBetween,
-                      styles.summaryDivider,
-                      { borderTopColor: t.line, marginTop: 12, paddingTop: 12 },
+                      styles.summaryReturnVal,
+                      { color: portfolioTotalRealizedGain >= 0 ? t.pos : t.neg },
                     ]}
                   >
-                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Total return</Text>
-                    <Text
-                      style={[
-                        styles.summaryReturnVal,
-                        {
-                          color:
-                            portfolioTotalReturnAbs > 0
-                              ? t.pos
-                              : portfolioTotalReturnAbs < 0
-                              ? t.neg
-                              : t.text2,
-                        },
-                      ]}
-                    >
-                      {formatReturnAbs(portfolioTotalReturnAbs)}
-                      {portfolioTotalReturnPct != null
-                        ? `  ${formatReturnPct(portfolioTotalReturnPct)}`
-                        : ''}
-                    </Text>
-                  </View>
-                </>
+                    {formatReturnAbs(portfolioTotalRealizedGain)}
+                  </Text>
+                </View>
               )}
             </View>
           </>
@@ -1721,6 +1904,126 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   );
 
   // ============================================================
+  // Render: Sell Modal
+  // ============================================================
+  const renderSellModal = () => {
+    const sellQtyNum   = parseFloat(sellQuantity) || 0;
+    const sellPriceNum = parseFloat(sellPrice) || 0;
+    const sellProceeds = sellQtyNum * sellPriceNum;
+    const avgCost      = sellItem && (sellItem.totalQuantity ?? 0) > 0
+      ? (sellItem.totalAmount ?? 0) / sellItem.totalQuantity
+      : 0;
+    const sellCostBasis = sellQtyNum * avgCost;
+    const sellEstPnL    = sellProceeds - sellCostBasis;
+    const pnlPos        = sellEstPnL >= 0;
+    const isValidSell   =
+      sellQtyNum > 0 &&
+      sellQtyNum <= (sellItem?.currentQuantity ?? 0) + 1e-9 &&
+      sellPriceNum > 0;
+
+    return (
+      <Modal
+        visible={showSellModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSellModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContainer, { backgroundColor: t.surface }]}>
+              <View style={[styles.sheetGrab, { backgroundColor: t.line2 }]} />
+              <Text style={[styles.modalTitle, { color: t.text }]}>Sell asset</Text>
+
+              {sellItem && (
+                <View style={[styles.pickedRow, { backgroundColor: t.surface2, borderRadius: 12 }]}>
+                  <TickerChip ticker={sellItem.instrument?.ticker ?? '?'} size={36} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.pickedName, { color: t.text }]} numberOfLines={1}>
+                      {sellItem.instrument?.name ?? sellItem.instrument?.ticker}
+                    </Text>
+                    <Text style={[styles.pickedMeta, { color: t.text3 }]}>
+                      Available: ×{sellItem.currentQuantity?.toFixed(6)}
+                      {avgCost > 0 ? `  ·  avg cost ${currency}${avgCost.toFixed(2)}` : ''}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 12 }]}>
+                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Quantity</Text>
+                <TextInput
+                  style={[styles.fieldInput, { color: t.text }]}
+                  placeholder="0.00"
+                  placeholderTextColor={t.text3}
+                  keyboardType="decimal-pad"
+                  value={sellQuantity}
+                  onChangeText={setSellQuantity}
+                />
+              </View>
+
+              <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
+                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Price at sale</Text>
+                <TextInput
+                  style={[styles.fieldInput, { color: t.text }]}
+                  placeholder="0.00"
+                  placeholderTextColor={t.text3}
+                  keyboardType="decimal-pad"
+                  value={sellPrice}
+                  onChangeText={setSellPrice}
+                />
+              </View>
+
+              {sellQtyNum > 0 && sellPriceNum > 0 && (
+                <View style={[styles.card, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
+                  <View style={styles.rowBetween}>
+                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Proceeds</Text>
+                    <Text style={[styles.summaryVal, { color: t.text }]}>{formatCurrency(sellProceeds)}</Text>
+                  </View>
+                  <View style={[styles.rowBetween, { marginTop: 6 }]}>
+                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Cost basis (PCM)</Text>
+                    <Text style={[styles.summaryVal, { color: t.text2 }]}>{formatCurrency(sellCostBasis)}</Text>
+                  </View>
+                  <View style={[styles.rowBetween, { marginTop: 6, borderTopWidth: 1, borderTopColor: t.line, paddingTop: 6 }]}>
+                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Est. P&L</Text>
+                    <Text style={[styles.summaryReturnVal, { color: pnlPos ? t.pos : t.neg }]}>
+                      {formatReturnAbs(sellEstPnL)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.sheetActions}>
+                <TouchableOpacity
+                  style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
+                  onPress={() => setShowSellModal(false)}
+                >
+                  <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.sheetSave,
+                    { backgroundColor: isValidSell && !isSavingSell ? t.neg : t.surface2 },
+                  ]}
+                  onPress={handleConfirmSell}
+                  disabled={!isValidSell || isSavingSell}
+                >
+                  {isSavingSell
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={[styles.sheetSaveText, { color: isValidSell ? '#fff' : t.text3 }]}>Confirm Sell</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    );
+  };
+
+  // ============================================================
   // Main Render
   // ============================================================
   return (
@@ -1808,6 +2111,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       {/* ── Modals ── */}
       {renderAddAllocationModal()}
       {renderAddPlanModal()}
+      {renderSellModal()}
     </View>
   );
 };
@@ -2110,6 +2414,19 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+
+  // Sell button
+  sellBtn: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+  },
+  sellBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // Ghost button

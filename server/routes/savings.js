@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { authenticateToken } = require('./auth');
 const SavingsMonth = require('../models/SavingsMonth');
 const InstrumentAllocation = require('../models/InstrumentAllocation');
+const InstrumentSale = require('../models/InstrumentSale');
 const AllocationPlan = require('../models/AllocationPlan');
 const Entrata = require('../models/Entrata');
 const Spesa = require('../models/Spesa');
@@ -336,18 +337,120 @@ router.get('/year-summary', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/savings/months/:id/sales
+router.get('/months/:id/sales', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const month = await SavingsMonth.findOne({ _id: req.params.id, userId });
+    if (!month) {
+      return res.status(404).json({ success: false, error: 'Savings month not found' });
+    }
+    const sales = await InstrumentSale.find({ userId, savingsMonthId: req.params.id })
+      .populate('instrumentId')
+      .sort({ createdAt: -1 });
+    return res.json({ success: true, data: sales });
+  } catch (err) {
+    console.error('Error fetching sales:', err);
+    res.status(500).json({ success: false, error: 'Error fetching sales' });
+  }
+});
+
+// POST /api/savings/months/:id/sales
+router.post('/months/:id/sales', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { instrumentId, quantity, priceAtSale } = req.body;
+
+    if (!instrumentId || quantity == null || priceAtSale == null) {
+      return res.status(400).json({ success: false, error: 'instrumentId, quantity and priceAtSale are required' });
+    }
+    if (quantity <= 0 || priceAtSale <= 0) {
+      return res.status(400).json({ success: false, error: 'quantity and priceAtSale must be positive' });
+    }
+
+    const month = await SavingsMonth.findOne({ _id: req.params.id, userId });
+    if (!month) {
+      return res.status(404).json({ success: false, error: 'Savings month not found' });
+    }
+
+    const instObjId = new mongoose.Types.ObjectId(instrumentId);
+    const userObjId = new mongoose.Types.ObjectId(userId);
+
+    // PCM: compute total bought and total already sold for this instrument
+    const [boughtAgg] = await InstrumentAllocation.aggregate([
+      { $match: { userId: userObjId, instrumentId: instObjId } },
+      { $group: { _id: null, totalQty: { $sum: { $ifNull: ['$quantity', 0] } }, totalAmt: { $sum: '$amount' } } },
+    ]);
+    const [soldAgg] = await InstrumentSale.aggregate([
+      { $match: { userId: userObjId, instrumentId: instObjId } },
+      { $group: { _id: null, totalQty: { $sum: '$quantity' } } },
+    ]);
+
+    const totalQtyBought = boughtAgg?.totalQty ?? 0;
+    const totalAmtBought = boughtAgg?.totalAmt ?? 0;
+    const totalQtySold   = soldAgg?.totalQty ?? 0;
+    const currentQty     = totalQtyBought - totalQtySold;
+
+    if (quantity > currentQty + 1e-9) {
+      return res.status(400).json({ success: false, error: `Quantità insufficiente. Disponibile: ${currentQty}` });
+    }
+
+    const avgCostPerShare = totalQtyBought > 0 ? totalAmtBought / totalQtyBought : 0;
+    const proceeds    = quantity * priceAtSale;
+    const costBasis   = quantity * avgCostPerShare;
+    const capitalGain = proceeds - costBasis;
+
+    const created = await InstrumentSale.create({
+      userId,
+      savingsMonthId: req.params.id,
+      instrumentId,
+      quantity,
+      priceAtSale,
+      proceeds,
+      costBasis,
+      capitalGain,
+    });
+    const sale = await created.populate('instrumentId');
+    return res.status(201).json({ success: true, data: sale });
+  } catch (err) {
+    console.error('Error creating sale:', err);
+    res.status(500).json({ success: false, error: 'Error creating sale' });
+  }
+});
+
+// DELETE /api/savings/months/:id/sales/:saleId
+router.delete('/months/:id/sales/:saleId', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const deleted = await InstrumentSale.findOneAndDelete({
+      _id: req.params.saleId,
+      userId,
+      savingsMonthId: req.params.id,
+    });
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Sale not found' });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting sale:', err);
+    res.status(500).json({ success: false, error: 'Error deleting sale' });
+  }
+});
+
 // GET /api/savings/portfolio?anno=&mese=
 router.get('/portfolio', authenticateToken, async (req, res) => {
   try {
+    const userId = req.user.userId;
     const { anno, mese } = req.query;
-    let matchStage = { userId: new mongoose.Types.ObjectId(req.user.userId) };
+    const userObjId = new mongoose.Types.ObjectId(userId);
+
+    let monthIds = null;
 
     if (anno != null && mese != null) {
       const targetAnno = Number(anno);
       const targetMese = Number(mese);
-      // All months up to and including the selected month
       const months = await SavingsMonth.find({
-        userId: req.user.userId,
+        userId,
         $or: [
           { anno: { $lt: targetAnno } },
           { anno: targetAnno, mese: { $lte: targetMese } },
@@ -356,41 +459,69 @@ router.get('/portfolio', authenticateToken, async (req, res) => {
       if (months.length === 0) {
         return res.json({ success: true, data: [] });
       }
-      matchStage.savingsMonthId = { $in: months.map(m => m._id) };
+      monthIds = months.map(m => m._id);
     }
 
-    const results = await InstrumentAllocation.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$instrumentId',
-          totalAmount: { $sum: '$amount' },
-          totalQuantity: { $sum: { $ifNull: ['$quantity', 0] } }
-        }
-      },
-      {
-        $lookup: {
-          from: 'instruments',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'instrument'
-        }
-      },
-      { $unwind: '$instrument' }
+    const buyMatchStage = { userId: userObjId };
+    if (monthIds) buyMatchStage.savingsMonthId = { $in: monthIds };
+
+    const sellMatchStage = { userId: userObjId };
+    if (monthIds) sellMatchStage.savingsMonthId = { $in: monthIds };
+
+    const [buyResults, sellResults] = await Promise.all([
+      InstrumentAllocation.aggregate([
+        { $match: buyMatchStage },
+        {
+          $group: {
+            _id: '$instrumentId',
+            totalAmount:   { $sum: '$amount' },
+            totalQuantity: { $sum: { $ifNull: ['$quantity', 0] } },
+          },
+        },
+        { $lookup: { from: 'instruments', localField: '_id', foreignField: '_id', as: 'instrument' } },
+        { $unwind: '$instrument' },
+      ]),
+      InstrumentSale.aggregate([
+        { $match: sellMatchStage },
+        {
+          $group: {
+            _id:                '$instrumentId',
+            totalQuantitySold:  { $sum: '$quantity' },
+            totalRealizedGain:  { $sum: '$capitalGain' },
+          },
+        },
+      ]),
     ]);
 
-    const data = results.map(r => {
+    const sellMap = new Map(sellResults.map(s => [s._id.toString(), s]));
+
+    const data = buyResults.map(r => {
+      const sell = sellMap.get(r._id.toString());
+      const totalQuantitySold  = sell?.totalQuantitySold ?? 0;
+      const realizedGain       = sell?.totalRealizedGain ?? 0;
+      const currentQuantity    = r.totalQuantity - totalQuantitySold;
+      const avgCostPerShare    = r.totalQuantity > 0 ? r.totalAmount / r.totalQuantity : 0;
+      const remainingCostBasis = currentQuantity * avgCostPerShare;
+
       let estimatedCurrentValue = null;
-      if (r.totalQuantity > 0 && r.instrument.lastPrice != null) {
-        estimatedCurrentValue = r.totalQuantity * r.instrument.lastPrice;
+      let unrealizedGain = null;
+      if (currentQuantity > 0 && r.instrument.lastPrice != null) {
+        estimatedCurrentValue = currentQuantity * r.instrument.lastPrice;
+        unrealizedGain = estimatedCurrentValue - remainingCostBasis;
       }
+
       return {
-        instrument: r.instrument,
-        totalAmount: r.totalAmount,
-        totalQuantity: r.totalQuantity,
-        estimatedCurrentValue
+        instrument:          r.instrument,
+        totalAmount:         r.totalAmount,
+        totalQuantity:       r.totalQuantity,
+        totalQuantitySold,
+        currentQuantity,
+        remainingCostBasis,
+        estimatedCurrentValue,
+        unrealizedGain,
+        realizedGain,
       };
-    });
+    }).filter(item => item.currentQuantity > 1e-9 || item.realizedGain !== 0);
 
     return res.json({ success: true, data });
   } catch (err) {
