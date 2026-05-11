@@ -53,13 +53,8 @@ router.post('/ensure-month', authenticateToken, async (req, res) => {
 
     const savings = income - expenses;
 
-    // Return existing if already present and has real data
+    // Always recompute and upsert — transactions may have changed since last run
     const existing = await SavingsMonth.findOne({ userId, anno: targetAnno, mese: targetMese });
-    if (existing && (existing.income !== 0 || existing.expenses !== 0)) {
-      return res.json({ success: true, data: existing, alreadyExists: true });
-    }
-
-    // Create or update (covers stale zero documents)
     const savedMonth = await SavingsMonth.findOneAndUpdate(
       { userId, anno: targetAnno, mese: targetMese },
       { $set: { income, expenses, savings, status: 'closed', closedAt: existing ? existing.closedAt : new Date() } },
@@ -81,11 +76,8 @@ router.post('/auto-close', authenticateToken, async (req, res) => {
     const prevMese = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
     const prevAnno = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
-    // Check if already closed
-    const existing = await SavingsMonth.findOne({ userId, anno: prevAnno, mese: prevMese, status: 'closed' });
-    if (existing) {
-      return res.json({ success: true, data: existing, alreadyClosed: true });
-    }
+    // Always recompute — transactions may have changed since last auto-close
+    const existing = await SavingsMonth.findOne({ userId, anno: prevAnno, mese: prevMese });
 
     // Sum income
     const startDate = new Date(prevAnno, prevMese, 1);
@@ -99,12 +91,14 @@ router.post('/auto-close', authenticateToken, async (req, res) => {
 
     const savings = income - expenses;
 
-    // Upsert SavingsMonth
+    // Upsert SavingsMonth — preserve original closedAt if already existed
     const savedMonth = await SavingsMonth.findOneAndUpdate(
       { userId, anno: prevAnno, mese: prevMese },
-      { $set: { income, expenses, savings, status: 'closed', closedAt: new Date() } },
+      { $set: { income, expenses, savings, status: 'closed', closedAt: existing ? existing.closedAt : new Date() } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+
+    const alreadyClosed = !!existing;
 
     // If savings < 0, find conto_corrente instrument in user's plan and record allocation
     if (savings < 0) {
@@ -129,7 +123,7 @@ router.post('/auto-close', authenticateToken, async (req, res) => {
       }
     }
 
-    return res.json({ success: true, data: savedMonth, alreadyClosed: false });
+    return res.json({ success: true, data: savedMonth, alreadyClosed });
   } catch (err) {
     console.error('Error in auto-close:', err);
     res.status(500).json({ success: false, error: 'Error closing month' });
