@@ -41,12 +41,6 @@ router.post('/ensure-month', authenticateToken, async (req, res) => {
       return res.status(400).json({ success: false, error: 'Cannot ensure a current or future month' });
     }
 
-    // Return existing if already present
-    const existing = await SavingsMonth.findOne({ userId, anno: targetAnno, mese: targetMese });
-    if (existing) {
-      return res.json({ success: true, data: existing, alreadyExists: true });
-    }
-
     // Compute income and expenses from transactions
     const startDate = new Date(targetAnno, targetMese, 1);
     const endDate = new Date(targetAnno, targetMese + 1, 1);
@@ -59,18 +53,20 @@ router.post('/ensure-month', authenticateToken, async (req, res) => {
 
     const savings = income - expenses;
 
-    const savedMonth = await SavingsMonth.create({
-      userId,
-      anno: targetAnno,
-      mese: targetMese,
-      income,
-      expenses,
-      savings,
-      status: 'closed',
-      closedAt: new Date(),
-    });
+    // Return existing if already present and has real data
+    const existing = await SavingsMonth.findOne({ userId, anno: targetAnno, mese: targetMese });
+    if (existing && (existing.income !== 0 || existing.expenses !== 0)) {
+      return res.json({ success: true, data: existing, alreadyExists: true });
+    }
 
-    return res.status(201).json({ success: true, data: savedMonth, alreadyExists: false });
+    // Create or update (covers stale zero documents)
+    const savedMonth = await SavingsMonth.findOneAndUpdate(
+      { userId, anno: targetAnno, mese: targetMese },
+      { $set: { income, expenses, savings, status: 'closed', closedAt: existing ? existing.closedAt : new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    return res.status(existing ? 200 : 201).json({ success: true, data: savedMonth, alreadyExists: !!existing });
   } catch (err) {
     console.error('Error in ensure-month:', err);
     res.status(500).json({ success: false, error: 'Error ensuring month' });
