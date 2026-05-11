@@ -7,11 +7,14 @@ const allocationPlanSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  targetSavings: {
-    type: Number,
-    min: 0,
-    default: null
-  },
+  monthlyTargets: [
+    {
+      _id: false,
+      anno: { type: Number, required: true },
+      mese: { type: Number, required: true, min: 0, max: 11 },
+      targetSavings: { type: Number, required: true, min: 0 }
+    }
+  ],
   allocations: [
     {
       _id: false,

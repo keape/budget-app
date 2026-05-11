@@ -78,10 +78,16 @@ interface PlanYearSummary {
   byInstrument: YearSummaryByInstrument[];
 }
 
+interface MonthlyTarget {
+  anno: number;
+  mese: number;
+  targetSavings: number;
+}
+
 interface PlanData {
   _id: string;
   userId: string;
-  targetSavings?: number | null;
+  monthlyTargets: MonthlyTarget[];
   allocations: PlanAllocation[];
 }
 
@@ -625,15 +631,12 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     reloadData();
   };
 
-  const savePlan = async (allocationsArr: any[], ts?: number | null) => {
+  const savePlan = async (allocationsArr: any[]) => {
     try {
-      const body: any = { allocations: allocationsArr };
-      const effectiveTs = ts !== undefined ? ts : (plan?.targetSavings ?? undefined);
-      if (effectiveTs !== undefined) body.targetSavings = effectiveTs;
       const response = await fetch(`${BASE_URL}/api/savings/plan`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ allocations: allocationsArr }),
       });
       if (!response.ok) Alert.alert('Error', 'Could not save plan.');
     } catch (e) { console.error('savePlan error:', e); }
@@ -646,14 +649,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       return;
     }
     setIsEditingTargetSavings(false);
-    await savePlan(
-      plan?.allocations?.map((a: any) => ({
-        instrumentId: a.instrumentId?._id ?? a.instrumentId,
-        targetPercentage: a.targetPercentage,
-        ...(a.targetAmount != null ? { targetAmount: a.targetAmount } : {}),
-      })) ?? [],
-      val,
-    );
+    try {
+      const res = await fetch(`${BASE_URL}/api/savings/plan/monthly-target`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anno: selectedYear, mese: selectedMonth, targetSavings: val }),
+      });
+      if (!res.ok) Alert.alert('Error', 'Could not save savings goal.');
+    } catch (e) { console.error('handleConfirmTargetSavings error:', e); }
     reloadData();
   };
 
@@ -892,14 +895,23 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         ? planMonthAllocations.reduce((s, a) => s + (a.amount ?? 0), 0)
         : (planYearSummary?.byInstrument.reduce((s, b) => s + b.totalAmount, 0) ?? 0);
 
-    // Savings goal computed values
-    const planTargetSavings = plan?.targetSavings ?? null;
+    // Savings goal computed values — per month
+    const monthlyTargets = plan?.monthlyTargets ?? [];
+    const currentMonthTarget = monthlyTargets.find(
+      m => m.anno === selectedYear && m.mese === selectedMonth,
+    );
+    const planTargetSavings = currentMonthTarget?.targetSavings ?? null;
+
+    // Year view: sum of all targets set for selectedYear
+    const yearTargets = monthlyTargets.filter(m => m.anno === selectedYear);
+    const yearTargetTotal = yearTargets.length > 0
+      ? yearTargets.reduce((s, m) => s + m.targetSavings, 0)
+      : null;
+
     const actualSavingsForGoal = planView === 'month'
       ? planMonthSavings
       : (planYearSummary?.totalSavings ?? 0);
-    const displayGoalTarget = planTargetSavings != null
-      ? (planView === 'year' ? planTargetSavings * 12 : planTargetSavings)
-      : null;
+    const displayGoalTarget = planView === 'year' ? yearTargetTotal : planTargetSavings;
     const goalPct = displayGoalTarget != null && displayGoalTarget > 0
       ? Math.min((actualSavingsForGoal / displayGoalTarget) * 100, 100) : 0;
     const goalMet = displayGoalTarget != null && actualSavingsForGoal >= displayGoalTarget;
@@ -980,15 +992,21 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 <Text style={[styles.heroAmount, { fontSize: 32, marginBottom: 0, color: t.text }]}>
                   {formatCurrency(displayGoalTarget)}
                 </Text>
-                <TouchableOpacity
-                  style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: t.surface2, borderRadius: 8 }}
-                  onPress={() => {
-                    setTargetSavingsInput(planTargetSavings!.toString());
-                    setIsEditingTargetSavings(true);
-                  }}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: t.text2 }}>Edit</Text>
-                </TouchableOpacity>
+                {planView === 'month' ? (
+                  <TouchableOpacity
+                    style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: t.surface2, borderRadius: 8 }}
+                    onPress={() => {
+                      setTargetSavingsInput(planTargetSavings!.toString());
+                      setIsEditingTargetSavings(true);
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: t.text2 }}>Edit</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ fontSize: 11, color: t.text3, flexShrink: 1, textAlign: 'right' }}>
+                    {yearTargets.length} month{yearTargets.length !== 1 ? 's' : ''} planned
+                  </Text>
+                )}
               </View>
               <View style={[styles.track, { backgroundColor: t.surface2, marginTop: 14 }]}>
                 <View style={[styles.trackFill, { width: `${goalPct}%` as any, backgroundColor: goalMet ? t.pos : ACCENT }]} />
@@ -1002,7 +1020,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 </Text>
               </View>
             </>
-          ) : (
+          ) : planView === 'month' ? (
             <TouchableOpacity
               style={{
                 marginTop: 12,
@@ -1021,6 +1039,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             >
               <Text style={{ fontSize: 14, fontWeight: '600', color: t.text3 }}>+ Set savings goal</Text>
             </TouchableOpacity>
+          ) : (
+            <Text style={{ fontSize: 13, color: t.text3, marginTop: 10, textAlign: 'center' }}>
+              No monthly goals set for {selectedYear}.{'\n'}Switch to Month view to add them.
+            </Text>
           )}
         </View>
 

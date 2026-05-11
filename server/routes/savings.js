@@ -217,17 +217,12 @@ router.get('/plan', authenticateToken, async (req, res) => {
 router.put('/plan', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { allocations, targetSavings } = req.body;
+    const { allocations } = req.body;
 
     if (!Array.isArray(allocations)) {
       return res.status(400).json({ success: false, error: 'allocations must be an array' });
     }
 
-    if (targetSavings != null && (typeof targetSavings !== 'number' || targetSavings < 0)) {
-      return res.status(400).json({ success: false, error: 'targetSavings must be a non-negative number' });
-    }
-
-    // Validate each entry
     for (const alloc of allocations) {
       if (alloc.targetPercentage == null || typeof alloc.targetPercentage !== 'number' || alloc.targetPercentage < 0 || alloc.targetPercentage > 100) {
         return res.status(400).json({ success: false, error: 'targetPercentage must be a number between 0 and 100' });
@@ -240,12 +235,9 @@ router.put('/plan', authenticateToken, async (req, res) => {
     const total = allocations.reduce((sum, a) => sum + (a.targetPercentage || 0), 0);
     const warning = total < 100 ? `Total allocation is ${total}% (partial plan)` : undefined;
 
-    const updateFields = { allocations };
-    if (targetSavings !== undefined) updateFields.targetSavings = targetSavings ?? null;
-
     const plan = await AllocationPlan.findOneAndUpdate(
       { userId },
-      { $set: updateFields },
+      { $set: { allocations } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
@@ -257,6 +249,50 @@ router.put('/plan', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error updating allocation plan:', err);
     res.status(500).json({ success: false, error: 'Error updating allocation plan' });
+  }
+});
+
+// PUT /api/savings/plan/monthly-target
+// Body: { anno, mese, targetSavings }  — targetSavings: null removes the entry
+router.put('/plan/monthly-target', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { anno, mese, targetSavings } = req.body;
+
+    if (!Number.isInteger(anno) || !Number.isInteger(mese) || mese < 0 || mese > 11) {
+      return res.status(400).json({ success: false, error: 'anno and mese (0–11) are required integers' });
+    }
+    if (targetSavings !== null && (typeof targetSavings !== 'number' || targetSavings < 0)) {
+      return res.status(400).json({ success: false, error: 'targetSavings must be a non-negative number or null' });
+    }
+
+    let plan;
+    if (targetSavings === null) {
+      // Remove the entry for this month
+      plan = await AllocationPlan.findOneAndUpdate(
+        { userId },
+        { $pull: { monthlyTargets: { anno, mese } } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } else {
+      // Upsert: remove old entry then push new one (atomic via two ops)
+      await AllocationPlan.findOneAndUpdate(
+        { userId },
+        { $pull: { monthlyTargets: { anno, mese } } },
+        { upsert: true, setDefaultsOnInsert: true }
+      );
+      plan = await AllocationPlan.findOneAndUpdate(
+        { userId },
+        { $push: { monthlyTargets: { anno, mese, targetSavings } } },
+        { new: true }
+      );
+    }
+
+    await plan.populate('allocations.instrumentId');
+    return res.json({ success: true, data: plan });
+  } catch (err) {
+    console.error('Error updating monthly target:', err);
+    res.status(500).json({ success: false, error: 'Error updating monthly target' });
   }
 });
 
