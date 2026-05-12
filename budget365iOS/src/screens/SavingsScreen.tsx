@@ -299,13 +299,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             (m: any) => m.anno === selectedYear && m.mese === selectedMonth,
           ) ?? null;
 
-        // Always call ensure-month for past months — backend always recomputes from
+        // Call ensure-month for current and past months — backend recomputes from
         // live transactions so stale cached DB values get corrected on every view.
         const now = new Date();
-        const isFutureOrCurrent =
+        const isFuture =
           selectedYear > now.getFullYear() ||
-          (selectedYear === now.getFullYear() && selectedMonth >= now.getMonth());
-        if (!isFutureOrCurrent) {
+          (selectedYear === now.getFullYear() && selectedMonth > now.getMonth());
+        if (!isFuture) {
           const ensureRes = await fetch(`${BASE_URL}/api/savings/ensure-month`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
@@ -358,10 +358,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
         // Month data for plan tab (actual vs target)
         const nowP = new Date();
-        const isFutureOrCurrentP =
+        const isFutureP =
           selectedYear > nowP.getFullYear() ||
-          (selectedYear === nowP.getFullYear() && selectedMonth >= nowP.getMonth());
-        if (!isFutureOrCurrentP) {
+          (selectedYear === nowP.getFullYear() && selectedMonth > nowP.getMonth());
+        if (!isFutureP) {
           const ensureRes = await fetch(`${BASE_URL}/api/savings/ensure-month`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
@@ -580,7 +580,15 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   };
 
   const handleSaveAllocation = async () => {
-    if (!selectedInstrument || !newAmount || !savingsMonth) return;
+    if (!selectedInstrument || !newAmount) return;
+    const now = new Date();
+    const isFuture =
+      selectedYear > now.getFullYear() ||
+      (selectedYear === now.getFullYear() && selectedMonth > now.getMonth());
+    if (isFuture) {
+      Alert.alert('Error', 'Cannot add allocations for future months');
+      return;
+    }
     const parsedAmount = parseFloat(newAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       Alert.alert('Error', 'Please enter a valid amount greater than 0');
@@ -595,11 +603,24 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       if (isNaN(p) || p <= 0) { Alert.alert('Error', 'Price must be greater than 0'); return; }
     }
     try {
+      let monthId = savingsMonth?._id;
+      if (!monthId) {
+        const ensureRes = await fetch(`${BASE_URL}/api/savings/ensure-month`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anno: selectedYear, mese: selectedMonth }),
+        });
+        if (!ensureRes.ok) { Alert.alert('Error', 'Could not prepare month record'); return; }
+        const ensureJson = await ensureRes.json();
+        monthId = ensureJson.data?._id;
+        if (!monthId) { Alert.alert('Error', 'Could not get month ID'); return; }
+      }
+
       const body: any = { instrumentId: selectedInstrument._id, amount: parsedAmount };
       if (newQuantity) body.quantity = parseFloat(newQuantity);
       if (newPrice) body.priceAtAllocation = parseFloat(newPrice);
       const res = await fetch(
-        `${BASE_URL}/api/savings/months/${savingsMonth._id}/allocations`,
+        `${BASE_URL}/api/savings/months/${monthId}/allocations`,
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
@@ -611,7 +632,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         const errJson = await res.json().catch(() => ({}));
         Alert.alert('Error', errJson.error ?? 'Could not add allocation');
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Network error');
+    }
   };
 
   const handleDeleteAllocation = (allId: string) => {
