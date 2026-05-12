@@ -34,12 +34,12 @@ router.post('/ensure-month', authenticateToken, async (req, res) => {
     const targetAnno = parseInt(anno, 10);
     const targetMese = parseInt(mese, 10);
 
-    // Don't allow current or future months
+    // Don't allow future months (current month is allowed — partial snapshot)
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    if (targetAnno > currentYear || (targetAnno === currentYear && targetMese >= currentMonth)) {
-      return res.status(400).json({ success: false, error: 'Cannot ensure a current or future month' });
+    if (targetAnno > currentYear || (targetAnno === currentYear && targetMese > currentMonth)) {
+      return res.status(400).json({ success: false, error: 'Cannot ensure a future month' });
     }
 
     // Compute income and expenses from transactions
