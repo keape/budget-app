@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import BASE_URL from './config';
 import { useNotifications } from './contexts/NotificationContext';
 import NotificationBar from './components/NotificationBar';
 import MonthlySummaryChart from './components/MonthlySummaryChart';
+import { fetchWithRetry } from './utils/fetchWithRetry';
 
 function Home() {
   const navigate = useNavigate();
@@ -52,26 +51,23 @@ function Home() {
       const meseCorrente = oggi.getMonth();
       const annoCorrente = oggi.getFullYear();
       
-      const [speseRes, entrateRes, budgetRes] = await Promise.all([
-        axios.get(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        axios.get(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        axios.get(`${BASE_URL}/api/budget-settings`, { 
+      const [speseRes, entrateRes, budgetRes] = await Promise.allSettled([
+        fetchWithRetry('/api/spese', { params: { limit: 1000 }, headers: { 'Authorization': `Bearer ${token}` } }),
+        fetchWithRetry('/api/entrate', { params: { limit: 1000 }, headers: { 'Authorization': `Bearer ${token}` } }),
+        fetchWithRetry('/api/budget-settings', {
           params: { anno: annoCorrente, mese: meseCorrente },
-          headers: { 'Authorization': `Bearer ${token}` } 
-        }).catch(err => {
-          console.warn('Errore caricamento budget:', err);
-          return { data: { spese: {}, entrate: {} } };
-        })
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
       ]);
 
-      const tutte_spese = speseRes.data.spese || [];
-      const tutte_entrate = entrateRes.data.entrate || [];
+      const tutte_spese = speseRes.status === 'fulfilled' ? speseRes.value.data?.spese || [] : [];
+      const tutte_entrate = entrateRes.status === 'fulfilled' ? entrateRes.value.data?.entrate || [] : [];
       const tutte_transazioni = [...tutte_spese, ...tutte_entrate].sort((a, b) => 
         new Date(b.data || b.createdAt) - new Date(a.data || a.createdAt)
       );
 
       // Elabora i dati del budget
-      const budgetSettings = budgetRes.data || { spese: {}, entrate: {} };
+      const budgetSettings = budgetRes.status === 'fulfilled' ? (budgetRes.value.data || { spese: {}, entrate: {} }) : { spese: {}, entrate: {} };
       const totaleBudgetSpese = Object.values(budgetSettings.spese || {}).reduce((sum, val) => sum + val, 0);
       const totaleBudgetEntrate = Object.values(budgetSettings.entrate || {}).reduce((sum, val) => sum + val, 0);
       
@@ -136,11 +132,11 @@ function Home() {
       });
 
       // Savings integration
-      axios.post(`${BASE_URL}/api/savings/auto-close`).catch(() => {});
-      const savingsRes = await axios.get(`${BASE_URL}/api/savings/months`).catch(() => null);
+      fetchWithRetry('/api/savings/auto-close', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }).catch(() => {});
+      const savingsRes = await fetchWithRetry('/api/savings/months', { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
       if (savingsRes?.data?.success && savingsRes.data.data.length > 0) {
         const latest = savingsRes.data.data[0];
-        const allocRes = await axios.get(`${BASE_URL}/api/savings/months/${latest._id}/allocations`).catch(() => null);
+        const allocRes = await fetchWithRetry(`/api/savings/months/${latest._id}/allocations`, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
         let allocatedPercent = 0;
         if (allocRes?.data?.success && latest.savings > 0) {
           const total = allocRes.data.data.reduce((sum, a) => sum + Number(a.amount ?? 0), 0);
