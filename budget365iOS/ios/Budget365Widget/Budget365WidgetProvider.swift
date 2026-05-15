@@ -137,7 +137,7 @@ struct Budget365WidgetProvider: TimelineProvider {
         request.timeoutInterval = 20
 
         URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
+            if error != nil {
                 completion(Budget365Entry(
                     date: Date(),
                     saldo: 0,
