@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { warmupBackend } from '../utils/apiClient';
+import { syncToken, clearToken } from '../utils/tokenSync';
 
 interface AuthContextData {
     isLoading: boolean;
@@ -48,6 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await AsyncStorage.setItem('token', token);
             await AsyncStorage.setItem('username', username);
             setUserToken(token);
+            // Sincronizza token con widget iOS
+            syncToken(token, username);
         } catch (e) {
             console.error(e);
         } finally {
@@ -61,6 +64,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await AsyncStorage.removeItem('token');
             await AsyncStorage.removeItem('username');
             setUserToken(null);
+            // Rimuovi token dal widget iOS
+            clearToken();
         } catch (e) {
             console.error(e);
         } finally {

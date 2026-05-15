@@ -12,6 +12,7 @@ const categorieRoutes = require('./routes/categorie');
 const transazioniPeriodicheRoutes = require('./routes/transazioniPeriodiche');
 const savingsRoutes = require('./routes/savings');
 const instrumentsRoutes = require('./routes/instruments');
+const widgetRoutes = require('./routes/widget');
 
 const app = express();
 
@@ -105,6 +106,7 @@ app.use('/api/categorie', categorieRoutes);
 app.use('/api/transazioni-periodiche', transazioniPeriodicheRoutes);
 app.use('/api/savings', savingsRoutes);
 app.use('/api/instruments', instrumentsRoutes);
+app.use('/api/widget', widgetRoutes);
 
 // Root test route
 app.get('/', (req, res) => {
