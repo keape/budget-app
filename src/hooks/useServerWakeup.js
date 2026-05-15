@@ -10,7 +10,7 @@ export const useServerWakeup = () => {
   const ping = useCallback(async () => {
     try {
       const res = await fetch(`${BASE_URL}/api/health`, {
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(15000),
       });
       if (res.ok && mountedRef.current) {
         setStatus('ready');

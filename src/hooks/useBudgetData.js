@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import BASE_URL from '../config';
+import { fetchWithRetry } from '../utils/fetchWithRetry';
 
 export const useBudgetData = (meseCorrente, annoCorrente) => {
   const [speseMensili, setSpeseMensili] = useState({});
@@ -37,7 +36,7 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
           // Crea una richiesta per ogni mese dell'anno (1-12 per mantenere coerenza con il backend)
           for (let mese = 1; mese <= 12; mese++) {
             budgetPromises.push(
-              axios.get(`${BASE_URL}/api/budget-settings`, {
+              fetchWithRetry('/api/budget-settings', {
                 params: { 
                   anno: annoCorrente,
                   mese: mese - 1  // Converte a indice 0-based per il backend
@@ -158,7 +157,7 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
           setBudgetSettings(budgetFinale);
         } else {
           // Per un mese specifico, recupera solo il budget di quel mese
-          const settingsResponse = await axios.get(`${BASE_URL}/api/budget-settings`, {
+          const settingsResponse = await fetchWithRetry('/api/budget-settings', {
             params: { 
               anno: annoCorrente,
               mese: meseCorrente - 1
@@ -171,19 +170,19 @@ export const useBudgetData = (meseCorrente, annoCorrente) => {
         }
 
         // Fetch Transactions
-        const [speseResponse, entrateResponse] = await Promise.all([
-          axios.get(`${BASE_URL}/api/spese`, {
+        const [speseResponse, entrateResponse] = await Promise.allSettled([
+          fetchWithRetry('/api/spese', {
               params: { page: 1, limit: 10000 },
               headers: { 'Authorization': `Bearer ${token}` }
            }),
-          axios.get(`${BASE_URL}/api/entrate`, {
+          fetchWithRetry('/api/entrate', {
               params: { page: 1, limit: 10000 },
               headers: { 'Authorization': `Bearer ${token}` }
            })
         ]);
 
-        const allSpese = speseResponse.data.spese || [];
-        const allEntrate = entrateResponse.data.entrate || [];
+        const allSpese = speseResponse.status === 'fulfilled' ? (speseResponse.value.data?.spese || []) : [];
+        const allEntrate = entrateResponse.status === 'fulfilled' ? (entrateResponse.value.data?.entrate || []) : [];
         console.log(`Recuperate ${allSpese.length} spese e ${allEntrate.length} entrate.`);
 
         // Filter Transactions by Selected Month or Year
