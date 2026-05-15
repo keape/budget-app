@@ -8,23 +8,64 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		174AFF5953269C5845C7D7C0 /* Budget365WidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F83AE651B1C53405D804229D /* Budget365WidgetProvider.swift */; };
+		2289205B244A05523A2ACE05 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE5327DCC63C8DF492285EDE /* SwiftUI.framework */; };
+		3691E53E4233CB363EEC155E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 351C9B15A9AAA531BE596ED2 /* WidgetKit.framework */; };
+		3AF29715FDDA9286D2FEA770 /* Budget365WidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81644242F94C6740DDE46E78 /* Budget365WidgetView.swift */; };
+		3F958A3169B863B625B42D9D /* TokenSyncModule.m in Sources */ = {isa = PBXBuildFile; fileRef = DE338C856EB19CCFB49DC520 /* TokenSyncModule.m */; };
+		5262CD83CBB5A5CD30AB1106 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E7F088B162591FB5C8D6D25 /* Foundation.framework */; };
+		720B8BB79DF5F8F7C2874299 /* Budget365Widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDFD228C8BB9BD3B5C68F557 /* Budget365Widget.swift */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		813A59AFB08ED4660C1DDF93 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		9D83D7CFA8313A504DF8BD66 /* Budget365Widget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = CBBF902366079B5EF2D22572 /* Budget365Widget.appex */; };
 		CCACA8424B2519BCDFA2F7C2 /* libPods-Budget365.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D1BB7A0AE884DF884E46141A /* libPods-Budget365.a */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8C47B8258B81ACC3BD1505F7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 48C66751E521DCB8BF92C170;
+			remoteInfo = Budget365Widget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D21AD0F74515D5A8C49E0A43 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				9D83D7CFA8313A504DF8BD66 /* Budget365Widget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		13B07F961A680F5B00A75B9A /* Budget365.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Budget365.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Budget365/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Budget365/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = Budget365/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		351C9B15A9AAA531BE596ED2 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/WidgetKit.framework; sourceTree = DEVELOPER_DIR; };
 		354E88F178E50BFD2ED567EA /* Pods-Budget365.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Budget365.release.xcconfig"; path = "Target Support Files/Pods-Budget365/Pods-Budget365.release.xcconfig"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Budget365/AppDelegate.swift; sourceTree = "<group>"; };
+		7E7F088B162591FB5C8D6D25 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		81644242F94C6740DDE46E78 /* Budget365WidgetView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Budget365WidgetView.swift; path = Budget365Widget/Budget365WidgetView.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Budget365/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		BE5327DCC63C8DF492285EDE /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
+		CBBF902366079B5EF2D22572 /* Budget365Widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Budget365Widget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CDFD228C8BB9BD3B5C68F557 /* Budget365Widget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Budget365Widget.swift; path = Budget365Widget/Budget365Widget.swift; sourceTree = "<group>"; };
+		CE2E3729ED849A0CAAEF4BDE /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = Info.plist; path = Budget365Widget/Info.plist; sourceTree = "<group>"; };
 		D1BB7A0AE884DF884E46141A /* libPods-Budget365.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Budget365.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE338C856EB19CCFB49DC520 /* TokenSyncModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; name = TokenSyncModule.m; path = Budget365/TokenSyncModule.m; sourceTree = "<group>"; };
 		DF26FD5413B5C4A98776929A /* Pods-Budget365.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Budget365.debug.xcconfig"; path = "Target Support Files/Pods-Budget365/Pods-Budget365.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F83AE651B1C53405D804229D /* Budget365WidgetProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Budget365WidgetProvider.swift; path = Budget365Widget/Budget365WidgetProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,6 +74,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCACA8424B2519BCDFA2F7C2 /* libPods-Budget365.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4102050C50DA5013997664D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5262CD83CBB5A5CD30AB1106 /* Foundation.framework in Frameworks */,
+				3691E53E4233CB363EEC155E /* WidgetKit.framework in Frameworks */,
+				2289205B244A05523A2ACE05 /* SwiftUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -56,6 +107,7 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				D1BB7A0AE884DF884E46141A /* libPods-Budget365.a */,
+				E45406C2F0EDAF7426F9B5F9 /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -75,6 +127,11 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				DE338C856EB19CCFB49DC520 /* TokenSyncModule.m */,
+				CDFD228C8BB9BD3B5C68F557 /* Budget365Widget.swift */,
+				F83AE651B1C53405D804229D /* Budget365WidgetProvider.swift */,
+				81644242F94C6740DDE46E78 /* Budget365WidgetView.swift */,
+				CE2E3729ED849A0CAAEF4BDE /* Info.plist */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -85,6 +142,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* Budget365.app */,
+				CBBF902366079B5EF2D22572 /* Budget365Widget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -96,6 +154,16 @@
 				354E88F178E50BFD2ED567EA /* Pods-Budget365.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		E45406C2F0EDAF7426F9B5F9 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				7E7F088B162591FB5C8D6D25 /* Foundation.framework */,
+				351C9B15A9AAA531BE596ED2 /* WidgetKit.framework */,
+				BE5327DCC63C8DF492285EDE /* SwiftUI.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,15 +180,34 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				09B1E1A53F76E97DA48C2503 /* [CP] Embed Pods Frameworks */,
 				8B41AA1624EDF0BD3A9AEF1F /* [CP] Copy Pods Resources */,
+				D21AD0F74515D5A8C49E0A43 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C399F75D0C43B64F3EF4651D /* PBXTargetDependency */,
 			);
 			name = Budget365;
 			productName = Budget365;
 			productReference = 13B07F961A680F5B00A75B9A /* Budget365.app */;
 			productType = "com.apple.product-type.application";
+		};
+		48C66751E521DCB8BF92C170 /* Budget365Widget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D57C99852D33525A37911BFE /* Build configuration list for PBXNativeTarget "Budget365Widget" */;
+			buildPhases = (
+				545DD693506C0949A521A781 /* Sources */,
+				D4102050C50DA5013997664D /* Frameworks */,
+				4538EFB407952B760AE47A81 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Budget365Widget;
+			productName = Budget365Widget;
+			productReference = CBBF902366079B5EF2D22572 /* Budget365Widget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -149,6 +236,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* Budget365 */,
+				48C66751E521DCB8BF92C170 /* Budget365Widget */,
 			);
 		};
 /* End PBXProject section */
@@ -161,6 +249,13 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				813A59AFB08ED4660C1DDF93 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4538EFB407952B760AE47A81 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -248,10 +343,30 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				3F958A3169B863B625B42D9D /* TokenSyncModule.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		545DD693506C0949A521A781 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				720B8BB79DF5F8F7C2874299 /* Budget365Widget.swift in Sources */,
+				174AFF5953269C5845C7D7C0 /* Budget365WidgetProvider.swift in Sources */,
+				3AF29715FDDA9286D2FEA770 /* Budget365WidgetView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C399F75D0C43B64F3EF4651D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Budget365Widget;
+			target = 48C66751E521DCB8BF92C170 /* Budget365Widget */;
+			targetProxy = 8C47B8258B81ACC3BD1505F7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -318,6 +433,41 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		412E2C0A29320B74921FA179 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_ID_PREFIX = com.keape.budget365;
+				CODE_SIGN_ENTITLEMENTS = Budget365Widget/Budget365Widget.entitlements;
+				DEVELOPMENT_TEAM = 4A5H2U7Q42;
+				INFOPLIST_FILE = Budget365Widget/Info.plist;
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).Budget365Widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		43B4A6DD6B782BE3F896FF8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_ID_PREFIX = com.keape.budget365;
+				CODE_SIGN_ENTITLEMENTS = Budget365Widget/Budget365Widget.entitlements;
+				DEVELOPMENT_TEAM = 4A5H2U7Q42;
+				INFOPLIST_FILE = Budget365Widget/Info.plist;
+				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).Budget365Widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -497,6 +647,15 @@
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
 				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D57C99852D33525A37911BFE /* Build configuration list for PBXNativeTarget "Budget365Widget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				43B4A6DD6B782BE3F896FF8E /* Release */,
+				412E2C0A29320B74921FA179 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
