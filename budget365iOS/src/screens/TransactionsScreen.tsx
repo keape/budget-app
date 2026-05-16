@@ -14,10 +14,12 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { API_URL } from '../config';
 import { warmupBackend } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
+const ACCENT = '#c4f23a';
 
 interface Transaction {
   _id: string;
@@ -30,7 +32,8 @@ interface Transaction {
 
 const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const { userToken } = useAuth();
-  const { currency, isDarkMode } = useSettings();
+  const { currency, showBalance } = useSettings();
+  const t = useAppTheme();
   const navigation = useNavigation<any>();
 
   // Data State
@@ -178,6 +181,12 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
     }, 0);
   };
 
+  const formatCurrency = (value: number, signed = false) => {
+    if (!showBalance) return '****';
+    const sign = signed ? (value >= 0 ? '+' : '-') : '';
+    return `${sign}${currency}${Math.abs(value).toFixed(2)}`;
+  };
+
   const deleteTransaction = async (id: string, tipo: string) => {
     Alert.alert(
       'Confirm deletion',
@@ -216,37 +225,37 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const renderTransaction = ({ item }: { item: Transaction }) => {
     const isEntrata = item.tipo === 'entrata';
     return (
-      <View style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]}>
+      <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
         <View style={{ flex: 1 }}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.catText, isDarkMode && { color: '#E5E7EB' }]}>{item.categoria}</Text>
-            <View style={[styles.badge, isEntrata ? styles.badgeEntrata : styles.badgeUscita]}>
-              <Text style={[styles.badgeText, isEntrata ? styles.badgeTextEntrata : styles.badgeTextUscita]}>
+            <Text style={[styles.catText, { color: t.text }]} numberOfLines={1}>{item.categoria}</Text>
+            <View style={[styles.badge, { backgroundColor: isEntrata ? 'rgba(22,163,74,0.14)' : 'rgba(220,38,38,0.14)' }]}>
+              <Text style={[styles.badgeText, { color: isEntrata ? t.pos : t.neg }]}>
                 {isEntrata ? 'Income' : 'Expense'}
               </Text>
             </View>
           </View>
 
-          <Text style={[styles.amountText, isEntrata ? styles.amountEntrata : styles.amountUscita]}>
-            {isEntrata ? '+' : '-'}{currency}{Math.abs(item.importo).toFixed(2)}
+          <Text style={[styles.amountText, { color: isEntrata ? t.pos : t.neg }]}>
+            {formatCurrency(isEntrata ? Math.abs(item.importo) : -Math.abs(item.importo), true)}
           </Text>
 
           {item.descrizione ? (
-            <Text style={[styles.descText, isDarkMode && { color: '#9CA3AF' }]}>{item.descrizione}</Text>
+            <Text style={[styles.descText, { color: t.text2 }]} numberOfLines={2}>{item.descrizione}</Text>
           ) : null}
 
-          <Text style={[styles.dateText, isDarkMode && { color: '#6B7280' }]}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
+          <Text style={[styles.dateText, { color: t.text3 }]}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
         </View>
 
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionBtn, isDarkMode ? { backgroundColor: '#1e1b4b', borderColor: '#312e81' } : { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' }]}
+            style={[styles.actionBtn, { backgroundColor: t.surface2, borderColor: t.line }]}
             onPress={() => navigation.navigate('AddTransaction', { transactionToEdit: item })}
           >
             <Text style={{ fontSize: 16 }}>✏️</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, isDarkMode ? { backgroundColor: '#450a0a', borderColor: '#7f1d1d' } : { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
+            style={[styles.actionBtn, { backgroundColor: t.surface2, borderColor: t.line }]}
             onPress={() => deleteTransaction(item._id, item.tipo)}
           >
             <Text style={{ fontSize: 16 }}>🗑️</Text>
@@ -261,107 +270,133 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
       [...new Set([...categorieSpese, ...categorieEntrate])].sort();
 
   return (
-    <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
+    <View style={[styles.container, { backgroundColor: t.bg }]}>
+      <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
+        <Text style={[styles.heroEyebrow, { color: t.text3 }]}>TRANSACTIONS</Text>
+        <Text style={[styles.heroAmount, { color: calculateTotal() >= 0 ? t.pos : t.neg }]}>
+          {formatCurrency(calculateTotal(), true)}
+        </Text>
+        <View style={[styles.flowRow, { backgroundColor: t.surface2 }]}>
+          <View style={styles.flowCell}>
+            <View style={[styles.flowDot, { backgroundColor: ACCENT }]} />
+            <View>
+              <Text style={[styles.flowLabel, { color: t.text3 }]}>FOUND</Text>
+              <Text style={[styles.flowVal, { color: t.text }]}>{filteredTransactions.length}</Text>
+            </View>
+          </View>
+          <View style={[styles.flowDivider, { backgroundColor: t.line2 }]} />
+          <View style={styles.flowCell}>
+            <View style={[styles.flowDot, { backgroundColor: filterType === 'entrata' ? t.pos : filterType === 'uscita' ? t.neg : t.text3 }]} />
+            <View>
+              <Text style={[styles.flowLabel, { color: t.text3 }]}>FILTER</Text>
+              <Text style={[styles.flowVal, { color: t.text }]}>
+                {filterType === 'tutte' ? 'All' : filterType === 'entrata' ? 'Income' : 'Expense'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity
+          style={[styles.actionPill, { backgroundColor: t.surface, borderColor: t.neg }]}
+          onPress={() => navigation.navigate('AddTransaction')}
+        >
+          <Text style={[styles.actionPillText, { color: t.neg }]}>+ Expense</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionPill, { backgroundColor: t.surface, borderColor: t.pos }]}
+          onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
+        >
+          <Text style={[styles.actionPillText, { color: t.pos }]}>+ Income</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Header & Search */}
-      <View style={[styles.searchContainer, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
+      <View style={[styles.searchContainer, { backgroundColor: t.surface, borderColor: t.line }]}>
         <TextInput
-          style={[styles.searchInput, isDarkMode && { backgroundColor: '#1F2937', color: '#F9FAFB' }]}
+          style={[styles.searchInput, { backgroundColor: t.surface2, color: t.text, borderColor: searchQuery ? ACCENT : t.line }]}
           placeholder="🔍 Search in descriptions..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={t.text3}
         />
-        <TouchableOpacity style={styles.filterToggleBtn} onPress={() => setShowFilters(!showFilters)}>
-          <Text style={[styles.filterToggleText, isDarkMode && { color: '#818CF8' }]}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
+        <TouchableOpacity style={[styles.filterToggleBtn, { borderColor: t.line2 }]} onPress={() => setShowFilters(!showFilters)}>
+          <Text style={[styles.filterToggleText, { color: t.text2 }]}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Filters Section */}
       {showFilters && (
-        <View style={[styles.filtersSection, isDarkMode && { backgroundColor: '#111827', borderBottomColor: '#374151' }]}>
-          <Text style={[styles.filterLabel, isDarkMode && { color: '#E5E7EB' }]}>Transaction Type:</Text>
-          <View style={styles.typeRow}>
-            {(['tutte', 'entrata', 'uscita'] as const).map(t => (
+        <View style={[styles.filtersSection, { backgroundColor: t.surface, borderColor: t.line }]}>
+          <Text style={[styles.filterLabel, { color: t.text3 }]}>TRANSACTION TYPE</Text>
+          <View style={[styles.typeRow, { backgroundColor: t.surface2 }]}>
+            {(['tutte', 'entrata', 'uscita'] as const).map(option => (
               <TouchableOpacity
-                key={t}
+                key={option}
                 style={[
                   styles.typeBtn,
-                  isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' },
-                  filterType === t && styles.typeBtnActive
+                  filterType === option && { backgroundColor: option === 'entrata' ? '#16a34a' : option === 'uscita' ? '#dc2626' : ACCENT }
                 ]}
                 onPress={() => {
-                  setFilterType(t);
+                  setFilterType(option);
                   setFilterCategory(''); // Reset cat on type change
                 }}
               >
-                <Text style={[styles.typeBtnText, isDarkMode && { color: '#D1D5DB' }, filterType === t && styles.typeBtnTextActive]}>
-                  {t === 'tutte' ? 'All' : t === 'entrata' ? 'Income' : 'Expense'}
+                <Text style={[styles.typeBtnText, { color: filterType === option ? '#0c0c0c' : t.text2 }, filterType === 'entrata' && option === 'entrata' && { color: '#fff' }, filterType === 'uscita' && option === 'uscita' && { color: '#fff' }]}>
+                  {option === 'tutte' ? 'All' : option === 'entrata' ? 'Income' : 'Expense'}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={[styles.filterLabel, isDarkMode && { color: '#E5E7EB' }]}>Category:</Text>
+          <Text style={[styles.filterLabel, { color: t.text3 }]}>CATEGORY</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
             <TouchableOpacity
-              style={[styles.catBtn, isDarkMode && { backgroundColor: '#374151' }, filterCategory === '' && styles.catBtnActive]}
+              style={[styles.catBtn, { backgroundColor: t.surface2, borderColor: t.line }, filterCategory === '' && { backgroundColor: ACCENT, borderColor: ACCENT }]}
               onPress={() => setFilterCategory('')}
             >
-              <Text style={[styles.catBtnText, isDarkMode && { color: '#D1D5DB' }, filterCategory === '' && styles.catBtnTextActive]}>All</Text>
+              <Text style={[styles.catBtnText, { color: filterCategory === '' ? '#0c0c0c' : t.text2 }]}>All</Text>
             </TouchableOpacity>
             {currentCategories.map(cat => (
               <TouchableOpacity
                 key={cat}
-                style={[styles.catBtn, isDarkMode && { backgroundColor: '#374151' }, filterCategory === cat && styles.catBtnActive]}
+                style={[styles.catBtn, { backgroundColor: t.surface2, borderColor: t.line }, filterCategory === cat && { backgroundColor: ACCENT, borderColor: ACCENT }]}
                 onPress={() => setFilterCategory(cat)}
               >
-                <Text style={[styles.catBtnText, isDarkMode && { color: '#D1D5DB' }, filterCategory === cat && styles.catBtnTextActive]}>{cat}</Text>
+                <Text style={[styles.catBtnText, { color: filterCategory === cat ? '#0c0c0c' : t.text2 }]}>{cat}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          <Text style={[styles.filterLabel, isDarkMode && { color: '#E5E7EB' }]}>Date Range (YYYY-MM-DD):</Text>
+          <Text style={[styles.filterLabel, { color: t.text3 }]}>DATE RANGE (YYYY-MM-DD)</Text>
           <View style={styles.dateRow}>
             <TextInput
-              style={[styles.dateInput, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+              style={[styles.dateInput, { backgroundColor: t.surface2, borderColor: t.line, color: t.text }]}
               placeholder="From (e.g. 2024-01-01)"
               value={startDate}
               onChangeText={setStartDate}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={t.text3}
             />
             <TextInput
-              style={[styles.dateInput, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
+              style={[styles.dateInput, { backgroundColor: t.surface2, borderColor: t.line, color: t.text }]}
               placeholder="To (e.g. 2024-12-31)"
               value={endDate}
               onChangeText={setEndDate}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={t.text3}
             />
           </View>
 
-          <TouchableOpacity style={[styles.resetBtn, isDarkMode && { backgroundColor: '#374151' }]} onPress={resetFilters}>
-            <Text style={[styles.resetBtnText, isDarkMode && { color: '#D1D5DB' }]}>Reset Filters</Text>
+          <TouchableOpacity style={[styles.resetBtn, { backgroundColor: t.surface2, borderColor: t.line2 }]} onPress={resetFilters}>
+            <Text style={[styles.resetBtnText, { color: t.text2 }]}>Reset Filters</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Summary */}
-      <View style={[styles.summaryBar, isDarkMode && { backgroundColor: '#1e1b4b', borderBottomColor: '#312e81' }]}>
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, isDarkMode && { color: '#9CA3AF' }]}>Found</Text>
-          <Text style={[styles.summaryValue, isDarkMode && { color: '#F9FAFB' }]}>{filteredTransactions.length}</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={[styles.summaryLabel, isDarkMode && { color: '#9CA3AF' }]}>Total</Text>
-          <Text style={[styles.summaryValue, { color: calculateTotal() >= 0 ? '#10B981' : '#F87171' }]}>
-            {calculateTotal() >= 0 ? '+' : ''}{currency}{calculateTotal().toFixed(2)}
-          </Text>
-        </View>
-      </View>
-
       {/* List */}
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: 'center' }}>
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color={ACCENT} />
         </View>
       ) : (
         <FlatList
@@ -370,125 +405,216 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           renderItem={renderTransaction}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No transactions found.</Text>
+            <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line }]}>
+              <Text style={[styles.emptyText, { color: t.text3 }]}>No transactions found.</Text>
+            </View>
           }
         />
       )}
+
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: ACCENT }]}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate('AddTransaction')}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1 },
+  hero: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+  },
+  heroEyebrow: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1.4,
+    marginBottom: 8,
+  },
+  heroAmount: {
+    fontSize: 40,
+    fontWeight: '700',
+    letterSpacing: -1,
+    marginBottom: 18,
+    lineHeight: 46,
+  },
+  flowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 10,
+  },
+  flowCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  flowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  flowLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  flowVal: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  flowDivider: {
+    width: 1,
+    height: 28,
+    marginHorizontal: 8,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 12,
+  },
+  actionPill: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  actionPillText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   searchContainer: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    borderWidth: 1,
     padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   searchInput: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1,
     padding: 12,
     fontSize: 16,
     marginBottom: 8,
-    color: '#111827',
   },
-  filterToggleBtn: { alignSelf: 'center' },
-  filterToggleText: { color: '#4F46E5', fontWeight: 'bold' },
+  filterToggleBtn: {
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  filterToggleText: { fontWeight: '600', fontSize: 13 },
 
   filtersSection: {
+    marginHorizontal: 16,
+    marginBottom: 12,
     padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderRadius: 16,
+    borderWidth: 1,
   },
   filterLabel: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
+    letterSpacing: 1,
     marginBottom: 8,
   },
-  typeRow: { flexDirection: 'row', marginBottom: 16 },
+  typeRow: { flexDirection: 'row', marginBottom: 16, borderRadius: 12, padding: 4, gap: 4 },
   typeBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    borderRadius: 9,
   },
-  typeBtnActive: { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
-  typeBtnText: { color: '#374151' },
-  typeBtnTextActive: { color: 'white' },
+  typeBtnText: { fontSize: 13, fontWeight: '600' },
 
   catBtn: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
     marginRight: 8,
   },
-  catBtnActive: { backgroundColor: '#4F46E5' },
-  catBtnText: { color: '#374151', fontSize: 13 },
-  catBtnTextActive: { color: 'white' },
+  catBtnText: { fontSize: 13, fontWeight: '600' },
 
   dateRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   dateInput: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    color: '#111827',
   },
 
   resetBtn: {
-    backgroundColor: '#E5E7EB',
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
     alignItems: 'center',
   },
-  resetBtnText: { color: '#374151', fontWeight: 'bold' },
-
-  summaryBar: {
-    flexDirection: 'row',
-    padding: 12,
-    backgroundColor: '#EEF2FF',
-    justifyContent: 'space-around',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E7FF',
-  },
-  summaryItem: { alignItems: 'center' },
-  summaryLabel: { fontSize: 12, color: '#6B7280' },
-  summaryValue: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+  resetBtnText: { fontWeight: '600' },
 
   card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginRight: 8 },
-  catText: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  badgeEntrata: { backgroundColor: '#D1FAE5' },
-  badgeUscita: { backgroundColor: '#FEE2E2' },
-  badgeText: { fontSize: 10, fontWeight: 'bold' },
-  badgeTextEntrata: { color: '#065F46' },
-  badgeTextUscita: { color: '#991B1B' },
-  amountText: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
-  amountEntrata: { color: '#059669' },
-  amountUscita: { color: '#DC2626' },
-  descText: { fontSize: 14, color: '#6B7280', fontStyle: 'italic', marginBottom: 4 },
-  dateText: { fontSize: 12, color: '#9CA3AF' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, marginRight: 8, gap: 8 },
+  catText: { fontSize: 14, fontWeight: '600', flex: 1 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  badgeText: { fontSize: 10, fontWeight: '700' },
+  amountText: { fontSize: 20, fontWeight: '700', marginBottom: 4, letterSpacing: -0.2 },
+  descText: { fontSize: 14, marginBottom: 4 },
+  dateText: { fontSize: 12 },
   actionButtons: { flexDirection: 'row', alignItems: 'center' },
-  actionBtn: { padding: 6, marginLeft: 4, borderRadius: 6, borderWidth: 1 },
-  emptyText: { textAlign: 'center', marginTop: 40, color: '#6B7280' },
+  actionBtn: { width: 36, height: 36, marginLeft: 6, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    padding: 18,
+    alignItems: 'center',
+  },
+  emptyText: { textAlign: 'center', fontSize: 13, fontWeight: '500', fontStyle: 'italic' },
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    zIndex: 100,
+  },
+  fabIcon: {
+    fontSize: 28,
+    fontWeight: '400',
+    color: '#0c0c0c',
+    lineHeight: 30,
+  },
 });
 
 export default TransactionsScreen;

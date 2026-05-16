@@ -7,23 +7,74 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     RefreshControl,
-    Dimensions,
-    Image,
+    Modal,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
+    Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { API_URL } from '../config';
 import { warmupBackend } from '../utils/apiClient';
 import { useFocusEffect } from '@react-navigation/native';
 
 const BASE_URL = API_URL;
+const ACCENT = '#c4f23a';
+
+const CATEGORY_COLORS = [
+    '#c4f23a', '#7dd3fc', '#fb923c', '#f472b6', '#a78bfa',
+    '#34d399', '#fbbf24', '#f87171', '#60a5fa', '#facc15',
+];
+
+const MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function getCategoryColor(key: string): string {
+    let hash = 0;
+    const s = (key || '?').toString();
+    for (let i = 0; i < s.length; i++) {
+        hash = s.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length];
+}
 
 const HomeScreen = ({ navigation }: { navigation: any }) => {
     const { userToken, logout } = useAuth();
-    const { currency, showBalance, isDarkMode } = useSettings();
+    const { currency, showBalance } = useSettings();
+    const t = useAppTheme();
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
+
+    // ── Month navigation ────────────────────────────────────
+    const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+
+    const prevMonth = () => {
+        if (selectedMonth === 0) {
+            setSelectedMonth(11);
+            setSelectedYear(y => y - 1);
+        } else {
+            setSelectedMonth(m => m - 1);
+        }
+    };
+    const nextMonth = () => {
+        if (selectedMonth === 11) {
+            setSelectedMonth(0);
+            setSelectedYear(y => y + 1);
+        } else {
+            setSelectedMonth(m => m + 1);
+        }
+    };
+    const isFutureMonth =
+        selectedYear > new Date().getFullYear() ||
+        (selectedYear === new Date().getFullYear() && selectedMonth > new Date().getMonth());
+
+    // ── Dashboard data ──────────────────────────────────────
     const [riepilogoData, setRiepilogoData] = useState({
         totaleSpeseMese: 0,
         totaleEntrateMese: 0,
@@ -47,6 +98,15 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         monthId: string | null;
     } | null>(null);
 
+    // ── Quick-add modal ─────────────────────────────────────
+    const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+    const [qaType, setQaType] = useState<'uscita' | 'entrata'>('uscita');
+    const [qaAmount, setQaAmount] = useState('');
+    const [qaCategory, setQaCategory] = useState('');
+    const [qaDescription, setQaDescription] = useState('');
+    const [isSavingQa, setIsSavingQa] = useState(false);
+
+    // ── Header settings ─────────────────────────────────────
     useEffect(() => {
         navigation.setOptions({
             headerRight: () => (
@@ -57,31 +117,20 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         });
     }, [navigation, logout]);
 
-    useFocusEffect(
-        useCallback(() => {
-            if (userToken) {
-                abortControllerRef.current?.abort();
-                abortControllerRef.current = new AbortController();
-                caricaDati(abortControllerRef.current.signal);
-            }
-            return () => {
-                abortControllerRef.current?.abort();
-            };
-        }, [userToken])
-    );
-
+    // ── Data loading ────────────────────────────────────────
     const caricaDati = async (signal?: AbortSignal) => {
         try {
             await warmupBackend();
             if (signal?.aborted) return;
-            const oggi = new Date();
-            const meseCorrente = oggi.getMonth();
-            const annoCorrente = oggi.getFullYear();
+
+            const mese = selectedMonth;
+            const anno = selectedYear;
+            const inizioMese = new Date(anno, mese, 1);
 
             const [speseRes, entrateRes, budgetRes] = await Promise.all([
                 fetch(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
                 fetch(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
-                fetch(`${BASE_URL}/api/budget-settings?anno=${annoCorrente}&mese=${meseCorrente}`, {
+                fetch(`${BASE_URL}/api/budget-settings?anno=${anno}&mese=${mese}`, {
                     headers: { 'Authorization': `Bearer ${userToken}` },
                     signal,
                 })
@@ -97,17 +146,23 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
             const tutte_spese = speseData.spese || [];
             const tutte_entrate = entrateData.entrate || [];
+
+            // Filter by selected month
+            const speseMese = tutte_spese.filter((s: any) => {
+                const d = new Date(s.data);
+                return d.getFullYear() === anno && d.getMonth() === mese;
+            });
+            const entrateMese = tutte_entrate.filter((e: any) => {
+                const d = new Date(e.data);
+                return d.getFullYear() === anno && d.getMonth() === mese;
+            });
+
             const tutte_transazioni = [
-                ...tutte_spese.map((s: any) => ({ ...s, type: 'uscita', importo: -Math.abs(s.importo) })),
-                ...tutte_entrate.map((e: any) => ({ ...e, type: 'entrata', importo: Math.abs(e.importo) }))
+                ...speseMese.map((s: any) => ({ ...s, type: 'uscita', importo: -Math.abs(s.importo) })),
+                ...entrateMese.map((e: any) => ({ ...e, type: 'entrata', importo: Math.abs(e.importo) }))
             ].sort((a, b) =>
                 new Date(b.data || b.createdAt).getTime() - new Date(a.data || a.createdAt).getTime()
             );
-
-            // Totali Mese
-            const inizioMese = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
-            const speseMese = tutte_spese.filter((s: any) => new Date(s.data).getTime() >= inizioMese.getTime());
-            const entrateMese = tutte_entrate.filter((e: any) => new Date(e.data).getTime() >= inizioMese.getTime());
 
             const totaleSpeseMese = speseMese.reduce((sum: number, s: any) => sum + Math.abs(s.importo), 0);
             const totaleEntrateMese = entrateMese.reduce((sum: number, e: any) => sum + e.importo, 0);
@@ -117,13 +172,12 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             speseMese.forEach((s: any) => {
                 catSpese[s.categoria] = (catSpese[s.categoria] || 0) + Math.abs(s.importo);
             });
-
             const catEntrate: { [key: string]: number } = {};
             entrateMese.forEach((e: any) => {
                 catEntrate[e.categoria] = (catEntrate[e.categoria] || 0) + e.importo;
             });
 
-            // Budget (somma valori configurati)
+            // Budget
             const totBudgetSpese = Object.values(budgetSettings.spese || {}).reduce((a: any, b: any) => a + b, 0) as number;
             const totBudgetEntrate = Object.values(budgetSettings.entrate || {}).reduce((a: any, b: any) => a + b, 0) as number;
 
@@ -144,39 +198,56 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 budgetEntrateMese: totBudgetEntrate
             });
 
-            // Fire-and-forget auto-close — don't await, don't block rendering
-            fetch(`${BASE_URL}/api/savings/auto-close`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-                // no signal — intentionally fire-and-forget
-            }).catch(() => {}); // ignore errors
+            // Fire-and-forget auto-close — only for current month
+            const now = new Date();
+            if (mese === now.getMonth() && anno === now.getFullYear()) {
+                fetch(`${BASE_URL}/api/savings/auto-close`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                }).catch(() => {});
+            }
 
             // Fetch savings months
-            const savingsRes = await fetch(`${BASE_URL}/api/savings/months`, {
-                headers: { 'Authorization': `Bearer ${userToken}` },
-                signal,
-            });
-            if (savingsRes.ok) {
-                const savingsJson = await savingsRes.json();
-                if (signal?.aborted) return;
-                if (savingsJson.success && savingsJson.data.length > 0) {
-                    const latestMonth = savingsJson.data[0]; // already sorted desc
-                    // Fetch allocations for this month to compute allocated %
-                    const allocRes = await fetch(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
-                        headers: { 'Authorization': `Bearer ${userToken}` },
-                        signal,
-                    });
-                    if (allocRes.ok) {
-                        const allocJson = await allocRes.json();
-                        if (signal?.aborted) return;
-                        let allocatedPercent = 0;
-                        if (allocJson.success && latestMonth.savings > 0) {
-                            const totalAllocated = allocJson.data.reduce((sum: number, a: any) => sum + a.amount, 0);
-                            allocatedPercent = Math.min(100, Math.round((totalAllocated / latestMonth.savings) * 100));
+            if (!isFutureMonth) {
+                const savingsRes = await fetch(`${BASE_URL}/api/savings/months`, {
+                    headers: { 'Authorization': `Bearer ${userToken}` },
+                    signal,
+                });
+                if (savingsRes.ok) {
+                    const savingsJson = await savingsRes.json();
+                    if (signal?.aborted) return;
+                    if (savingsJson.success && savingsJson.data.length > 0) {
+                        const latestMonth = savingsJson.data.find(
+                            (m: any) => m.anno === anno && m.mese === mese
+                        );
+                        if (latestMonth) {
+                            const allocRes = await fetch(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
+                                headers: { 'Authorization': `Bearer ${userToken}` },
+                                signal,
+                            });
+                            if (allocRes.ok) {
+                                const allocJson = await allocRes.json();
+                                if (signal?.aborted) return;
+                                let allocatedPercent = 0;
+                                if (allocJson.success && latestMonth.savings > 0) {
+                                    const totalAllocated = allocJson.data.reduce((sum: number, a: any) => sum + a.amount, 0);
+                                    allocatedPercent = Math.min(100, Math.round((totalAllocated / latestMonth.savings) * 100));
+                                }
+                                setSavingsData({ savings: latestMonth.savings, allocatedPercent, monthId: latestMonth._id });
+                            } else {
+                                setSavingsData(null);
+                            }
+                        } else {
+                            setSavingsData(null);
                         }
-                        setSavingsData({ savings: latestMonth.savings, allocatedPercent, monthId: latestMonth._id });
+                    } else {
+                        setSavingsData(null);
                     }
+                } else {
+                    setSavingsData(null);
                 }
+            } else {
+                setSavingsData(null);
             }
 
         } catch (error: any) {
@@ -191,6 +262,26 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         }
     };
 
+    useFocusEffect(
+        useCallback(() => {
+            if (userToken) {
+                abortControllerRef.current?.abort();
+                abortControllerRef.current = new AbortController();
+                caricaDati(abortControllerRef.current.signal);
+            }
+            return () => {
+                abortControllerRef.current?.abort();
+            };
+        }, [userToken])
+    );
+
+    useEffect(() => {
+        if (!userToken) return;
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
+        caricaDati(abortControllerRef.current.signal);
+    }, [selectedMonth, selectedYear]);
+
     const onRefresh = () => {
         abortControllerRef.current?.abort();
         abortControllerRef.current = new AbortController();
@@ -198,435 +289,936 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         caricaDati(abortControllerRef.current.signal);
     };
 
-    const SimpleBarChart = ({ label, value, max, color }: { label: string, value: number, max: number, color: string }) => {
-        const widthPercentage = max > 0 ? (value / max) * 100 : 0;
-        return (
-            <View style={{ marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: isDarkMode ? '#E5E7EB' : '#374151' }}>{label}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: 'bold', color: color }}>
-                        {showBalance ? `${currency}${value.toFixed(2)}` : '****'}
-                    </Text>
-                </View>
-                <View style={{ height: 10, backgroundColor: isDarkMode ? '#374151' : '#E5E7EB', borderRadius: 5, overflow: 'hidden' }}>
-                    <View style={{ height: '100%', width: `${Math.min(widthPercentage, 100)}%`, backgroundColor: color, borderRadius: 5 }} />
-                </View>
-            </View>
-        );
+    const reloadData = () => {
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
+        caricaDati(abortControllerRef.current.signal);
     };
 
+    // ── Quick-add handlers ──────────────────────────────────
+    const resetQuickAdd = () => {
+        setShowQuickAddModal(false);
+        setQaType('uscita');
+        setQaAmount('');
+        setQaCategory('');
+        setQaDescription('');
+        setIsSavingQa(false);
+    };
+
+    const handleSaveQuickAdd = async () => {
+        const amount = parseFloat(qaAmount);
+        if (isNaN(amount) || amount <= 0) {
+            Alert.alert('Error', 'Enter a valid amount');
+            return;
+        }
+        if (!qaCategory.trim()) {
+            Alert.alert('Error', 'Enter a category');
+            return;
+        }
+        setIsSavingQa(true);
+        try {
+            const endpoint = qaType === 'uscita' ? '/api/spese' : '/api/entrate';
+            const body = {
+                importo: amount,
+                categoria: qaCategory.trim(),
+                descrizione: qaDescription.trim() || qaCategory.trim(),
+                data: new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0],
+            };
+            const res = await fetch(`${BASE_URL}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (res.ok) {
+                resetQuickAdd();
+                reloadData();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                Alert.alert('Error', err.error || 'Could not save transaction');
+            }
+        } catch (e) {
+            Alert.alert('Error', 'Network error');
+        } finally {
+            setIsSavingQa(false);
+        }
+    };
+
+    const formatCurrency = (val: number) =>
+        showBalance
+            ? `${currency}${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : '****';
+
+    // ── Sub-components ──────────────────────────────────────
+    const CategoryChip = ({ label, size = 36 }: { label: string; size?: number }) => (
+        <View
+            style={{
+                width: size,
+                height: size,
+                borderRadius: Math.round(size * 0.25),
+                backgroundColor: getCategoryColor(label),
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+            }}
+        >
+            <Text style={{ color: '#0c0c0c', fontWeight: '800', fontSize: size <= 28 ? 9 : 10 }}>
+                {(label || '?').toUpperCase().slice(0, 3)}
+            </Text>
+        </View>
+    );
+
+    // ── Quick-add Modal ─────────────────────────────────────
+    const renderQuickAddModal = () => (
+        <Modal
+            visible={showQuickAddModal}
+            transparent
+            animationType="slide"
+            onRequestClose={resetQuickAdd}
+        >
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContainer, { backgroundColor: t.surface }]}>
+                        <View style={[styles.sheetGrab, { backgroundColor: t.line2 }]} />
+                        <Text style={[styles.modalTitle, { color: t.text }]}>
+                            {qaType === 'uscita' ? 'Add expense' : 'Add income'}
+                        </Text>
+
+                        {/* Type toggle */}
+                        <View style={[styles.modeToggle, { backgroundColor: t.surface2 }]}>
+                            {(['uscita', 'entrata'] as const).map(m => (
+                                <TouchableOpacity
+                                    key={m}
+                                    style={[styles.modeBtn, qaType === m && { backgroundColor: m === 'uscita' ? t.neg : t.pos }]}
+                                    onPress={() => setQaType(m)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.modeBtnText,
+                                            { color: qaType === m ? '#fff' : t.text2 },
+                                        ]}
+                                    >
+                                        {m === 'uscita' ? 'Expense' : 'Income'}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Amount */}
+                        <View style={[styles.field, { backgroundColor: t.surface2, borderColor: qaAmount ? ACCENT : t.line, marginTop: 12 }]}>
+                            <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Amount</Text>
+                            <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
+                            <TextInput
+                                style={[styles.fieldInput, { color: t.text }]}
+                                placeholder="0.00"
+                                placeholderTextColor={t.text3}
+                                keyboardType="numeric"
+                                value={qaAmount}
+                                onChangeText={setQaAmount}
+                                autoFocus
+                            />
+                        </View>
+
+                        {/* Category */}
+                        <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
+                            <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Category</Text>
+                            <TextInput
+                                style={[styles.fieldInput, { color: t.text }]}
+                                placeholder="e.g. Groceries, Freelance"
+                                placeholderTextColor={t.text3}
+                                value={qaCategory}
+                                onChangeText={setQaCategory}
+                                returnKeyType="next"
+                            />
+                        </View>
+
+                        {/* Description */}
+                        <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
+                            <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Description (optional)</Text>
+                            <TextInput
+                                style={[styles.fieldInput, { color: t.text }]}
+                                placeholder="Quick note…"
+                                placeholderTextColor={t.text3}
+                                value={qaDescription}
+                                onChangeText={setQaDescription}
+                                returnKeyType="done"
+                                onSubmitEditing={handleSaveQuickAdd}
+                            />
+                        </View>
+
+                        <View style={styles.sheetActions}>
+                            <TouchableOpacity
+                                style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
+                                onPress={resetQuickAdd}
+                            >
+                                <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.sheetSave, { backgroundColor: qaType === 'uscita' ? t.neg : t.pos }]}
+                                onPress={handleSaveQuickAdd}
+                                disabled={isSavingQa}
+                            >
+                                {isSavingQa
+                                    ? <ActivityIndicator size="small" color="#fff" />
+                                    : <Text style={styles.sheetSaveText}>Save</Text>
+                                }
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </KeyboardAvoidingView>
+        </Modal>
+    );
+
+    // ── Loading state ───────────────────────────────────────
     if (isLoading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4F46E5" />
+            <View style={[styles.container, styles.loadingContainer, { backgroundColor: t.bg }]}>
+                <ActivityIndicator size="large" color={ACCENT} />
             </View>
         );
     }
 
+    // ── Main render ────────────────────────────────────────
     return (
-        <ScrollView
-            style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-            {/* Quick Actions */}
-            <View style={styles.actionsContainer}>
-                <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#DC2626', flex: 1, marginRight: 4 }]}
-                    onPress={() => navigation.navigate('AddTransaction')}
-                >
-                    <Text style={styles.actionButtonText}>💸 Add Expense</Text>
+        <View style={[styles.container, { backgroundColor: t.bg }]}>
+            {/* ── Month navigator ── */}
+            <View style={[styles.monthNavRow, { backgroundColor: t.bg }]}>
+                <TouchableOpacity style={styles.monthArrow} onPress={prevMonth}>
+                    <Text style={[styles.monthArrowText, { color: t.text2 }]}>‹</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: '#059669', flex: 1, marginLeft: 4 }]}
-                    onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
-                >
-                    <Text style={styles.actionButtonText}>💰 Add Income</Text>
+                <Text style={[styles.monthNavText, { color: t.text2 }]}>
+                    {MONTHS[selectedMonth]} {selectedYear}
+                </Text>
+                <TouchableOpacity style={styles.monthArrow} onPress={nextMonth}>
+                    <Text style={[styles.monthArrowText, { color: t.text2 }]}>›</Text>
                 </TouchableOpacity>
             </View>
 
-            {/* Quick Navigation */}
-            <View style={[styles.quickNavRow, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Transactions')}>
-                    <Text style={styles.quickNavIcon}>🔍</Text>
-                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Transactions</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Budget')}>
-                    <Text style={styles.quickNavIcon}>📈</Text>
-                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Budget</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Savings' as never)}>
-                    <Text style={styles.quickNavIcon}>💰</Text>
-                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Savings</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.quickNavBtn, isDarkMode && { backgroundColor: '#111827' }]} onPress={() => navigation.navigate('Stats')}>
-                    <Text style={styles.quickNavIcon}>📊</Text>
-                    <Text style={[styles.quickNavLabel, isDarkMode && { color: '#D1D5DB' }]}>Stats</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Cards Riepilogo */}
-            <View style={styles.cardsGrid}>
-                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats', { initialType: 'entrate' })}>
-                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Income</Text>
-                    <Text style={[styles.cardValue, { color: '#059669' }]}>
-                        {showBalance ? `+${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 120 }}
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={ACCENT} />}
+            >
+                {/* ── Hero — Monthly Summary ── */}
+                <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
+                    <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
+                        Overview · {MONTHS[selectedMonth]} {selectedYear}
                     </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats', { initialType: 'spese' })}>
-                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Expenses</Text>
-                    <Text style={[styles.cardValue, { color: '#DC2626' }]}>
-                        {showBalance ? `-${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats')}>
-                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Balance</Text>
-                    <Text style={[styles.cardValue, { color: riepilogoData.bilancioMese >= 0 ? '#059669' : '#DC2626' }]}>
-                        {showBalance ? `${riepilogoData.bilancioMese >= 0 ? '+' : ''}${currency}${riepilogoData.bilancioMese.toFixed(2)}` : '****'}
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.card, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Stats')}>
-                    <Text style={[styles.cardLabel, isDarkMode && { color: '#9CA3AF' }]}>Transactions</Text>
-                    <Text style={[styles.cardValue, { color: '#3B82F6' }]}>{riepilogoData.numeroTransazioniMese}</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Savings Card */}
-            {savingsData && (
-                <TouchableOpacity
-                    style={[styles.savingsCard, { backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF' }]}
-                    onPress={() => navigation.navigate('Savings' as never)}
-                >
-                    <Text style={[styles.savingsLabel, { color: isDarkMode ? '#9CA3AF' : '#6B7280' }]}>
-                        💰 Monthly savings
-                    </Text>
-                    <Text style={[styles.savingsAmount, { color: savingsData.savings >= 0 ? '#10B981' : '#EF4444' }]}>
+                    <Text style={[styles.heroAmount, { color: t.text }]}>
                         {showBalance
-                            ? `${savingsData.savings >= 0 ? '+' : '-'}${currency}${Math.abs(savingsData.savings).toFixed(2)}`
+                            ? `${riepilogoData.bilancioMese >= 0 ? '+' : ''}${currency}${riepilogoData.bilancioMese.toFixed(2)}`
                             : '****'}
                     </Text>
-                    <Text style={[styles.savingsSubtitle, { color: isDarkMode ? '#6B7280' : '#9CA3AF' }]}>
-                        {savingsData.allocatedPercent}% allocated →
-                    </Text>
-                </TouchableOpacity>
-            )}
-
-            {/* Budget Summary Charts */}
-            <TouchableOpacity style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Budget')}>
-                <View style={styles.sectionTitleRow}>
-                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>📉 Performance vs Budget</Text>
-                    <Text style={styles.chevron}>›</Text>
+                    <View style={[styles.flowRow, { backgroundColor: t.surface2 }]}>
+                        <View style={styles.flowCell}>
+                            <View style={[styles.flowDot, { backgroundColor: t.pos }]} />
+                            <View>
+                                <Text style={[styles.flowLabel, { color: t.text3 }]}>INCOME</Text>
+                                <Text style={[styles.flowVal, { color: t.pos }]}>
+                                    {showBalance ? `+${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={[styles.flowDivider, { backgroundColor: t.line2 }]} />
+                        <View style={styles.flowCell}>
+                            <View style={[styles.flowDot, { backgroundColor: t.neg }]} />
+                            <View>
+                                <Text style={[styles.flowLabel, { color: t.text3 }]}>EXPENSES</Text>
+                                <Text style={[styles.flowVal, { color: t.neg }]}>
+                                    {showBalance ? `−${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
                 </View>
-                <View style={styles.sectionContent}>
-                    <SimpleBarChart
-                        label="Expenses vs Budget"
-                        value={riepilogoData.totaleSpeseMese}
-                        max={budgetData.budgetSpeseMese || riepilogoData.totaleSpeseMese * 1.2}
-                        color="#DC2626"
-                    />
-                    <Text style={styles.subText}>
-                        Expense Budget: {showBalance ? `${currency}${budgetData.budgetSpeseMese.toFixed(2)}` : '****'}
-                    </Text>
+
+                {/* ── Quick action buttons ── */}
+                <View style={styles.actionsContainer}>
+                    <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: t.surface, borderColor: t.neg }]}
+                        onPress={() => navigation.navigate('AddTransaction')}
+                    >
+                        <Text style={[styles.actionBtnText, { color: t.neg }]}>+ Expense</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.actionBtn, { backgroundColor: t.surface, borderColor: t.pos }]}
+                        onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
+                    >
+                        <Text style={[styles.actionBtnText, { color: t.pos }]}>+ Income</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* ── Quick nav grid ── */}
+                <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
+                    <View style={styles.navGrid}>
+                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Transactions')}>
+                            <Text style={styles.navIcon}>↗</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>Transactions</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Budget')}>
+                            <Text style={styles.navIcon}>📋</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>Budget</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Savings' as never)}>
+                            <Text style={styles.navIcon}>💰</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>Savings</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Stats')}>
+                            <Text style={styles.navIcon}>📊</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>Stats</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* ── Savings card ── */}
+                {savingsData ? (
+                    <TouchableOpacity
+                        style={[styles.allocCard, { backgroundColor: t.surface, borderColor: t.line }]}
+                        onPress={() => navigation.navigate('Savings' as never)}
+                    >
+                        <View style={styles.rowBetween}>
+                            <Text style={[styles.microLabel, { color: t.text3 }]}>MONTHLY SAVINGS</Text>
+                            <Text style={[styles.cardPct, { color: ACCENT }]}>{savingsData.allocatedPercent}%</Text>
+                        </View>
+                        <Text style={[styles.heroAmountSmall, { color: savingsData.savings >= 0 ? t.pos : t.neg, marginTop: 4 }]}>
+                            {showBalance
+                                ? `${savingsData.savings >= 0 ? '+' : '−'}${currency}${Math.abs(savingsData.savings).toFixed(2)}`
+                                : '****'}
+                        </Text>
+                        <View style={[styles.track, { backgroundColor: t.surface2, marginTop: 12 }]}>
+                            <View style={[styles.trackFill, { width: `${savingsData.allocatedPercent}%` as any, backgroundColor: ACCENT }]} />
+                        </View>
+                        <Text style={[styles.heroSubMeta, { color: t.text3, marginTop: 8 }]}>
+                            {savingsData.allocatedPercent}% allocated
+                        </Text>
+                    </TouchableOpacity>
+                ) : !isFutureMonth ? (
+                    <View style={[styles.allocCard, { backgroundColor: t.surface, borderColor: t.line, opacity: 0.5 }]}>
+                        <Text style={[styles.microLabel, { color: t.text3 }]}>MONTHLY SAVINGS</Text>
+                        <Text style={[styles.emptyText, { color: t.text3, marginTop: 8 }]}>No savings data for this month</Text>
+                    </View>
+                ) : null}
+
+                {/* ── Budget vs Actual ── */}
+                <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
+                    <View style={styles.sectionHead}>
+                        <Text style={[styles.sectionTitle, { color: t.text3 }]}>BUDGET VS ACTUAL</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Budget')}>
+                            <Text style={[styles.sectionMeta, { color: t.text3 }]}>Edit ›</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Expenses bar */}
+                    <View style={{ marginTop: 12 }}>
+                        <View style={styles.rowBetween}>
+                            <Text style={[styles.allocName, { color: t.text }]}>Expenses</Text>
+                            <Text style={[styles.allocAmt, { color: t.neg }]}>
+                                {showBalance ? `${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
+                            </Text>
+                        </View>
+                        <View style={[styles.allocBar, { backgroundColor: t.surface2 }]}>
+                            <View style={[styles.allocBarFill, {
+                                width: `${Math.min((riepilogoData.totaleSpeseMese / (budgetData.budgetSpeseMese || riepilogoData.totaleSpeseMese * 1.2)) * 100, 100)}%` as any,
+                                backgroundColor: t.neg,
+                            }]} />
+                        </View>
+                        <Text style={[styles.allocMeta, { color: t.text3, marginTop: 3 }]}>
+                            Budget: {showBalance ? `${currency}${budgetData.budgetSpeseMese.toFixed(2)}` : '****'}
+                        </Text>
+                    </View>
 
                     <View style={{ height: 16 }} />
 
-                    <SimpleBarChart
-                        label="Income vs Budget"
-                        value={riepilogoData.totaleEntrateMese}
-                        max={budgetData.budgetEntrateMese || riepilogoData.totaleEntrateMese * 1.2}
-                        color="#059669"
-                    />
-                    <Text style={styles.subText}>
-                        Income Budget: {showBalance ? `${currency}${budgetData.budgetEntrateMese.toFixed(2)}` : '****'}
-                    </Text>
-                </View>
-            </TouchableOpacity>
-
-            {/* Categorie Top */}
-            <View style={styles.row}>
-                <TouchableOpacity style={[styles.sectionContainer, { flex: 1, marginRight: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Transactions')}>
-                    <View style={styles.sectionTitleRow}>
-                        <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Expenses</Text>
-                        <Text style={styles.chevron}>›</Text>
-                    </View>
-                    <View style={styles.sectionContent}>
-                        {riepilogoData.dettagliCategorie.spese.length === 0 ? (
-                            <Text style={styles.emptyText}>No expenses</Text>
-                        ) : (
-                            riepilogoData.dettagliCategorie.spese.map(([cat, val], idx) => (
-                                <View key={idx} style={[styles.catRow, isDarkMode && { borderBottomColor: '#374151' }]}>
-                                    <Text style={[styles.catName, isDarkMode && { color: '#E5E7EB' }]} numberOfLines={1}>{cat}</Text>
-                                    <Text style={styles.catValueSpesa}>
-                                        {showBalance ? `${currency}${val.toFixed(0)}` : '****'}
-                                    </Text>
-                                </View>
-                            ))
-                        )}
-                    </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.sectionContainer, { flex: 1, marginLeft: 8 }, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Transactions')}>
-                    <View style={styles.sectionTitleRow}>
-                        <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>Top Income</Text>
-                        <Text style={styles.chevron}>›</Text>
-                    </View>
-                    <View style={styles.sectionContent}>
-                        {riepilogoData.dettagliCategorie.entrate.length === 0 ? (
-                            <Text style={styles.emptyText}>No income</Text>
-                        ) : (
-                            riepilogoData.dettagliCategorie.entrate.map(([cat, val], idx) => (
-                                <View key={idx} style={[styles.catRow, isDarkMode && { borderBottomColor: '#374151' }]}>
-                                    <Text style={[styles.catName, isDarkMode && { color: '#E5E7EB' }]} numberOfLines={1}>{cat}</Text>
-                                    <Text style={styles.catValueEntrata}>
-                                        {showBalance ? `${currency}${val.toFixed(0)}` : '****'}
-                                    </Text>
-                                </View>
-                            ))
-                        )}
-                    </View>
-                </TouchableOpacity>
-            </View>
-
-            {/* Ultime Transazioni */}
-            <TouchableOpacity style={[styles.sectionContainer, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => navigation.navigate('Transactions')}>
-                <View style={styles.sectionTitleRow}>
-                    <Text style={[styles.sectionTitle, isDarkMode && { color: '#F3F4F6' }]}>🕐 Recent Activity</Text>
-                    <Text style={styles.chevron}>›</Text>
-                </View>
-                <View style={styles.sectionContent}>
-                    {riepilogoData.ultime5Transazioni.map((t, i) => (
-                        <View key={i} style={[styles.transactionRow, isDarkMode && { borderBottomColor: '#374151' }]}>
-                            <View>
-                                <Text style={[styles.transDesc, isDarkMode && { color: '#F9FAFB' }]}>{t.descrizione || t.categoria}</Text>
-                                <Text style={[styles.transDate, isDarkMode && { color: '#9CA3AF' }]}>{new Date(t.data).toLocaleDateString('it-IT')}</Text>
-                            </View>
-                            <Text style={[styles.transAmount, { color: t.importo >= 0 ? '#059669' : '#DC2626' }]}>
-                                {showBalance ? `${t.importo >= 0 ? '+' : ''}${currency}${Math.abs(t.importo).toFixed(2)}` : '****'}
+                    {/* Income bar */}
+                    <View>
+                        <View style={styles.rowBetween}>
+                            <Text style={[styles.allocName, { color: t.text }]}>Income</Text>
+                            <Text style={[styles.allocAmt, { color: t.pos }]}>
+                                {showBalance ? `${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
                             </Text>
                         </View>
-                    ))}
+                        <View style={[styles.allocBar, { backgroundColor: t.surface2 }]}>
+                            <View style={[styles.allocBarFill, {
+                                width: `${Math.min((riepilogoData.totaleEntrateMese / (budgetData.budgetEntrateMese || riepilogoData.totaleEntrateMese * 1.2)) * 100, 100)}%` as any,
+                                backgroundColor: t.pos,
+                            }]} />
+                        </View>
+                        <Text style={[styles.allocMeta, { color: t.text3, marginTop: 3 }]}>
+                            Budget: {showBalance ? `${currency}${budgetData.budgetEntrateMese.toFixed(2)}` : '****'}
+                        </Text>
+                    </View>
                 </View>
+
+                {/* ── Top expenses ── */}
+                <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 16 }}>
+                    <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
+                        <View style={styles.sectionHead}>
+                            <Text style={[styles.sectionTitle, { color: t.text3 }]}>TOP EXPENSES</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                                <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {riepilogoData.dettagliCategorie.spese.length === 0 ? (
+                            <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
+                                <Text style={[styles.emptyText, { color: t.text3 }]}>No expenses this month</Text>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={{ gap: 8, marginTop: 8 }}>
+                                    {riepilogoData.dettagliCategorie.spese.map(([cat, val], idx) => (
+                                        <View key={idx} style={[styles.allocRow, { backgroundColor: t.surface, borderColor: t.line }]}>
+                                            <CategoryChip label={cat} />
+                                            <View style={styles.allocMid}>
+                                                <View style={styles.rowBetween}>
+                                                    <Text style={[styles.allocName, { color: t.text }]} numberOfLines={1}>{cat}</Text>
+                                                    <Text style={[styles.allocAmt, { color: t.neg }]}>
+                                                        {showBalance ? `${currency}${val.toFixed(0)}` : '****'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                                {/* Ghost add expense inline */}
+                                <TouchableOpacity
+                                    style={[styles.ghostBtn, { borderColor: t.line2, marginTop: 8 }]}
+                                    onPress={() => navigation.navigate('AddTransaction')}
+                                >
+                                    <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add expense</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+
+                    {/* ── Top income ── */}
+                    <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
+                        <View style={styles.sectionHead}>
+                            <Text style={[styles.sectionTitle, { color: t.text3 }]}>TOP INCOME</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                                <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {riepilogoData.dettagliCategorie.entrate.length === 0 ? (
+                            <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
+                                <Text style={[styles.emptyText, { color: t.text3 }]}>No income this month</Text>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={{ gap: 8, marginTop: 8 }}>
+                                    {riepilogoData.dettagliCategorie.entrate.map(([cat, val], idx) => (
+                                        <View key={idx} style={[styles.allocRow, { backgroundColor: t.surface, borderColor: t.line }]}>
+                                            <CategoryChip label={cat} />
+                                            <View style={styles.allocMid}>
+                                                <View style={styles.rowBetween}>
+                                                    <Text style={[styles.allocName, { color: t.text }]} numberOfLines={1}>{cat}</Text>
+                                                    <Text style={[styles.allocAmt, { color: t.pos }]}>
+                                                        {showBalance ? `+${currency}${val.toFixed(0)}` : '****'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                                {/* Ghost add income inline */}
+                                <TouchableOpacity
+                                    style={[styles.ghostBtn, { borderColor: t.line2, marginTop: 8 }]}
+                                    onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
+                                >
+                                    <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add income</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+                </View>
+
+                {/* ── Recent Activity ── */}
+                <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
+                    <View style={styles.sectionHead}>
+                        <Text style={[styles.sectionTitle, { color: t.text3 }]}>RECENT ACTIVITY</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                            <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {riepilogoData.ultime5Transazioni.length === 0 ? (
+                        <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
+                            <Text style={[styles.emptyText, { color: t.text3 }]}>No transactions yet</Text>
+                        </View>
+                    ) : (
+                        <View style={{ gap: 0, marginTop: 8 }}>
+                            {riepilogoData.ultime5Transazioni.map((tx, i) => (
+                                <View
+                                    key={i}
+                                    style={[
+                                        styles.transactionRow,
+                                        { borderBottomColor: t.line },
+                                        i === riepilogoData.ultime5Transazioni.length - 1 && { borderBottomWidth: 0 },
+                                    ]}
+                                >
+                                    <View style={{ flex: 1, marginRight: 12 }}>
+                                        <Text style={[styles.transDesc, { color: t.text }]} numberOfLines={1}>
+                                            {tx.descrizione || tx.categoria}
+                                        </Text>
+                                        <Text style={[styles.transDate, { color: t.text3 }]}>
+                                            {new Date(tx.data).toLocaleDateString('it-IT')}
+                                        </Text>
+                                    </View>
+                                    <Text style={[styles.transAmount, { color: tx.importo >= 0 ? t.pos : t.neg }]}>
+                                        {showBalance
+                                            ? `${tx.importo >= 0 ? '+' : '−'}${currency}${Math.abs(tx.importo).toFixed(2)}`
+                                            : '****'}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </ScrollView>
+
+            {/* ── FAB — quick add ── */}
+            <TouchableOpacity
+                style={[styles.fab, { backgroundColor: ACCENT }]}
+                activeOpacity={0.85}
+                onPress={() => setShowQuickAddModal(true)}
+            >
+                <Text style={styles.fabIcon}>+</Text>
             </TouchableOpacity>
 
-            <View style={{ height: 40 }} />
-        </ScrollView>
+            {/* ── Quick-add modal ── */}
+            {renderQuickAddModal()}
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    header: {
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E7EB',
+    container: { flex: 1 },
+    loadingContainer: { justifyContent: 'center', alignItems: 'center' },
+
+    // ── Month navigator ──
+    monthNavRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+        paddingVertical: 8,
+        gap: 4,
     },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#111827',
-        textAlign: 'center',
-    },
-    quickNavRow: {
-        flexDirection: 'row',
-        marginHorizontal: 16,
-        marginBottom: 16,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 14,
-        padding: 8,
-        gap: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    quickNavBtn: {
-        flex: 1,
+    monthArrow: {
+        width: 32,
+        height: 32,
         alignItems: 'center',
-        paddingVertical: 10,
-        borderRadius: 10,
-        backgroundColor: '#F9FAFB',
+        justifyContent: 'center',
     },
-    quickNavIcon: {
+    monthArrowText: {
         fontSize: 22,
-        marginBottom: 4,
-    },
-    quickNavLabel: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#374151',
-        letterSpacing: 0.2,
-    },
-    actionsContainer: {
-        flexDirection: 'row',
-        padding: 16,
-        justifyContent: 'space-around',
-    },
-    actionButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 3,
-        alignItems: 'center',
-    },
-    actionButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    cardsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        padding: 12,
-        justifyContent: 'space-between',
-    },
-    card: {
-        width: '48%',
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    cardLabel: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginBottom: 4,
-    },
-    cardValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    savingsCard: {
-        marginHorizontal: 16,
-        marginBottom: 16,
-        padding: 16,
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    savingsLabel: {
-        fontSize: 12,
-        fontWeight: '500',
-        marginBottom: 4,
-    },
-    savingsAmount: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 4,
-    },
-    savingsSubtitle: {
-        fontSize: 12,
-    },
-    sectionContainer: {
-        margin: 16,
-        marginBottom: 0,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    sectionTitleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    chevron: {
-        fontSize: 22,
-        color: '#9CA3AF',
+        lineHeight: 24,
         fontWeight: '300',
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#111827',
+    monthNavText: {
+        fontSize: 13,
+        fontWeight: '500',
+        minWidth: 120,
+        textAlign: 'center',
+        letterSpacing: -0.1,
     },
-    sectionContent: {},
-    subText: {
+
+    // ── Hero ──
+    hero: {
+        marginHorizontal: 16,
+        marginTop: 4,
+        marginBottom: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        padding: 20,
+    },
+    heroEyebrow: {
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1.4,
+        marginBottom: 8,
+    },
+    heroAmount: {
+        fontSize: 44,
+        fontWeight: '700',
+        letterSpacing: -1.5,
+        marginBottom: 18,
+        lineHeight: 50,
+    },
+    heroAmountSmall: {
+        fontSize: 30,
+        fontWeight: '700',
+        letterSpacing: -1,
+        lineHeight: 36,
+    },
+    heroSubMeta: {
         fontSize: 12,
-        color: '#6B7280',
-        textAlign: 'right',
+        fontWeight: '500',
     },
-    row: {
+    flowRow: {
         flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        padding: 10,
+    },
+    flowCell: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    flowDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    flowLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
+    flowVal: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    flowDivider: {
+        width: 1,
+        height: 28,
         marginHorizontal: 8,
     },
-    catRow: {
+
+    // ── Action buttons ──
+    actionsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-        paddingBottom: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        paddingHorizontal: 16,
+        gap: 10,
+        marginBottom: 12,
     },
-    catName: {
-        fontSize: 14,
-        color: '#374151',
+    actionBtn: {
         flex: 1,
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        alignItems: 'center',
     },
-    catValueSpesa: {
+    actionBtnText: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: '#DC2626',
+        fontWeight: '700',
     },
-    catValueEntrata: {
+
+    // ── Nav grid ──
+    navGrid: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    navBtn: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderRadius: 10,
+    },
+    navIcon: {
+        fontSize: 20,
+        marginBottom: 4,
+    },
+    navLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        letterSpacing: 0.2,
+    },
+
+    // ── Card (generic) ──
+    card: {
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 16,
+    },
+    emptyCard: {
+        borderRadius: 12,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        padding: 16,
+        alignItems: 'center',
+    },
+    rowBetween: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    cardLabel: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    cardPct: {
+        fontSize: 18,
+        fontWeight: '700',
+        letterSpacing: -0.3,
+    },
+
+    // ── Progress track ──
+    track: {
+        height: 6,
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    trackFill: {
+        height: '100%',
+        borderRadius: 3,
+    },
+
+    // ── Micro label/value ──
+    microLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    microVal: {
+        fontSize: 16,
+        fontWeight: '600',
+        letterSpacing: -0.3,
+    },
+
+    // ── Section head ──
+    sectionHead: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+    },
+    sectionTitle: {
+        fontSize: 11,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
+    },
+    sectionMeta: {
+        fontSize: 11,
+        fontWeight: '500',
+        letterSpacing: 0.4,
+    },
+
+    // ── Allocation-row-style (category items) ──
+    allocRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        borderRadius: 14,
+        borderWidth: 1,
+        padding: 14,
+        gap: 12,
+    },
+    allocMid: {
+        flex: 1,
+        gap: 6,
+    },
+    allocName: {
         fontSize: 14,
-        fontWeight: 'bold',
-        color: '#059669',
+        fontWeight: '600',
+        letterSpacing: -0.1,
+        flex: 1,
+        marginRight: 8,
     },
-    emptyText: {
-        fontStyle: 'italic',
-        color: '#9CA3AF',
-        textAlign: 'center',
+    allocAmt: {
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: -0.1,
+        flexShrink: 0,
     },
+    allocBar: {
+        height: 3,
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginTop: 6,
+    },
+    allocBarFill: {
+        height: '100%',
+        borderRadius: 2,
+    },
+    allocMeta: {
+        fontSize: 11,
+        letterSpacing: 0.2,
+    },
+    allocPct: {
+        fontSize: 11,
+        fontWeight: '600',
+    },
+
+    // ── Ghost button ──
+    ghostBtn: {
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        alignItems: 'center',
+    },
+    ghostBtnText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+
+    // ── FAB ──
+    fab: {
+        position: 'absolute',
+        bottom: 28,
+        right: 20,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        zIndex: 100,
+    },
+    fabIcon: {
+        fontSize: 28,
+        fontWeight: '400',
+        color: '#0c0c0c',
+        lineHeight: 30,
+    },
+
+    // ── Transaction row ──
     transactionRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     transDesc: {
-        fontSize: 16,
-        color: '#111827',
-        fontWeight: '500',
+        fontSize: 14,
+        fontWeight: '600',
+        letterSpacing: -0.1,
     },
     transDate: {
-        fontSize: 12,
-        color: '#9CA3AF',
+        fontSize: 11,
+        marginTop: 2,
     },
     transAmount: {
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: -0.1,
+    },
+
+    // ── Savings card (nested alloc card) ──
+    allocCard: {
+        marginHorizontal: 16,
+        marginBottom: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 16,
+    },
+
+    // ── Modal ──
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalContainer: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+        gap: 8,
+    },
+    sheetGrab: {
+        width: 40,
+        height: 4,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 12,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        letterSpacing: -0.3,
+        marginBottom: 8,
+    },
+    modeToggle: {
+        flexDirection: 'row',
+        borderRadius: 12,
+        padding: 4,
+        gap: 4,
+    },
+    modeBtn: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 9,
+        alignItems: 'center',
+    },
+    modeBtnText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    field: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        paddingHorizontal: 14,
+        height: 52,
+        gap: 6,
+    },
+    fieldLabel: {
+        fontSize: 10,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+        position: 'absolute',
+        top: -9,
+        left: 12,
+        paddingHorizontal: 4,
+    },
+    fieldPrefix: {
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '500',
+    },
+    fieldInput: {
+        flex: 1,
+        fontSize: 20,
+        fontWeight: '500',
+        padding: 0,
+        letterSpacing: -0.3,
+    },
+    sheetActions: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 12,
+    },
+    sheetCancel: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    sheetCancelText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    sheetSave: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    sheetSaveText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#fff',
+    },
+
+    // ── Empty ──
+    emptyText: {
+        fontSize: 13,
+        fontWeight: '500',
+        fontStyle: 'italic',
+        textAlign: 'center',
     },
 });
 

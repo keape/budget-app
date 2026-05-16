@@ -1,0 +1,225 @@
+[
+  {
+    "id": "50-30-20",
+    "title": "The 50/30/20 rule — does it actually work?",
+    "keyPoints": [
+      "50% needs (rent, bills, groceries)",
+      "30% wants (dining, subscriptions, entertainment)",
+      "20% savings and investments",
+      "Why it breaks for high-cost cities",
+      "How to adapt it to your income"
+    ],
+    "hashtags": ["#personalfinance", "#budgeting", "#moneytips"]
+  },
+  {
+    "id": "savings-rate",
+    "title": "Your savings rate is the most important number in your finances",
+    "keyPoints": [
+      "Savings rate = (income - expenses) / income × 100",
+      "A 10% rate vs 50% rate: the difference in years to financial independence",
+      "How to track it monthly",
+      "Why income growth matters less than savings rate growth"
+    ],
+    "hashtags": ["#FIRE", "#financialindependence", "#savingsrate"]
+  },
+  {
+    "id": "etf-vs-stocks",
+    "title": "ETF vs individual stocks: where should you put your savings?",
+    "keyPoints": [
+      "ETFs: instant diversification, lower risk, lower reward ceiling",
+      "Stocks: higher volatility, higher upside, requires research",
+      "Why most retail investors underperform ETFs",
+      "The case for a core-satellite approach (80% ETF, 20% stocks)"
+    ],
+    "hashtags": ["#investing", "#ETF", "#personalfinance", "#FIRE"]
+  },
+  {
+    "id": "dca",
+    "title": "Dollar-cost averaging: the boring strategy that actually works",
+    "keyPoints": [
+      "Buy a fixed amount every month regardless of price",
+      "Removes emotion from investing",
+      "Smooths out market volatility over time",
+      "How to set it up and forget it"
+    ],
+    "hashtags": ["#investing", "#DCA", "#passiveinvesting", "#personalfinance"]
+  },
+  {
+    "id": "emergency-fund",
+    "title": "Emergency fund: how much is enough?",
+    "keyPoints": [
+      "The 3-6 month rule explained",
+      "Where to keep it (high-yield savings, not investments)",
+      "Why you build the emergency fund BEFORE investing",
+      "Signs you need a bigger cushion"
+    ],
+    "hashtags": ["#personalfinance", "#emergencyfund", "#moneytips"]
+  },
+  {
+    "id": "budget-categories",
+    "title": "How to choose your budget categories (and not overcomplicate it)",
+    "keyPoints": [
+      "Too many categories = you stop tracking",
+      "Start with 5-7 core categories",
+      "Fixed vs variable expenses",
+      "How Budget365 handles category customization"
+    ],
+    "hashtags": ["#budgeting", "#personalfinance", "#moneytips", "#buildinpublic"]
+  },
+  {
+    "id": "fire-number",
+    "title": "How to calculate your FIRE number",
+    "keyPoints": [
+      "FIRE number = annual expenses × 25 (the 4% rule)",
+      "Why the 4% rule works historically",
+      "Lean FIRE vs Fat FIRE vs Coast FIRE",
+      "How to reverse-engineer your savings target"
+    ],
+    "hashtags": ["#FIRE", "#financialindependence", "#retirementearly"]
+  },
+  {
+    "id": "tracking-consistency",
+    "title": "Why tracking every expense is the first step to wealth",
+    "keyPoints": [
+      "You can't optimize what you don't measure",
+      "The psychological effect of awareness",
+      "How 15 minutes a week changes your financial decisions",
+      "Manual tracking vs automatic sync — pros and cons"
+    ],
+    "hashtags": ["#budgeting", "#personalfinance", "#financialwellness"]
+  },
+  {
+    "id": "subscription-audit",
+    "title": "Do a subscription audit — you're probably paying for things you forgot",
+    "keyPoints": [
+      "The average person has 12+ active subscriptions",
+      "How to find all recurring charges",
+      "The keep/cancel/downgrade framework",
+      "How much you save by cancelling just 3 unused subs"
+    ],
+    "hashtags": ["#budgeting", "#moneysaving", "#personalfinance"]
+  },
+  {
+    "id": "net-worth",
+    "title": "Track your net worth, not just your bank balance",
+    "keyPoints": [
+      "Net worth = assets - liabilities",
+      "Why checking balance is misleading",
+      "Assets to include: savings, investments, property",
+      "Liabilities to include: loans, credit cards, mortgage",
+      "How to track it monthly and see the trend"
+    ],
+    "hashtags": ["#networth", "#personalfinance", "#wealthbuilding"]
+  },
+  {
+    "id": "allocation-plan",
+    "title": "My savings allocation system: how I split every paycheck",
+    "keyPoints": [
+      "Fixed percentages per category (emergency, investments, fun)",
+      "Why automation beats willpower",
+      "How I track allocation adherence monthly",
+      "The Budget365 allocation plan feature"
+    ],
+    "hashtags": ["#personalfinance", "#savingsrate", "#buildinpublic", "#FIRE"]
+  },
+  {
+    "id": "lifestyle-creep",
+    "title": "Lifestyle creep: the silent killer of your financial goals",
+    "keyPoints": [
+      "Income goes up, expenses follow automatically",
+      "How to spot it in your own spending data",
+      "The 'save the raise' strategy",
+      "Why tracking prevents it"
+    ],
+    "hashtags": ["#personalfinance", "#budgeting", "#moneymindset"]
+  },
+  {
+    "id": "debt-payoff",
+    "title": "Debt snowball vs avalanche: which works better?",
+    "keyPoints": [
+      "Snowball: pay smallest balance first (psychology wins)",
+      "Avalanche: pay highest interest first (math wins)",
+      "Research shows snowball has better completion rates",
+      "When to switch strategies"
+    ],
+    "hashtags": ["#debtfree", "#personalfinance", "#moneytips"]
+  },
+  {
+    "id": "passive-income",
+    "title": "The difference between passive income and wishful thinking",
+    "keyPoints": [
+      "Real passive income: dividends, rental yield, index fund returns",
+      "Fake passive income: things that require constant work",
+      "Why dividend investing math often doesn't beat index funds",
+      "Setting realistic expectations"
+    ],
+    "hashtags": ["#passiveincome", "#investing", "#personalfinance"]
+  },
+  {
+    "id": "monthly-review",
+    "title": "My monthly financial review ritual (takes 20 minutes)",
+    "keyPoints": [
+      "Check income vs budget",
+      "Check savings rate",
+      "Check investment allocation",
+      "Adjust next month's budget",
+      "How Budget365 makes this fast"
+    ],
+    "hashtags": ["#personalfinance", "#budgeting", "#buildinpublic", "#moneytips"]
+  },
+  {
+    "id": "investing-start",
+    "title": "When should you start investing? (hint: not when you feel ready)",
+    "keyPoints": [
+      "Time in market > timing the market",
+      "The compound interest math: starting at 25 vs 35",
+      "Start with €50/month if that's all you have",
+      "Build the emergency fund first, then invest"
+    ],
+    "hashtags": ["#investing", "#personalfinance", "#compoundinterest", "#FIRE"]
+  },
+  {
+    "id": "food-budget",
+    "title": "Food is your most controllable expense — here's how to tackle it",
+    "keyPoints": [
+      "Average household spends 15-20% of income on food",
+      "Meal planning cuts grocery bills by 30%",
+      "Eating out vs cooking: the real math",
+      "How to set and track a realistic food budget"
+    ],
+    "hashtags": ["#budgeting", "#moneysaving", "#personalfinance"]
+  },
+  {
+    "id": "index-funds",
+    "title": "Why index funds beat 90% of professional fund managers",
+    "keyPoints": [
+      "The SPIVA report: active managers underperform consistently",
+      "Low fees compound dramatically over 30 years",
+      "Global diversification with one fund",
+      "VWCE, S&P500 ETF — the basics"
+    ],
+    "hashtags": ["#indexfunds", "#ETF", "#passiveinvesting", "#FIRE"]
+  },
+  {
+    "id": "budget-vs-actual",
+    "title": "Budget vs actual: the only comparison that matters",
+    "keyPoints": [
+      "Setting a budget means nothing without comparing to reality",
+      "Which categories always go over (and why)",
+      "The 'within 10%' tolerance approach",
+      "How to use the data to improve next month's budget"
+    ],
+    "hashtags": ["#budgeting", "#personalfinance", "#moneytips", "#buildinpublic"]
+  },
+  {
+    "id": "portfolio-rebalancing",
+    "title": "Portfolio rebalancing: when and how to do it",
+    "keyPoints": [
+      "What rebalancing is: restoring your target allocation",
+      "Annual vs threshold-based rebalancing",
+      "Tax implications to consider",
+      "How to track drift in Budget365"
+    ],
+    "hashtags": ["#investing", "#portfolio", "#ETF", "#personalfinance"]
+  }
+]

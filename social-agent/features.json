@@ -1,0 +1,44 @@
+[
+  {
+    "id": "csv-export",
+    "label": "CSV / PDF Export",
+    "description": "Export your transactions and budget reports as CSV or PDF",
+    "status": "planned",
+    "votes": 0
+  },
+  {
+    "id": "multi-currency",
+    "label": "Multi-currency support",
+    "description": "Track income and expenses in different currencies with live exchange rates",
+    "status": "planned",
+    "votes": 0
+  },
+  {
+    "id": "shared-budgets",
+    "label": "Shared budgets (couples / family)",
+    "description": "Share a budget with a partner or family member and track together",
+    "status": "planned",
+    "votes": 0
+  },
+  {
+    "id": "budget-alerts",
+    "label": "Budget alerts & notifications",
+    "description": "Push notifications when you're approaching or exceeding a budget category",
+    "status": "planned",
+    "votes": 0
+  },
+  {
+    "id": "recurring-investments",
+    "label": "Recurring investment entries",
+    "description": "Schedule automatic entries for regular DCA investments (ETF, stocks)",
+    "status": "planned",
+    "votes": 0
+  },
+  {
+    "id": "widgets",
+    "label": "Home screen widgets (iOS/Android)",
+    "description": "Quick balance and budget status visible from the home screen without opening the app",
+    "status": "planned",
+    "votes": 0
+  }
+]

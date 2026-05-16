@@ -2,19 +2,19 @@ services:
   - type: worker
     name: budget365-social-agent
     env: node
-    buildCommand: npm install
+    buildCommand: npm install && npx playwright install chromium --with-deps
     startCommand: node index.js
     rootDir: ./social-agent
     envVars:
-      - key: ANTHROPIC_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: X_API_KEY
+      - key: OPENROUTER_MODEL
         sync: false
-      - key: X_API_SECRET
+      - key: X_USERNAME
         sync: false
-      - key: X_ACCESS_TOKEN
+      - key: X_EMAIL
         sync: false
-      - key: X_ACCESS_SECRET
+      - key: X_PASSWORD
         sync: false
       - key: FACEBOOK_PAGE_TOKEN
         sync: false
@@ -46,4 +46,8 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: CORS_ORIGINS
+        value: https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app
+      - key: ENABLE_ADMIN_ROUTES
+        value: "false"
     healthCheckPath: /api/health

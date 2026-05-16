@@ -17,6 +17,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useAppTheme } from '../hooks/useAppTheme';
 import { API_URL } from '../config';
 import { warmupBackend } from '../utils/apiClient';
 import { AllocationMode, deriveOnPriceChange } from '../utils/allocationCalc';
@@ -155,21 +156,10 @@ const TAB_LABELS: Record<ActiveTab, string> = {
 // ============================================================
 const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const { userToken } = useAuth();
-  const { currency, isDarkMode, showBalance } = useSettings();
+  const { currency, showBalance } = useSettings();
 
   // ── Theme ─────────────────────────────────────────────────
-  const t = useMemo(() => ({
-    bg:       isDarkMode ? '#0a0a0a' : '#f6f6f4',
-    surface:  isDarkMode ? '#131313' : '#ffffff',
-    surface2: isDarkMode ? '#1a1a1a' : '#f0f0ec',
-    line:     isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(15,15,18,0.06)',
-    line2:    isDarkMode ? 'rgba(255,255,255,0.10)' : 'rgba(15,15,18,0.10)',
-    text:     isDarkMode ? '#f4f4f5' : '#0c0c0c',
-    text2:    isDarkMode ? '#a1a1aa' : '#5b5b66',
-    text3:    isDarkMode ? '#6b6b73' : '#8b8b95',
-    pos:      isDarkMode ? '#4ade80' : '#16a34a',
-    neg:      isDarkMode ? '#ff6b6b' : '#dc2626',
-  }), [isDarkMode]);
+  const t = useAppTheme();
 
   // ── Tab animation ─────────────────────────────────────────
   const tabAnimRef = useRef(new Animated.Value(0));
@@ -1376,9 +1366,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                       styles.planTrackTarget,
                       {
                         width: `${Math.min(100, target)}%` as any,
-                        backgroundColor: isDarkMode
-                          ? 'rgba(255,255,255,0.08)'
-                          : 'rgba(0,0,0,0.06)',
+                        backgroundColor: 'rgba(128,128,128,0.08)',
                         borderRightColor: t.text3,
                       },
                     ]}
