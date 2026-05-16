@@ -4,6 +4,14 @@ const { authenticateToken } = require('./auth');
 const BudgetSettings = require('../models/BudgetSettings');
 const router = express.Router();
 
+const requireAdminRoutesEnabled = (req, res, next) => {
+  if (process.env.ENABLE_ADMIN_ROUTES === 'true') {
+    return next();
+  }
+
+  return res.status(404).json({ message: 'Endpoint non trovato' });
+};
+
 // NEW APPROACH: Use direct MongoDB collection without any indexes or constraints
 const getBudgetCollection = () => {
   return mongoose.connection.db.collection('budgetsettings_new');
@@ -204,7 +212,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // EMERGENCY ENDPOINT - Remove unique index from MongoDB
-router.post('/remove-unique-index', authenticateToken, async (req, res) => {
+router.post('/remove-unique-index', requireAdminRoutesEnabled, authenticateToken, async (req, res) => {
   try {
     console.log('🚨 REMOVING UNIQUE INDEX - User:', req.user.username);
 
@@ -232,7 +240,7 @@ router.post('/remove-unique-index', authenticateToken, async (req, res) => {
 });
 
 // EMERGENCY ENDPOINT - Remove duplicates and fix unique index issues  
-router.post('/emergency-fix', authenticateToken, async (req, res) => {
+router.post('/emergency-fix', requireAdminRoutesEnabled, authenticateToken, async (req, res) => {
   try {
     console.log('🚨 EMERGENCY FIX - User:', req.user.username);
 

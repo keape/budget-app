@@ -7,12 +7,15 @@ yarn-error.log*
 
 # Environment variables
 .env
+.env.production
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 server/.env
+server/scripts/.env
 server/credentials.json
+social-agent/.env
 
 # Build outputs
 build/

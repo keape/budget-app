@@ -18,6 +18,7 @@ function BudgetSettings() {
   const [newCategory, setNewCategory] = useState({ type: null, name: '', value: '' });
   const [showAddCategory, setShowAddCategory] = useState({ spese: false, entrate: false });
   const [isFixing, setIsFixing] = useState(false);
+  const adminRoutesEnabled = process.env.REACT_APP_ENABLE_ADMIN_ROUTES === 'true';
 
   const mesi = [
     "Intero anno", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -1012,7 +1013,7 @@ function BudgetSettings() {
         </div>
         
         {/* Emergency Fix Button - Solo se ci sono errori 409 */}
-        {error && error.includes('409') && (
+        {adminRoutesEnabled && error && error.includes('409') && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="text-sm text-red-800 mb-2 text-center">
               🚨 Errore duplicati database rilevato
