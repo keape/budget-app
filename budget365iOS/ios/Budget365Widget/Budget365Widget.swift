@@ -1,10 +1,9 @@
 // Budget365Widget.swift
-// Entry point del widget Budget365 — WidgetKit medium con riepilogo mensile
+// Widget — riepilogo mensile WidgetKit medium con riepilogo mensile
 
 import WidgetKit
 import SwiftUI
 
-@main
 struct Budget365Widget: Widget {
     let kind: String = "com.budget365.widget.riepilogo"
 

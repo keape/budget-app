@@ -20,6 +20,20 @@
                ReferencedContainer = "container:Budget365.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "NO"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "48C66751E521DCB8BF92C170"
+               BuildableName = "Budget365Widget.appex"
+               BlueprintName = "Budget365Widget"
+               ReferencedContainer = "container:Budget365.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

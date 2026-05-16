@@ -16,6 +16,18 @@ const widgetRoutes = require('./routes/widget');
 
 const app = express();
 
+const requireAdminRoutesEnabled = (req, res, next) => {
+  if (process.env.ENABLE_ADMIN_ROUTES === 'true') {
+    return next();
+  }
+
+  return res.status(404).json({
+    success: false,
+    error: 'Not Found',
+    message: `API endpoint ${req.originalUrl} not found`
+  });
+};
+
 // CORS Configuration
 const corsOptions = {
   origin: [
@@ -88,7 +100,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // DEBUG: Check environment variables
-app.get('/api/debug-env', (req, res) => {
+app.get('/api/debug-env', requireAdminRoutesEnabled, (req, res) => {
   res.json({
     hasMongodbUri: !!process.env.MONGODB_URI,
     hasJwtSecret: !!process.env.JWT_SECRET,
@@ -114,7 +126,7 @@ app.get('/', (req, res) => {
 });
 
 // MIGRATION: Copy data from old to new collection
-app.all('/api/migrate-budget-data', async (req, res) => {
+app.all('/api/migrate-budget-data', requireAdminRoutesEnabled, async (req, res) => {
   try {
     console.log('🚀 MIGRATING: Copying data from old to new collection');
     const mongoose = require('mongoose');
@@ -178,7 +190,7 @@ app.all('/api/migrate-budget-data', async (req, res) => {
 });
 
 // DEBUG: View migrated data
-app.all('/api/debug-budget-data', async (req, res) => {
+app.all('/api/debug-budget-data', requireAdminRoutesEnabled, async (req, res) => {
   try {
     const mongoose = require('mongoose');
     
@@ -222,7 +234,7 @@ app.all('/api/debug-budget-data', async (req, res) => {
 });
 
 // EMERGENCY: Remove unique index directly - BOTH GET AND POST  
-app.all('/api/emergency-remove-index', async (req, res) => {
+app.all('/api/emergency-remove-index', requireAdminRoutesEnabled, async (req, res) => {
   try {
     console.log('🚨 EMERGENCY: Removing unique index from database');
     const BudgetSettings = require('./models/BudgetSettings');
@@ -266,7 +278,7 @@ const Entrata = require('./models/Entrata');
 const { authenticateToken } = require('./routes/auth');
 
 // TEST ENDPOINT - per verificare autenticazione per tutti gli utenti
-app.post('/api/test-auth', authenticateToken, (req, res) => {
+app.post('/api/test-auth', requireAdminRoutesEnabled, authenticateToken, (req, res) => {
   console.log('🧪 TEST AUTH - Utente:', req.user.username, 'ID:', req.user.userId);
   res.json({
     message: 'Autenticazione riuscita',
@@ -279,7 +291,7 @@ app.post('/api/test-auth', authenticateToken, (req, res) => {
 });
 
 // POST /api/fix-transactions
-app.post('/api/fix-transactions', authenticateToken, async (req, res) => {
+app.post('/api/fix-transactions', requireAdminRoutesEnabled, authenticateToken, async (req, res) => {
   try {
     const userFilter = { userId: req.user.userId };
     const spese = await Spesa.find(userFilter);

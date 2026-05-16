@@ -58,10 +58,20 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
       setModalitaTransazione('una_tantum');
       navigation.setOptions({ title: 'Edit Transaction' });
     } else if (route?.params?.type) {
-      // Handle direct type navigation (e.g. Add Income button)
+      // Handle direct type navigation (e.g. widget shortcuts)
       setTipo(route.params.type);
+      // Pre-fill additional params from widget/deep link
+      if (route.params.importo) {
+        setImporto(String(route.params.importo));
+      }
+      if (route.params.categoria) {
+        setCategoria(route.params.categoria);
+      }
+      if (route.params.descrizione) {
+        setDescrizione(route.params.descrizione);
+      }
     }
-  }, [route?.params?.transactionToEdit, route?.params?.type]);
+  }, [route?.params?.transactionToEdit, route?.params?.type, route?.params?.importo, route?.params?.categoria, route?.params?.descrizione]);
 
   // Stati per transazioni periodiche
   const [tipoRipetizione, setTipoRipetizione] = useState('mensile');

@@ -126,8 +126,53 @@ const AppNavigator = () => {
     );
   }
 
+  // Deep linking — widget shortcuts
+  const linking = {
+    prefixes: ['budget365://'],
+    getStateFromPath: (path: string) => {
+      // Parse: add?type=spesa&importo=50&categoria=Alimentari&descrizione=...
+      const parts = path.split('?');
+      const base = parts[0];
+      const params: Record<string, string> = {};
+      if (parts[1]) {
+        parts[1].split('&').forEach(pair => {
+          const [k, v] = pair.split('=');
+          if (k && v) params[decodeURIComponent(k)] = decodeURIComponent(v);
+        });
+      }
+
+      if (base === 'add' || base === 'add-expense') {
+        return {
+          routes: [{
+            name: 'AddTransaction',
+            params: {
+              type: params.type || 'spesa',
+              importo: params.importo ? Number(params.importo) : undefined,
+              categoria: params.categoria || undefined,
+              descrizione: params.descrizione || undefined,
+            },
+          }],
+        };
+      }
+      if (base === 'add-income') {
+        return {
+          routes: [{
+            name: 'AddTransaction',
+            params: {
+              type: 'entrata',
+              importo: params.importo ? Number(params.importo) : undefined,
+              categoria: params.categoria || undefined,
+              descrizione: params.descrizione || undefined,
+            },
+          }],
+        };
+      }
+      return undefined;
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           <>
