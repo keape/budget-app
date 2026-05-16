@@ -65,3 +65,4 @@ social-agent/node_modules/
 # iOS duplicate lock files
 "budget365iOS/ios/Podfile 3.lock"
 budget365iOS/ios/Podfile\ 3.lock
+*.xcarchive/
