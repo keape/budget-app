@@ -28,18 +28,25 @@ const requireAdminRoutesEnabled = (req, res, next) => {
   });
 };
 
+const defaultCorsOrigins = [
+  'http://localhost:3000',
+  'http://192.168.68.177:3000',
+  'https://budget-app-ao5r.onrender.com',
+  'https://budget-app-cd5o.onrender.com',
+  'https://budget-app-keape.vercel.app',
+  'https://budget-app-three-gules.vercel.app',
+  'https://budget-app-backend.onrender.com',
+  'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev'
+];
+
+const corsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
 // CORS Configuration
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'http://192.168.68.177:3000',
-    'https://budget-app-ao5r.onrender.com',
-    'https://budget-app-cd5o.onrender.com',
-    'https://budget-app-keape.vercel.app',
-    'https://budget-app-three-gules.vercel.app',
-    'https://budget-app-backend.onrender.com',
-    'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev'
-  ],
+  origin: corsOrigins.length > 0 ? corsOrigins : defaultCorsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],

@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX Comparison — SavingsScreen vs HomeScreen</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #121212;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  padding: 32px 16px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  text-align: center;
+  margin-bottom: 4px;
+  color: #fff;
+}
+.subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 32px;
+}
+
+.comparison {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.phone {
+  width: 375px;
+  background: #000;
+  border-radius: 40px;
+  padding: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  position: relative;
+}
+
+.phone-inner {
+  background: #1a1a2e;
+  border-radius: 30px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Dynamic Island */
+.notch {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 30px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 10;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #1a1a2e;
+}
+.status-bar .right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Screen label */
+.screen-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #666;
+  padding: 6px 0 10px;
+}
+
+/* Scroll area */
+.scroll-area {
+  height: 640px;
+  overflow-y: auto;
+  padding: 0 12px;
+  scrollbar-width: none;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* === Reusable components === */
+.hero {
+  background: #232346;
+  border: 1px solid #2a2a4a;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.hero-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  color: #777;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.hero-amount {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  color: #fff;
+  margin-bottom: 14px;
+}
+.hero-amount-small {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+  margin-bottom: 0;
+}
+.flow-row {
+  display: flex;
+  align-items: center;
+  background: #1e1e3a;
+  border-radius: 10px;
+  padding: 10px;
+  gap: 0;
+}
+.flow-cell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.flow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.flow-dot.pos { background: #34d399; }
+.flow-dot.neg { background: #f87171; }
+.flow-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #777;
+  margin-bottom: 1px;
+}
+.flow-val {
+  font-size: 12px;
+  font-weight: 600;
+}
+.flow-val.pos { color: #34d399; }
+.flow-val.neg { color: #f87171; }
+.flow-divider {
+  width: 1px;
+  height: 24px;
+  background: #2a2a4a;
+  margin: 0 6px;
+}
+
+/* Card */
+.card {
+  background: #232346;
+  border: 1px solid #2a2a4a;
+  border-radius: 14px;
+  padding: 14px;
+}
+.empty-card {
+  border: 1px dashed #3a3a5a;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+.empty-text {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Section head */
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.section-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #777;
+  text-transform: uppercase;
+}
+.section-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: #777;
+}
+
+/* Alloc row */
+.alloc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #232346;
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+}
+.alloc-mid { flex: 1; min-width: 0; }
+.row-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.alloc-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alloc-amt {
+  font-size: 13px;
+  font-weight: 600;
+}
+.alloc-amt.neg { color: #f87171; }
+.alloc-amt.pos { color: #34d399; }
+
+.alloc-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #1e1e3a;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.alloc-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+.alloc-bar-fill.neg { background: #f87171; }
+.alloc-bar-fill.pos { background: #34d399; }
+.alloc-bar-fill.accent { background: #c4f23a; }
+
+.alloc-meta {
+  font-size: 10px;
+  color: #666;
+  margin-top: 3px;
+}
+.alloc-pct {
+  font-size: 10px;
+  font-weight: 500;
+  color: #888;
+}
+
+/* Chip */
+.chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.chip-text {
+  font-size: 8px;
+  font-weight: 800;
+  color: #0c0c0c;
+}
+
+/* Ghost button */
+.ghost-btn {
+  border: 1.5px dashed #3a3a5a;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  margin-top: 8px;
+}
+.ghost-btn-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #777;
+}
+
+/* Track */
+.track {
+  height: 5px;
+  border-radius: 3px;
+  background: #1e1e3a;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.track-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #c4f23a;
+}
+
+/* Micro */
+.micro-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #777;
+  text-transform: uppercase;
+}
+.micro-val {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+/* Month nav */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  gap: 4px;
+}
+.month-arrow {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 20px;
+  font-weight: 300;
+  cursor: pointer;
+}
+.month-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  min-width: 110px;
+  text-align: center;
+  letter-spacing: -0.1px;
+}
+
+/* Action buttons row */
+.actions-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.action-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1.5px solid;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #232346;
+}
+.action-btn.expense { border-color: #f87171; color: #f87171; }
+.action-btn.income { border-color: #34d399; color: #34d399; }
+
+/* Nav grid */
+.nav-grid {
+  display: flex;
+  gap: 6px;
+}
+.nav-item {
+  flex: 1;
+  text-align: center;
+  padding: 10px 4px;
+  border-radius: 8px;
+  background: #1e1e3a;
+}
+.nav-icon { font-size: 16px; margin-bottom: 2px; }
+.nav-label { font-size: 9px; font-weight: 600; color: #888; }
+
+/* Recent tx */
+.tx-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #2a2a4a;
+}
+.tx-row:last-child { border-bottom: none; }
+.tx-desc {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+.tx-date {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+.tx-amt {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* FAB */
+.fab {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #c4f23a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(196,242,58,0.3);
+  z-index: 20;
+  cursor: pointer;
+}
+.fab-icon { font-size: 24px; color: #0c0c0c; font-weight: 300; }
+
+/* Tabs (Savings only) */
+.tabs {
+  display: flex;
+  background: #1e1e3a;
+  border-radius: 10px;
+  margin: 0 12px 10px;
+  padding: 4px;
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tab.active {
+  background: #232346;
+  color: #fff;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Comparison legend */
+.legend {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #888;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.legend-dot.present { background: #34d399; }
+.legend-dot.missing { background: #f87171; }
+
+/* Sections spacing */
+.spacer-4 { height: 4px; }
+.spacer-8 { height: 8px; }
+.spacer-12 { height: 12px; }
+</style>
+</head>
+<body>
+
+<h1>UX Comparison</h1>
+<p class="subtitle">SavingsScreen (reference) ← vs → HomeScreen (current)</p>
+
+<div class="legend">
+  <span class="legend-item"><span class="legend-dot present"></span> Pattern presente</span>
+  <span class="legend-item"><span class="legend-dot missing"></span> Pattern mancante</span>
+</div>
+
+<div class="comparison">
+
+  <!-- ============================================ -->
+  <!-- SAVINGS SCREEN -->
+  <!-- ============================================ -->
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="notch"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span>●●●●</span>
+          <span>▮▮</span>
+          <span>🔋</span>
+        </div>
+      </div>
+      <div class="screen-label" style="color:#c4f23a;">SavingsScreen · Reference</div>
+
+      <div class="scroll-area">
+
+        <!-- Month nav -->
+        <div class="month-nav">
+          <span class="month-arrow">‹</span>
+          <span class="month-text">April 2025</span>
+          <span class="month-arrow">›</span>
+        </div>
+
+        <!-- Tabs (Savings-specific) -->
+        <div class="tabs">
+          <div class="tab active">Month</div>
+          <div class="tab">Plan</div>
+          <div class="tab">Portfolio</div>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-eyebrow">Savings · April 2025</div>
+          <div class="hero-amount">€2,450.00</div>
+          <div class="flow-row">
+            <div class="flow-cell">
+              <span class="flow-dot pos"></span>
+              <div>
+                <div class="flow-label">INCOME</div>
+                <div class="flow-val pos">€4,200.00</div>
+              </div>
+            </div>
+            <div class="flow-divider"></div>
+            <div class="flow-cell">
+              <span class="flow-dot neg"></span>
+              <div>
+                <div class="flow-label">EXPENSES</div>
+                <div class="flow-val neg">€1,750.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Allocated card -->
+        <div class="card">
+          <div class="row-between">
+            <div class="card-label" style="font-size:12px;color:#888;">Allocated</div>
+            <div style="font-size:16px;font-weight:700;color:#c4f23a;">44%</div>
+          </div>
+          <div class="track">
+            <div class="track-fill" style="width:44%"></div>
+          </div>
+          <div class="row-between" style="margin-top:10px;">
+            <div>
+              <div class="micro-label">INVESTED</div>
+              <div class="micro-val">€1,080.00</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="micro-label">AVAILABLE</div>
+              <div class="micro-val" style="color:#c4f23a;">€1,370.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="spacer-8"></div>
+
+        <!-- Section: ALLOCATIONS -->
+        <div class="section-head">
+          <span class="section-title">ALLOCATIONS</span>
+          <span class="section-meta">3 items</span>
+        </div>
+
+        <!-- Allocation items -->
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="alloc-row">
+            <div class="chip" style="background:#c4f23a;"><span class="chip-text">VWCE</span></div>
+            <div class="alloc-mid">
+              <div class="row-between">
+                <span class="alloc-name">VWCE · Vanguard FTSE AW</span>
+                <span class="alloc-amt" style="color:#e0e0e0;">€500</span>
+              </div>
+              <div class="alloc-bar"><div class="alloc-bar-fill accent" style="width:80%"></div></div>
+              <div class="row-between">
+                <span class="alloc-meta">VWCE · ETF · ×2.4</span>
+                <span class="alloc-pct">20.4% of savings</span>
+              </div>
+            </div>
+            <span style="color:#555;padding:4px;cursor:pointer;">✕</span>
+          </div>
+
+          <div class="alloc-row">
+            <div class="chip" style="background:#7dd3fc;"><span class="chip-text">BTC</span></div>
+            <div class="alloc-mid">
+              <div class="row-between">
+                <span class="alloc-name">Bitcoin</span>
+                <span class="alloc-amt" style="color:#e0e0e0;">€300</span>
+              </div>
+              <div class="alloc-bar"><div class="alloc-bar-fill accent" style="width:48%"></div></div>
+              <div class="row-between">
+                <span class="alloc-meta">BTC · Crypto</span>
+                <span class="alloc-pct">12.2% of savings</span>
+              </div>
+            </div>
+            <span style="color:#555;padding:4px;cursor:pointer;">✕</span>
+          </div>
+
+          <div class="alloc-row">
+            <div class="chip" style="background:#fb923c;"><span class="chip-text">BND</span></div>
+            <div class="alloc-mid">
+              <div class="row-between">
+                <span class="alloc-name">BND · Vanguard Total Bond</span>
+                <span class="alloc-amt" style="color:#e0e0e0;">€280</span>
+              </div>
+              <div class="alloc-bar"><div class="alloc-bar-fill accent" style="width:45%"></div></div>
+              <div class="row-between">
+                <span class="alloc-meta">BND · Bond</span>
+                <span class="alloc-pct">11.4% of savings</span>
+              </div>
+            </div>
+            <span style="color:#555;padding:4px;cursor:pointer;">✕</span>
+          </div>
+        </div>
+
+        <!-- Ghost add -->
+        <div class="ghost-btn">
+          <span class="ghost-btn-text">+ Add allocation</span>
+        </div>
+
+        <!-- Sales section -->
+        <div class="section-head" style="margin-top:12px;">
+          <span class="section-title">SALES</span>
+          <span class="section-meta">1 item</span>
+        </div>
+        <div class="alloc-row" style="border-left:3px solid #34d399;">
+          <div class="chip" style="background:#a78bfa;"><span class="chip-text">AAPL</span></div>
+          <div class="alloc-mid">
+            <div class="row-between">
+              <span class="alloc-name">Apple Inc.</span>
+              <span class="alloc-amt" style="color:#34d399;">+€42.00</span>
+            </div>
+            <div class="row-between">
+              <span class="alloc-meta">×5 @ €210.00</span>
+              <span class="alloc-pct">€1,050.00 proceeds</span>
+            </div>
+          </div>
+          <span style="color:#555;padding:4px;cursor:pointer;">✕</span>
+        </div>
+
+      </div>
+
+      <!-- FAB -->
+      <div class="fab">+</div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- HOME SCREEN -->
+  <!-- ============================================ -->
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="notch"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <span>●●●●</span>
+          <span>▮▮</span>
+          <span>🔋</span>
+        </div>
+      </div>
+      <div class="screen-label" style="color:#34d399;">HomeScreen · Current</div>
+
+      <div class="scroll-area">
+
+        <!-- Month nav -->
+        <div class="month-nav">
+          <span class="month-arrow">‹</span>
+          <span class="month-text">May 2025</span>
+          <span class="month-arrow">›</span>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-eyebrow">Overview · May 2025</div>
+          <div class="hero-amount" style="color:#34d399;">+€2,420.00</div>
+          <div class="flow-row">
+            <div class="flow-cell">
+              <span class="flow-dot pos"></span>
+              <div>
+                <div class="flow-label">INCOME</div>
+                <div class="flow-val pos">€4,850.00</div>
+              </div>
+            </div>
+            <div class="flow-divider"></div>
+            <div class="flow-cell">
+              <span class="flow-dot neg"></span>
+              <div>
+                <div class="flow-label">EXPENSES</div>
+                <div class="flow-val neg">€2,430.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="actions-row">
+          <div class="action-btn expense">+ Expense</div>
+          <div class="action-btn income">+ Income</div>
+        </div>
+
+        <!-- Nav grid -->
+        <div class="card" style="margin-bottom:12px;">
+          <div class="nav-grid">
+            <div class="nav-item"><div class="nav-icon">↗</div><div class="nav-label">Transactions</div></div>
+            <div class="nav-item"><div class="nav-icon">📋</div><div class="nav-label">Budget</div></div>
+            <div class="nav-item"><div class="nav-icon">💰</div><div class="nav-label">Savings</div></div>
+            <div class="nav-item"><div class="nav-icon">📊</div><div class="nav-label">Stats</div></div>
+          </div>
+        </div>
+
+        <!-- Savings card (present) -->
+        <div class="card" style="margin-bottom:12px;cursor:pointer;">
+          <div class="row-between">
+            <div class="micro-label">MONTHLY SAVINGS</div>
+            <div style="font-size:16px;font-weight:700;color:#c4f23a;">53%</div>
+          </div>
+          <div class="hero-amount hero-amount-small" style="color:#34d399;">+€2,800.00</div>
+          <div class="track">
+            <div class="track-fill" style="width:53%"></div>
+          </div>
+          <div style="font-size:10px;color:#666;margin-top:6px;">53% allocated</div>
+        </div>
+
+        <!-- Budget vs Actual -->
+        <div class="card" style="margin-bottom:12px;">
+          <div class="section-head">
+            <span class="section-title">BUDGET VS ACTUAL</span>
+            <span class="section-meta" style="cursor:pointer;">Edit ›</span>
+          </div>
+
+          <!-- Expenses bar -->
+          <div style="margin-top:10px;">
+            <div class="row-between">
+              <span class="alloc-name">Expenses</span>
+              <span class="alloc-amt neg">€2,430</span>
+            </div>
+            <div class="alloc-bar"><div class="alloc-bar-fill neg" style="width:65%"></div></div>
+            <div class="alloc-meta">Budget: €3,400</div>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <!-- Income bar -->
+          <div>
+            <div class="row-between">
+              <span class="alloc-name">Income</span>
+              <span class="alloc-amt pos">€4,850</span>
+            </div>
+            <div class="alloc-bar"><div class="alloc-bar-fill pos" style="width:71%"></div></div>
+            <div class="alloc-meta">Budget: €5,200</div>
+          </div>
+        </div>
+
+        <!-- Top Expenses -->
+        <div class="card" style="margin-bottom:10px;">
+          <div class="section-head">
+            <span class="section-title">TOP EXPENSES</span>
+            <span class="section-meta" style="cursor:pointer;">All ›</span>
+          </div>
+          <div class="spacer-4"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="alloc-row">
+              <div class="chip" style="background:#fb923c;"><span class="chip-text">GRO</span></div>
+              <div class="alloc-mid">
+                <div class="row-between">
+                  <span class="alloc-name">Groceries</span>
+                  <span class="alloc-amt neg">€620</span>
+                </div>
+              </div>
+            </div>
+            <div class="alloc-row">
+              <div class="chip" style="background:#f472b6;"><span class="chip-text">REN</span></div>
+              <div class="alloc-mid">
+                <div class="row-between">
+                  <span class="alloc-name">Rent</span>
+                  <span class="alloc-amt neg">€850</span>
+                </div>
+              </div>
+            </div>
+            <div class="alloc-row">
+              <div class="chip" style="background:#60a5fa;"><span class="chip-text">UTI</span></div>
+              <div class="alloc-mid">
+                <div class="row-between">
+                  <span class="alloc-name">Utilities</span>
+                  <span class="alloc-amt neg">€180</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ghost-btn">
+            <span class="ghost-btn-text">+ Add expense</span>
+          </div>
+        </div>
+
+        <!-- Top Income -->
+        <div class="card" style="margin-bottom:10px;">
+          <div class="section-head">
+            <span class="section-title">TOP INCOME</span>
+            <span class="section-meta" style="cursor:pointer;">All ›</span>
+          </div>
+          <div class="spacer-4"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="alloc-row">
+              <div class="chip" style="background:#c4f23a;"><span class="chip-text">SAL</span></div>
+              <div class="alloc-mid">
+                <div class="row-between">
+                  <span class="alloc-name">Salary</span>
+                  <span class="alloc-amt pos">€3,800</span>
+                </div>
+              </div>
+            </div>
+            <div class="alloc-row">
+              <div class="chip" style="background:#34d399;"><span class="chip-text">FRE</span></div>
+              <div class="alloc-mid">
+                <div class="row-between">
+                  <span class="alloc-name">Freelance</span>
+                  <span class="alloc-amt pos">€850</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ghost-btn">
+            <span class="ghost-btn-text">+ Add income</span>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card" style="margin-bottom:24px;">
+          <div class="section-head">
+            <span class="section-title">RECENT ACTIVITY</span>
+            <span class="section-meta" style="cursor:pointer;">All ›</span>
+          </div>
+          <div class="spacer-4"></div>
+          <div class="tx-row">
+            <div>
+              <div class="tx-desc">Salary deposit</div>
+              <div class="tx-date">15 May 2025</div>
+            </div>
+            <div class="tx-amt" style="color:#34d399;">+€3,800.00</div>
+          </div>
+          <div class="tx-row">
+            <div>
+              <div class="tx-desc">Esselunga</div>
+              <div class="tx-date">14 May 2025</div>
+            </div>
+            <div class="tx-amt" style="color:#f87171;">−€62.40</div>
+          </div>
+          <div class="tx-row">
+            <div>
+              <div class="tx-desc">Freelance payment</div>
+              <div class="tx-date">12 May 2025</div>
+            </div>
+            <div class="tx-amt" style="color:#34d399;">+€850.00</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FAB -->
+      <div class="fab">+</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

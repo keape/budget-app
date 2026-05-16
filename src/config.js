@@ -1,13 +1,12 @@
 import axios from 'axios';
 
-// URL del backend - Vercel deployment
-const BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://budget-app-three-gules.vercel.app'  // Vercel backend
-  : 'http://localhost:5001';  // Local development
+const DEFAULT_LOCAL_API_URL = 'http://localhost:5001';
+const DEFAULT_PRODUCTION_API_URL = 'https://budget-app-backend.onrender.com';
 
-// Test: Aggiungi logging per vedere se è un problema di URL
-console.log('🔧 Config BASE_URL:', BASE_URL);
-console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
+const BASE_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? DEFAULT_PRODUCTION_API_URL
+    : DEFAULT_LOCAL_API_URL);
 
 // Function to get the auth token
 const getAuthToken = () => {

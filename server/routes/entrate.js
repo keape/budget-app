@@ -1,19 +1,20 @@
 const express = require('express');
 const Entrata = require('../models/Entrata');
 const { authenticateToken } = require('./auth');
+const { debugLog, logError } = require('../utils/logger');
 const router = express.Router();
 
 // GET /api/entrate (Paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    console.log('🔍 DEBUG ENTRATE - req.user:', req.user);
+    debugLog('🔍 DEBUG ENTRATE - req.user:', req.user);
     
     // User isolation check
     if (!req.user || !req.user.userId) {
-      console.log('🚫 Accesso negato - utente non autenticato');
+      debugLog('🚫 Accesso negato - utente non autenticato');
       return res.status(401).json({ error: 'Utente non autenticato' });
     }
-    console.log('✅ Utente autenticato:', req.user.username);
+    debugLog('✅ Utente autenticato:', req.user.username);
     
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
@@ -26,7 +27,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const filteredEntrate = entrate.filter(entrata => 
       entrata.userId && entrata.userId.toString() === req.user.userId.toString()
     );
-    console.log('🔒 SECURITY FILTER entrate - dopo filtro security:', filteredEntrate.length, 'entrate');
+    debugLog('🔒 SECURITY FILTER entrate - dopo filtro security:', filteredEntrate.length, 'entrate');
     
     res.json({ 
       entrate: filteredEntrate, 
@@ -35,7 +36,7 @@ router.get('/', authenticateToken, async (req, res) => {
       totalItems: totalEntrate 
     });
   } catch (err) {
-    console.error('❌ Errore nel recupero delle entrate:', err);
+    logError('❌ Errore nel recupero delle entrate:', err);
     res.status(500).json({ error: "Errore nel recupero delle entrate" });
   }
 });
@@ -53,7 +54,7 @@ router.get('/totale-mese', authenticateToken, async (req, res) => {
     const totale = entrate.reduce((acc, entrata) => acc + entrata.importo, 0);
     res.json({ totale: totale.toFixed(2), mese: oggi.toLocaleString('it-IT', { month: 'long' }), anno: oggi.getFullYear() });
   } catch (err) {
-    console.error('❌ Errore nel calcolo del totale mensile delle entrate:', err);
+    logError('❌ Errore nel calcolo del totale mensile delle entrate:', err);
     res.status(500).json({ error: "Errore nel calcolo del totale mensile delle entrate" });
   }
 });
@@ -76,7 +77,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const entrataSalvata = await nuovaEntrata.save();
     res.status(201).json({ success: true, message: `Entrata di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`, data: entrataSalvata });
   } catch (err) {
-    console.error("❌ Errore nel salvataggio dell'entrata:", err);
+    logError("❌ Errore nel salvataggio dell'entrata:", err);
     res.status(500).json({ error: "Errore nel salvataggio", message: "Non è stato possibile salvare l'entrata. Riprova." });
   }
 });
@@ -97,24 +98,24 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (!entrata) return res.status(404).json({ error: "Entrata non trovata" });
     res.json(entrata);
   } catch (err) {
-    console.error("❌ Errore nella modifica dell'entrata:", err);
+    logError("❌ Errore nella modifica dell'entrata:", err);
     res.status(500).json({ error: "Errore nella modifica dell'entrata" });
   }
 });
 
 // DELETE /api/entrate/:id
 router.delete('/:id', authenticateToken, async (req, res) => {
-  console.log('🗑️ Richiesta eliminazione entrata:', req.params.id);
+  debugLog('🗑️ Richiesta eliminazione entrata:', req.params.id);
   try {
     const entrata = await Entrata.findOneAndDelete({ 
       _id: req.params.id, 
       userId: req.user.userId 
     });
     if (!entrata) return res.status(404).json({ error: "Entrata non trovata" });
-    console.log('✅ Entrata eliminata con successo:', req.params.id);
+    debugLog('✅ Entrata eliminata con successo:', req.params.id);
     res.json({ message: "Entrata eliminata con successo" });
   } catch (err) {
-    console.error("❌ Errore nella cancellazione dell'entrata:", err);
+    logError("❌ Errore nella cancellazione dell'entrata:", err);
     res.status(500).json({ error: "Errore nella cancellazione dell'entrata" });
   }
 });

@@ -1,0 +1,68 @@
+[
+  {
+    "name": "guest_id",
+    "value": "v1%3A177801078095957348",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "__cf_bm",
+    "value": "bRP.LAtEAT2gfb.5V1aozZWdVZn39zUvVGGk7ntWOfk-1778010780.8194232-1.0.1.1-urkMM3n.Y3Iy5FCeZ_OMH1t_ArOIQhOf979Sy8RoYe0y66ZNzLwyJjpsAXtWW0.cTzgav9GZQj6hVPX6iskDMo3xvGA.twXidtQIocLdio47lmNb1E_Q.YY0IsPtstu8",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "gt",
+    "value": "2051752041555390870",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "__cuid",
+    "value": "8ad331f3af014070961777b15de2e960",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "g_state",
+    "value": "{\"i_l\":0,\"i_ll\":1778010783064,\"i_b\":\"l37Kwy5UYp6A7TQ0nCCoUo1IUaBmQAQuB958SbGJtl4\",\"i_e\":{\"enable_itp_optimization\":0},\"i_et\":1778010783062}",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "kdt",
+    "value": "KRTPPRikO45qd5d0YLYCTifrGcl8GvZBfOsTffCs",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "auth_token",
+    "value": "1bcafa025103c2a60d6b20f2ab775cc076013e4b",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "ct0",
+    "value": "2c5c6b6279702411f3175092fdebf40968c96627687e829fd34113cde24cb344e223104658fab0b35ee9884a6aaa92bcbae57a0d107b60cd83d70a41716cd29d3ca8dd4765f402985817b0f918c7ef28",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "att",
+    "value": "1-ZOVuoaPXiy2ODJ0MwqSvbfMeEQYrLuEe40ZS6fZk",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "lang",
+    "value": "en",
+    "domain": ".x.com",
+    "path": "/"
+  },
+  {
+    "name": "twid",
+    "value": "u%3D2051690413627494400",
+    "domain": ".x.com",
+    "path": "/"
+  }
+]

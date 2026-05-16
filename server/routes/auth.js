@@ -10,6 +10,7 @@ const BudgetSettings = require('../models/BudgetSettings');
 const TransazionePeriodica = require('../models/TransazionePeriodica');
 const Otp = require('../models/Otp');
 const nodemailer = require('nodemailer');
+const { debugLog, logError } = require('../utils/logger');
 const router = express.Router();
 
 // Configure Nodemailer Transporter
@@ -32,10 +33,10 @@ const sendEmail = async (to, subject, text) => {
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`📧 Email sent to ${to}`);
+    debugLog(`📧 Email sent to ${to}`);
     return true;
   } catch (error) {
-    console.error('❌ Error sending email:', error);
+    logError('❌ Error sending email:', error);
     return false;
   }
 };
@@ -81,7 +82,7 @@ router.post('/send-otp', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ Error sending OTP:', error);
+    logError('❌ Error sending OTP:', error);
     res.status(500).json({ message: "Error sending verification code" });
   }
 });
@@ -89,14 +90,14 @@ router.post('/send-otp', async (req, res) => {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    console.log('🔍 DEBUG: Inizio registrazione');
-    console.log('🔍 DEBUG: Dati ricevuti:', req.body);
+    debugLog('🔍 DEBUG: Inizio registrazione');
+    debugLog('🔍 DEBUG: Dati ricevuti:', req.body);
 
     const { username, password, email, otp } = req.body;
 
     // Validazione input
     if (!username || !password || !email || !otp) {
-      console.log('❌ DEBUG: Dati mancanti - username:', username, 'email:', email, 'password:', !!password, 'otp:', !!otp);
+      debugLog('❌ DEBUG: Dati mancanti - username:', username, 'email:', email, 'password:', !!password, 'otp:', !!otp);
       return res.status(400).json({ message: "Username, email, password and OTP are required" });
     }
 
@@ -106,29 +107,29 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired verification code" });
     }
 
-    console.log('🔍 DEBUG: Controllo utente esistente...');
+    debugLog('🔍 DEBUG: Controllo utente esistente...');
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
-      console.log('❌ DEBUG: Username già esistente:', username);
+      debugLog('❌ DEBUG: Username già esistente:', username);
       return res.status(400).json({ message: "Username già in uso" });
     }
 
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
-      console.log('❌ DEBUG: Email già esistente:', email);
+      debugLog('❌ DEBUG: Email già esistente:', email);
       return res.status(400).json({ message: "Email già in uso" });
     }
 
-    console.log('🔍 DEBUG: Hashing password...');
+    debugLog('🔍 DEBUG: Hashing password...');
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log('✅ DEBUG: Password hashata con successo');
+    debugLog('✅ DEBUG: Password hashata con successo');
 
-    console.log('🔍 DEBUG: Creazione nuovo utente...');
+    debugLog('🔍 DEBUG: Creazione nuovo utente...');
     const user = new User({ username, password: hashedPassword, email, emailVerified: true });
 
-    console.log('🔍 DEBUG: Salvataggio utente nel database...');
+    debugLog('🔍 DEBUG: Salvataggio utente nel database...');
     await user.save();
-    console.log('✅ DEBUG: Utente salvato con successo, ID:', user._id);
+    debugLog('✅ DEBUG: Utente salvato con successo, ID:', user._id);
 
     // CREATE DEFAULT BUDGET SETTINGS
     try {
@@ -136,7 +137,7 @@ router.post('/register', async (req, res) => {
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth(); // 0-11
 
-      console.log(`✨ CREATING DEFAULT BUDGET for ${username} (${currentMonth}/${currentYear})`);
+      debugLog(`✨ CREATING DEFAULT BUDGET for ${username} (${currentMonth}/${currentYear})`);
 
       const defaultSpese = {
         "Home": 0,
@@ -163,10 +164,10 @@ router.post('/register', async (req, res) => {
 
       // Use budgetsettings_new directly to match the rest of the app
       await mongoose.connection.db.collection('budgetsettings_new').insertOne(defaultBudget);
-      console.log('✅ DEBUG: Default budget settings created successfully');
+      debugLog('✅ DEBUG: Default budget settings created successfully');
 
     } catch (budgetError) {
-      console.error('⚠️ Warning: Failed to create default budget:', budgetError);
+      logError('⚠️ Warning: Failed to create default budget:', budgetError);
       // We don't fail registration if this fails, just log it
     }
 
@@ -175,11 +176,11 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({ message: "Utente registrato con successo" });
   } catch (error) {
-    console.error('❌ Errore durante la registrazione:', error);
-    console.error('❌ Stack trace completo:', error.stack);
-    console.error('❌ Tipo errore:', error.name);
-    console.error('❌ Messaggio errore:', error.message);
-    res.status(500).json({ message: "Errore durante la registrazione", error: error.message });
+    logError('❌ Errore durante la registrazione:', error);
+    res.status(500).json({
+      message: "Errore durante la registrazione",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -187,19 +188,19 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { identifier, password } = req.body; // 'identifier' can be email or username
-    console.log('🔍 LOGIN tentativo per identifier:', identifier);
+    debugLog('🔍 LOGIN tentativo per identifier:', identifier);
 
     const user = await User.findOne({
       $or: [{ username: identifier }, { email: identifier }]
     });
 
     if (!user) {
-      console.log('❌ LOGIN: Utente non trovato:', identifier);
+      debugLog('❌ LOGIN: Utente non trovato:', identifier);
       return res.status(401).json({ message: "Credenziali non valide" });
     }
 
-    console.log('🔍 LOGIN: Utente trovato, verifica password...');
-    console.log('🔍 LOGIN: User data:', {
+    debugLog('🔍 LOGIN: Utente trovato, verifica password...');
+    debugLog('🔍 LOGIN: User data:', {
       id: user._id,
       username: user.username,
       idType: typeof user._id,
@@ -210,61 +211,58 @@ router.post('/login', async (req, res) => {
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      console.log('❌ LOGIN: Password non valida per:', identifier);
+      debugLog('❌ LOGIN: Password non valida per:', identifier);
       return res.status(401).json({ message: "Credenziali non valide" });
     }
 
-    console.log('✅ LOGIN: Password valida, generazione token...');
+    debugLog('✅ LOGIN: Password valida, generazione token...');
     const tokenPayload = { userId: user._id, username: user.username };
-    console.log('🔍 LOGIN: Token payload:', tokenPayload);
+    debugLog('🔍 LOGIN: Token payload:', tokenPayload);
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '24h' });
-    console.log('✅ LOGIN: Token generato, lunghezza:', token.length);
+    debugLog('✅ LOGIN: Token generato, lunghezza:', token.length);
 
     // Test immediato del token
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('✅ LOGIN: Token verificato subito:', decoded);
+      debugLog('✅ LOGIN: Token verificato subito:', decoded);
     } catch (verifyError) {
-      console.error('❌ LOGIN: Token appena generato non valido!', verifyError);
+      logError('❌ LOGIN: Token appena generato non valido!', verifyError);
     }
 
     res.json({ token });
   } catch (error) {
-    console.error('❌ Errore durante il login:', error);
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Error message:', error.message);
-    console.error('❌ Error stack:', error.stack);
+    logError('❌ Errore durante il login:', error);
     res.status(500).json({
       message: "Errore durante il login",
-      error: error.message,
-      errorType: error.name
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      errorType: process.env.NODE_ENV === 'development' ? error.name : undefined
     });
   }
 });
 
 // Middleware per l'autenticazione JWT
 const authenticateToken = (req, res, next) => {
-  console.log('🔐 AUTHENTICATETOKEN START - headers:', req.headers['authorization'] ? 'PRESENTE' : 'MANCANTE');
+  debugLog('🔐 AUTHENTICATETOKEN START - headers:', req.headers['authorization'] ? 'PRESENTE' : 'MANCANTE');
 
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    console.log('❌ TOKEN MANCANTE');
+    debugLog('❌ TOKEN MANCANTE');
     return res.status(401).json({ message: 'Token di accesso richiesto' });
   }
 
-  console.log('🔍 TOKEN PRESENTE, verifica in corso...');
+  debugLog('🔍 TOKEN PRESENTE, verifica in corso...');
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
-      console.log('❌ TOKEN NON VALIDO:', err.message);
+      debugLog('❌ TOKEN NON VALIDO:', err.message);
       return res.status(403).json({ message: 'Token non valido' });
     }
 
-    console.log('✅ TOKEN VALIDO - User data:', user);
-    console.log('🆔 USER ID ESTRATTO:', user.userId);
-    console.log('👤 USERNAME ESTRATTO:', user.username);
+    debugLog('✅ TOKEN VALIDO - User data:', user);
+    debugLog('🆔 USER ID ESTRATTO:', user.userId);
+    debugLog('👤 USERNAME ESTRATTO:', user.username);
 
     req.user = user;
     next();
@@ -296,7 +294,7 @@ router.post('/change-password', authenticateToken, async (req, res) => {
 
     res.json({ message: "Password cambiata con successo" });
   } catch (error) {
-    console.error('❌ Errore durante il cambio password:', error);
+    logError('❌ Errore durante il cambio password:', error);
     res.status(500).json({ message: "Errore durante il cambio password" });
   }
 });
@@ -377,7 +375,7 @@ router.post('/social-login', async (req, res) => {
           updatedAt: now
         };
         await mongoose.connection.db.collection('budgetsettings_new').insertOne(defaultBudget);
-      } catch (e) { console.error('Default budget skip:', e); }
+      } catch (e) { logError('Default budget skip:', e); }
 
     } else {
       // Aggiorna ID social se non presente
@@ -394,7 +392,7 @@ router.post('/social-login', async (req, res) => {
     res.json({ token: jwtToken, username: user.username });
 
   } catch (error) {
-    console.error('❌ Social Login Error:', error.response?.data || error.message);
+    logError('❌ Social Login Error:', error.response?.data || error);
     res.status(500).json({ message: "Errore durante il social login" });
   }
 });
@@ -425,7 +423,7 @@ router.post('/update-email', authenticateToken, async (req, res) => {
 
     res.json({ message: "Email aggiornata con successo" });
   } catch (error) {
-    console.error('❌ Errore durante l\'aggiornamento email:', error);
+    logError('❌ Errore durante l\'aggiornamento email:', error);
     res.status(500).json({ message: "Errore durante l'aggiornamento dell'email" });
   }
 });
@@ -434,7 +432,7 @@ router.post('/update-email', authenticateToken, async (req, res) => {
 router.delete('/delete-account', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
-    console.log(`⚠️ Richiesta cancellazione account per user ID: ${userId}`);
+    debugLog(`⚠️ Richiesta cancellazione account per user ID: ${userId}`);
 
     // Check if user exists
     const user = await User.findById(userId);
@@ -443,26 +441,26 @@ router.delete('/delete-account', authenticateToken, async (req, res) => {
     }
 
     // Delete all related data
-    console.log(`🗑️ Eliminazione dati associati...`);
+    debugLog(`🗑️ Eliminazione dati associati...`);
     const deleteSpese = await Spesa.deleteMany({ userId });
-    console.log(`- Spese eliminate: ${deleteSpese.deletedCount}`);
+    debugLog(`- Spese eliminate: ${deleteSpese.deletedCount}`);
 
     const deleteEntrate = await Entrata.deleteMany({ userId });
-    console.log(`- Entrate eliminate: ${deleteEntrate.deletedCount}`);
+    debugLog(`- Entrate eliminate: ${deleteEntrate.deletedCount}`);
 
     const deleteBudget = await BudgetSettings.deleteMany({ userId });
-    console.log(`- BudgetSettings eliminati: ${deleteBudget.deletedCount}`);
+    debugLog(`- BudgetSettings eliminati: ${deleteBudget.deletedCount}`);
 
     const deletePeriodiche = await TransazionePeriodica.deleteMany({ userId });
-    console.log(`- Transazioni periodiche eliminate: ${deletePeriodiche.deletedCount}`);
+    debugLog(`- Transazioni periodiche eliminate: ${deletePeriodiche.deletedCount}`);
 
     // Delete User
     await User.findByIdAndDelete(userId);
-    console.log(`✅ Utente ${userId} eliminato con successo`);
+    debugLog(`✅ Utente ${userId} eliminato con successo`);
 
     res.json({ message: "Account e tutti i dati associati cancellati con successo" });
   } catch (error) {
-    console.error('❌ Errore durante cancellazione account:', error);
+    logError('❌ Errore durante cancellazione account:', error);
     res.status(500).json({ message: "Errore durante la cancellazione dell'account" });
   }
 });
@@ -499,14 +497,14 @@ router.post('/forgot-password', async (req, res) => {
     );
 
     if (!emailSent) {
-      console.warn('⚠️ Forgot-password: reset token salvato ma email non inviata a:', user.email);
+      debugLog('⚠️ Forgot-password: reset token salvato ma email non inviata');
     }
 
     res.json({
       message: "Se l'utente esiste, riceverai le istruzioni per il reset"
     });
   } catch (error) {
-    console.error('❌ Errore durante il reset password:', error);
+    logError('❌ Errore durante il reset password:', error);
     res.status(500).json({ message: "Errore durante il reset password" });
   }
 });
@@ -537,7 +535,7 @@ router.post('/reset-password', async (req, res) => {
 
     res.json({ message: "Password reimpostata con successo" });
   } catch (error) {
-    console.error('❌ Errore durante il reset password:', error);
+    logError('❌ Errore durante il reset password:', error);
     res.status(500).json({ message: "Errore durante il reset password" });
   }
 });

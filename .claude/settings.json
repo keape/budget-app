@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/keape/Documents/budget365/.claude/hooks/context_inject.sh",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}

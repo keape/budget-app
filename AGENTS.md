@@ -12,6 +12,20 @@ Read `CLAUDE.md` first for the project map. For backend/API work, also read `doc
 - Do not commit environment files or credentials. `.env`, `.env.production`, `server/.env`, `server/scripts/.env`, `server/credentials.json`, and `social-agent/.env` must stay untracked.
 - If secrets were previously tracked, rotate the affected secrets instead of assuming `.gitignore` is enough.
 - Do not expose debug, migration, or emergency repair endpoints in production.
+- Do not add raw `console.log` debug output in backend routes. Use `debugLog` from `server/utils/logger.js`; it is silent in production.
+- Use `logError` from `server/utils/logger.js` for route errors so production logs avoid verbose stack/payload dumps.
+
+## Data Rules
+- `Spesa.importo` must always be stored as a negative number, including update routes: `-Math.abs(Number(importo))`.
+- `Entrata.importo` must always be stored as a positive number, including update routes: `Math.abs(Number(importo))`.
+- Do not rely on the frontend to normalize signs; enforce this in backend routes.
+
+## Deploy Configuration
+- Do not hardcode deployment URLs in application code when an environment variable can carry them.
+- Web frontend API URL is controlled by `REACT_APP_API_URL`. If absent, `src/config.js` falls back to `http://localhost:5001` in development and `https://budget-app-backend.onrender.com` in production.
+- Backend CORS is controlled by comma-separated `CORS_ORIGINS`. If absent, `server/index.js` uses the legacy default allowlist.
+- Render backend env should include `CORS_ORIGINS`, `FRONTEND_URL`, `MONGODB_URI`, `JWT_SECRET`, email vars, and `ENABLE_ADMIN_ROUTES=false`.
+- Vercel frontend env should include `REACT_APP_API_URL=https://budget-app-backend.onrender.com` and `REACT_APP_ENABLE_ADMIN_ROUTES=false`.
 
 ## Admin/Maintenance Routes
 Backend maintenance routes are disabled by default and return 404 unless:
