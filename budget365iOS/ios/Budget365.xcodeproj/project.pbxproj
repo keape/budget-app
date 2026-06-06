@@ -295,7 +295,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
+			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n\"$WITH_ENVIRONMENT\" \"$REACT_NATIVE_XCODE\"\n";
 		};
 		09B1E1A53F76E97DA48C2503 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -481,13 +481,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_ID_PREFIX = com.keape.budget365;
-				CURRENT_PROJECT_VERSION = 106;
-				MARKETING_VERSION = 4.6;
 				CODE_SIGN_ENTITLEMENTS = Budget365Widget/Budget365Widget.entitlements;
+				CURRENT_PROJECT_VERSION = 106;
 				DEVELOPMENT_TEAM = 4A5H2U7Q42;
 				INFOPLIST_FILE = Budget365Widget/Info.plist;
 				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 4.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).Budget365Widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -501,13 +501,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_ID_PREFIX = com.keape.budget365;
-				CURRENT_PROJECT_VERSION = 106;
-				MARKETING_VERSION = 4.6;
 				CODE_SIGN_ENTITLEMENTS = Budget365Widget/Budget365Widget.entitlements;
+				CURRENT_PROJECT_VERSION = 106;
 				DEVELOPMENT_TEAM = 4A5H2U7Q42;
 				INFOPLIST_FILE = Budget365Widget/Info.plist;
 				INSTALL_PATH = "$(LOCAL_APPS_DIR)";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				MARKETING_VERSION = 4.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).Budget365Widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
