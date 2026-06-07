@@ -98,10 +98,11 @@ app.use((req, res, next) => {
 
 // Health check endpoint - must be before database middleware
 app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    success: dbConnected,
     server: 'running',
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    database: dbConnected ? 'connected' : 'disconnected',
     timestamp: new Date().toISOString()
   });
 });
