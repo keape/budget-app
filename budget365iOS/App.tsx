@@ -17,9 +17,21 @@ import PeriodicTransactionsScreen from './src/screens/PeriodicTransactionsScreen
 import SavingsScreen from './src/screens/SavingsScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SettingsProvider, useSettings } from './src/context/SettingsContext';
+import { IconChevronLeft } from './src/components/NavIcons';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+const HomeBackButton = ({ onPress }: { onPress: () => void }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, paddingVertical: 6, paddingHorizontal: 4 }}
+    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+  >
+    <IconChevronLeft size={26} color="#FFFFFF" />
+    <Text style={{ fontSize: 17, color: '#FFFFFF', marginLeft: 2 }}>Home</Text>
+  </TouchableOpacity>
+);
 
 const MainTabs = () => {
   const { isDarkMode } = useSettings();
@@ -64,11 +76,7 @@ const MainTabs = () => {
         component={TransactionsScreen}
         options={({ navigation }) => ({
           title: 'Search & Filter',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginLeft: 16 }}>
-              <Text style={{ fontSize: 22, color: '#FFFFFF' }}>←</Text>
-            </TouchableOpacity>
-          ),
+          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} />,
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>🔍</Text>
@@ -81,11 +89,7 @@ const MainTabs = () => {
         component={BudgetScreen}
         options={({ navigation }) => ({
           title: 'Budget',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginLeft: 16 }}>
-              <Text style={{ fontSize: 22, color: '#FFFFFF' }}>←</Text>
-            </TouchableOpacity>
-          ),
+          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} />,
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>📈</Text>
@@ -98,11 +102,7 @@ const MainTabs = () => {
         component={StatsScreen}
         options={({ navigation }) => ({
           title: 'Stats',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginLeft: 16 }}>
-              <Text style={{ fontSize: 22, color: '#FFFFFF' }}>←</Text>
-            </TouchableOpacity>
-          ),
+          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} />,
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>📊</Text>
@@ -180,46 +180,54 @@ const AppNavigator = () => {
             <Stack.Screen
               name="AddTransaction"
               component={AddTransactionScreen}
-              options={{
+              options={({ navigation }) => ({
                 headerShown: true,
                 title: 'New Transaction',
                 headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff'
-              }}
+                headerTintColor: '#fff',
+                headerBackVisible: false,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+              })}
             />
 
             <Stack.Screen
               name="Settings"
               component={SettingsScreen}
-              options={{
+              options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Settings',
                 headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff'
-              }}
+                headerTintColor: '#fff',
+                headerBackVisible: false,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+              })}
             />
 
             <Stack.Screen
               name="PeriodicTransactions"
               component={PeriodicTransactionsScreen}
-              options={{
+              options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Recurring Transactions',
                 headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff'
-              }}
+                headerTintColor: '#fff',
+                headerBackVisible: false,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+              })}
             />
 
             <Stack.Screen
               name="Savings"
               component={SavingsScreen}
-              options={{
+              options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Savings & Portfolio',
                 headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
                 headerTintColor: '#fff',
                 headerTitleStyle: { fontWeight: 'bold' },
-              }}
+                headerBackVisible: false,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+              })}
             />
           </>
         ) : (

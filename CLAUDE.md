@@ -51,7 +51,7 @@ npm test                    # React Testing Library
 ```bash
 cd budget365iOS
 nohup node start-metro.js &              # Metro (NOT npm start)
-npx react-native run-ios --scheme Debug  # iOS simulator (always Debug)
+npx react-native run-ios --scheme Budget365 --mode Debug  # iOS simulator
 npx react-native run-android             # Android
 ```
 
@@ -95,6 +95,10 @@ npm start        # Terminal 2 — frontend port 3000
 - Root `package.json` `postinstall` runs `cd server && npm install` automatically
 - Backend starts without MongoDB (graceful degradation)
 - `render.yaml` uses `sync: false` for secrets; keep real secret values in Render/Vercel dashboards, not in Git
+
+## App Store Upload
+Skill `appstore-upload` (`.claude/skills/appstore-upload/SKILL.md`). Bug log: `.claude/CLAUDE_xcode.md`.
+Trigger: quando l'utente vuole pubblicare su App Store o TestFlight.
 
 ## CLAUDE.md Maintenance Rules
 - **Target**: main CLAUDE.md ≤ 100 righe; ogni sub-file ≤ 120 righe
