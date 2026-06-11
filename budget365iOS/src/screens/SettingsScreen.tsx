@@ -149,11 +149,6 @@ const SettingsScreen: React.FC = () => {
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={handleDeleteAccount}>
-                <Text style={[styles.menuItemText, { color: '#DC2626' }]}>🗑️ Delete Account</Text>
-                <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={[styles.menuItem, styles.logoutButton, isDarkMode && { backgroundColor: '#450a0a', borderColor: '#7f1d1d' }]} onPress={logout}>
                 <Text style={[styles.menuItemText, styles.logoutText, isDarkMode && { color: '#ef4444' }]}>🚪 Logout</Text>
             </TouchableOpacity>
@@ -301,6 +296,25 @@ const SettingsScreen: React.FC = () => {
                         <View style={[styles.toggleCircle, showBalance && styles.activeToggleCircle]} />
                     </TouchableOpacity>
                 </View>
+            </View>
+
+            {/* Danger Zone */}
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>⚠️ Danger Zone</Text>
+                <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
+                    Deleting your account is permanent and removes all your data.
+                </Text>
+                <TouchableOpacity
+                    style={[styles.dangerButton, isDarkMode && { backgroundColor: '#450a0a', borderColor: '#7f1d1d' }]}
+                    onPress={handleDeleteAccount}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#DC2626" />
+                    ) : (
+                        <Text style={styles.dangerButtonText}>🗑️ Delete Account</Text>
+                    )}
+                </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={[styles.secondaryButton, { marginBottom: 40 }]} onPress={() => setActiveTab('menu')}>
@@ -613,6 +627,19 @@ const styles = StyleSheet.create({
     },
     activeToggleCircle: {
         transform: [{ translateX: 22 }],
+    },
+    dangerButton: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FEE2E2',
+        padding: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    dangerButtonText: {
+        color: '#DC2626',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

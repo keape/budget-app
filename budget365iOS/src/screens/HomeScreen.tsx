@@ -7,15 +7,16 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     RefreshControl,
-    Modal,
-    TextInput,
-    KeyboardAvoidingView,
-    Platform,
-    Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAppTheme } from '../hooks/useAppTheme';
+import {
+    IconTransactions,
+    IconBudget,
+    IconSavings,
+    IconStats,
+} from '../components/NavIcons';
 import { API_URL } from '../config';
 import { warmupBackend } from '../utils/apiClient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -44,8 +45,18 @@ function getCategoryColor(key: string): string {
 
 const HomeScreen = ({ navigation }: { navigation: any }) => {
     const { userToken, logout } = useAuth();
-    const { currency, showBalance } = useSettings();
+    const { currency, showBalance, isDarkMode } = useSettings();
     const t = useAppTheme();
+
+    const NAV_PALETTE = {
+        transactions: { solid: '#5E5CE6', rgb: '94,92,230' },
+        budget:       { solid: '#0A84FF', rgb: '10,132,255' },
+        savings:      { solid: '#30D158', rgb: '48,209,88' },
+        stats:        { solid: '#FF9F0A', rgb: '255,159,10' },
+    } as const;
+    const tileAlpha = isDarkMode ? 0.28 : 0.12;
+    const navTileBg = (key: keyof typeof NAV_PALETTE) =>
+        `rgba(${NAV_PALETTE[key].rgb},${tileAlpha})`;
     const [isLoading, setIsLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
@@ -97,14 +108,6 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         allocatedPercent: number;
         monthId: string | null;
     } | null>(null);
-
-    // ── Quick-add modal ─────────────────────────────────────
-    const [showQuickAddModal, setShowQuickAddModal] = useState(false);
-    const [qaType, setQaType] = useState<'uscita' | 'entrata'>('uscita');
-    const [qaAmount, setQaAmount] = useState('');
-    const [qaCategory, setQaCategory] = useState('');
-    const [qaDescription, setQaDescription] = useState('');
-    const [isSavingQa, setIsSavingQa] = useState(false);
 
     // ── Header settings ─────────────────────────────────────
     useEffect(() => {
@@ -295,54 +298,6 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         caricaDati(abortControllerRef.current.signal);
     };
 
-    // ── Quick-add handlers ──────────────────────────────────
-    const resetQuickAdd = () => {
-        setShowQuickAddModal(false);
-        setQaType('uscita');
-        setQaAmount('');
-        setQaCategory('');
-        setQaDescription('');
-        setIsSavingQa(false);
-    };
-
-    const handleSaveQuickAdd = async () => {
-        const amount = parseFloat(qaAmount);
-        if (isNaN(amount) || amount <= 0) {
-            Alert.alert('Error', 'Enter a valid amount');
-            return;
-        }
-        if (!qaCategory.trim()) {
-            Alert.alert('Error', 'Enter a category');
-            return;
-        }
-        setIsSavingQa(true);
-        try {
-            const endpoint = qaType === 'uscita' ? '/api/spese' : '/api/entrate';
-            const body = {
-                importo: amount,
-                categoria: qaCategory.trim(),
-                descrizione: qaDescription.trim() || qaCategory.trim(),
-                data: new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0],
-            };
-            const res = await fetch(`${BASE_URL}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${userToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-            if (res.ok) {
-                resetQuickAdd();
-                reloadData();
-            } else {
-                const err = await res.json().catch(() => ({}));
-                Alert.alert('Error', err.error || 'Could not save transaction');
-            }
-        } catch (e) {
-            Alert.alert('Error', 'Network error');
-        } finally {
-            setIsSavingQa(false);
-        }
-    };
-
     const formatCurrency = (val: number) =>
         showBalance
             ? `${currency}${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -365,111 +320,6 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 {(label || '?').toUpperCase().slice(0, 3)}
             </Text>
         </View>
-    );
-
-    // ── Quick-add Modal ─────────────────────────────────────
-    const renderQuickAddModal = () => (
-        <Modal
-            visible={showQuickAddModal}
-            transparent
-            animationType="slide"
-            onRequestClose={resetQuickAdd}
-        >
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContainer, { backgroundColor: t.surface }]}>
-                        <View style={[styles.sheetGrab, { backgroundColor: t.line2 }]} />
-                        <Text style={[styles.modalTitle, { color: t.text }]}>
-                            {qaType === 'uscita' ? 'Add expense' : 'Add income'}
-                        </Text>
-
-                        {/* Type toggle */}
-                        <View style={[styles.modeToggle, { backgroundColor: t.surface2 }]}>
-                            {(['uscita', 'entrata'] as const).map(m => (
-                                <TouchableOpacity
-                                    key={m}
-                                    style={[styles.modeBtn, qaType === m && { backgroundColor: m === 'uscita' ? t.neg : t.pos }]}
-                                    onPress={() => setQaType(m)}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.modeBtnText,
-                                            { color: qaType === m ? '#fff' : t.text2 },
-                                        ]}
-                                    >
-                                        {m === 'uscita' ? 'Expense' : 'Income'}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        {/* Amount */}
-                        <View style={[styles.field, { backgroundColor: t.surface2, borderColor: qaAmount ? ACCENT : t.line, marginTop: 12 }]}>
-                            <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Amount</Text>
-                            <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
-                            <TextInput
-                                style={[styles.fieldInput, { color: t.text }]}
-                                placeholder="0.00"
-                                placeholderTextColor={t.text3}
-                                keyboardType="numeric"
-                                value={qaAmount}
-                                onChangeText={setQaAmount}
-                                autoFocus
-                            />
-                        </View>
-
-                        {/* Category */}
-                        <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
-                            <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Category</Text>
-                            <TextInput
-                                style={[styles.fieldInput, { color: t.text }]}
-                                placeholder="e.g. Groceries, Freelance"
-                                placeholderTextColor={t.text3}
-                                value={qaCategory}
-                                onChangeText={setQaCategory}
-                                returnKeyType="next"
-                            />
-                        </View>
-
-                        {/* Description */}
-                        <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
-                            <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Description (optional)</Text>
-                            <TextInput
-                                style={[styles.fieldInput, { color: t.text }]}
-                                placeholder="Quick note…"
-                                placeholderTextColor={t.text3}
-                                value={qaDescription}
-                                onChangeText={setQaDescription}
-                                returnKeyType="done"
-                                onSubmitEditing={handleSaveQuickAdd}
-                            />
-                        </View>
-
-                        <View style={styles.sheetActions}>
-                            <TouchableOpacity
-                                style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
-                                onPress={resetQuickAdd}
-                            >
-                                <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.sheetSave, { backgroundColor: qaType === 'uscita' ? t.neg : t.pos }]}
-                                onPress={handleSaveQuickAdd}
-                                disabled={isSavingQa}
-                            >
-                                {isSavingQa
-                                    ? <ActivityIndicator size="small" color="#fff" />
-                                    : <Text style={styles.sheetSaveText}>Save</Text>
-                                }
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </KeyboardAvoidingView>
-        </Modal>
     );
 
     // ── Loading state ───────────────────────────────────────
@@ -555,20 +405,28 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 {/* ── Quick nav grid ── */}
                 <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
                     <View style={styles.navGrid}>
-                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Transactions')}>
-                            <Text style={styles.navIcon}>↗</Text>
+                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Transactions')}>
+                            <View style={[styles.navTile, { backgroundColor: navTileBg('transactions') }]}>
+                                <IconTransactions size={26} color={NAV_PALETTE.transactions.solid} />
+                            </View>
                             <Text style={[styles.navLabel, { color: t.text2 }]}>Transactions</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Budget')}>
-                            <Text style={styles.navIcon}>📋</Text>
+                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Budget')}>
+                            <View style={[styles.navTile, { backgroundColor: navTileBg('budget') }]}>
+                                <IconBudget size={26} color={NAV_PALETTE.budget.solid} />
+                            </View>
                             <Text style={[styles.navLabel, { color: t.text2 }]}>Budget</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Savings' as never)}>
-                            <Text style={styles.navIcon}>💰</Text>
+                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Savings' as never)}>
+                            <View style={[styles.navTile, { backgroundColor: navTileBg('savings') }]}>
+                                <IconSavings size={26} color={NAV_PALETTE.savings.solid} />
+                            </View>
                             <Text style={[styles.navLabel, { color: t.text2 }]}>Savings</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.navBtn, { backgroundColor: t.surface2 }]} onPress={() => navigation.navigate('Stats')}>
-                            <Text style={styles.navIcon}>📊</Text>
+                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Stats')}>
+                            <View style={[styles.navTile, { backgroundColor: navTileBg('stats') }]}>
+                                <IconStats size={26} color={NAV_PALETTE.stats.solid} />
+                            </View>
                             <Text style={[styles.navLabel, { color: t.text2 }]}>Stats</Text>
                         </TouchableOpacity>
                     </View>
@@ -778,17 +636,14 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 </View>
             </ScrollView>
 
-            {/* ── FAB — quick add ── */}
+            {/* ── FAB — add transaction ── */}
             <TouchableOpacity
                 style={[styles.fab, { backgroundColor: ACCENT }]}
                 activeOpacity={0.85}
-                onPress={() => setShowQuickAddModal(true)}
+                onPress={() => navigation.navigate('AddTransaction')}
             >
                 <Text style={styles.fabIcon}>+</Text>
             </TouchableOpacity>
-
-            {/* ── Quick-add modal ── */}
-            {renderQuickAddModal()}
         </View>
     );
 };
@@ -912,22 +767,24 @@ const styles = StyleSheet.create({
     // ── Nav grid ──
     navGrid: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 6,
     },
     navBtn: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 12,
-        borderRadius: 10,
+        gap: 7,
     },
-    navIcon: {
-        fontSize: 20,
-        marginBottom: 4,
+    navTile: {
+        width: 60,
+        height: 60,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     navLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        letterSpacing: 0.2,
+        fontSize: 11,
+        fontWeight: '500',
+        letterSpacing: -0.1,
     },
 
     // ── Card (generic) ──
@@ -1112,105 +969,6 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1,
         padding: 16,
-    },
-
-    // ── Modal ──
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    modalContainer: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        padding: 20,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        gap: 8,
-    },
-    sheetGrab: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        alignSelf: 'center',
-        marginBottom: 12,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        letterSpacing: -0.3,
-        marginBottom: 8,
-    },
-    modeToggle: {
-        flexDirection: 'row',
-        borderRadius: 12,
-        padding: 4,
-        gap: 4,
-    },
-    modeBtn: {
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 9,
-        alignItems: 'center',
-    },
-    modeBtnText: {
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    field: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 12,
-        borderWidth: 1,
-        paddingHorizontal: 14,
-        height: 52,
-        gap: 6,
-    },
-    fieldLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-        position: 'absolute',
-        top: -9,
-        left: 12,
-        paddingHorizontal: 4,
-    },
-    fieldPrefix: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    fieldInput: {
-        flex: 1,
-        fontSize: 20,
-        fontWeight: '500',
-        padding: 0,
-        letterSpacing: -0.3,
-    },
-    sheetActions: {
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 12,
-    },
-    sheetCancel: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    sheetCancelText: {
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    sheetSave: {
-        flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    sheetSaveText: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: '#fff',
     },
 
     // ── Empty ──
