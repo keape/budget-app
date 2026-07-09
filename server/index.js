@@ -377,16 +377,28 @@ let isDbConnected = false;
 const mongoUri = process.env.MONGODB_URI?.replace(/^["']|["']$/g, '');
 console.log('🔧 Cleaned MongoDB URI length:', mongoUri?.length);
 
-mongoose.connect(mongoUri)
-  .then(() => {
-    console.log('✅ Connessione a MongoDB riuscita');
-    isDbConnected = true;
-  })
-  .catch((error) => {
-    console.error('❌ Errore di connessione a MongoDB:', error.message);
-    console.log('⚠️ Server will continue without database connection');
-    isDbConnected = false;
-  });
+const MONGO_RETRY_DELAY_MS = 5000;
+
+const connectToMongo = () => {
+  mongoose.connect(mongoUri)
+    .then(() => {
+      console.log('✅ Connessione a MongoDB riuscita');
+      isDbConnected = true;
+    })
+    .catch((error) => {
+      console.error('❌ Errore di connessione a MongoDB:', error.message);
+      console.log(`⚠️ Ritento connessione tra ${MONGO_RETRY_DELAY_MS / 1000}s`);
+      isDbConnected = false;
+      setTimeout(connectToMongo, MONGO_RETRY_DELAY_MS);
+    });
+};
+
+// Previene crash del processo se mongoose emette 'error' dopo la connessione iniziale
+mongoose.connection.on('error', (error) => {
+  console.error('❌ Errore MongoDB post-connessione:', error.message);
+});
+
+connectToMongo();
 
 // Start server
 const PORT = process.env.PORT || 5001;
