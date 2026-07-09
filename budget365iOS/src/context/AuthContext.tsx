@@ -2,6 +2,14 @@ import React, { createContext, useState, useEffect, useContext, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { warmupBackend } from '../utils/apiClient';
 import { syncToken, clearToken } from '../utils/tokenSync';
+import { API_URL } from '../config';
+
+const generaTransazioniPeriodiche = (token: string) => {
+    fetch(`${API_URL}/api/transazioni-periodiche/genera`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+    }).catch(err => console.error('Error generating periodic transactions:', err));
+};
 
 interface AuthContextData {
     isLoading: boolean;
@@ -35,7 +43,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             const token = await AsyncStorage.getItem('token');
             setUserToken(token);
-            if (token) warmupBackend(); // avvia il warmup in anticipo, senza bloccare il rendering
+            if (token) {
+                warmupBackend(); // avvia il warmup in anticipo, senza bloccare il rendering
+                generaTransazioniPeriodiche(token);
+            }
         } catch (e) {
             console.error(e);
         } finally {
@@ -49,6 +60,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await AsyncStorage.setItem('token', token);
             await AsyncStorage.setItem('username', username);
             setUserToken(token);
+            generaTransazioniPeriodiche(token);
             // Sincronizza token con widget iOS
             syncToken(token, username);
         } catch (e) {
