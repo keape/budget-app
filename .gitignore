@@ -46,6 +46,14 @@ backup*/
 *.backup
 node_modules_old/
 **/node_modules_old/
+**/.node_modules_old/
+
+# Graphify tool output
+graphify-out/
+
+# Obsidian vaults (personal, not app code)
+Obsidian-budget365/
+budget365iOS/Obsidian-budget365iOS/
 
 # Temporary files
 tmp/

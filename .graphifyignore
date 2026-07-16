@@ -1,0 +1,98 @@
+# Dependencies
+node_modules/
+server/node_modules/
+**/node_modules/
+**/node_modules_old/
+
+# Environment files
+.env
+.env.production
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+server/.env
+server/scripts/.env
+server/credentials.json
+social-agent/.env
+
+# Build outputs
+build/
+dist/
+coverage/
+
+# IDE/Editor
+.vscode/
+.idea/
+.ruby-lsp/
+.superpowers/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Logs
+logs/
+*.log
+
+# Backup
+backup*/
+*.backup
+
+# Git
+.git/
+
+# iOS / Pods / Xcode
+**/Pods/
+**/ios/Pods/
+budget365iOS/ios/Pods/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+
+# Ruby / CocoaPods
+**/vendor/bundle/
+**/.bundle/
+*.jsbundle
+
+# Android
+.idea
+.gradle
+local.properties
+*.iml
+*.hprof
+.cxx/
+*.keystore
+.kotlin/
+
+# Graphify
+graphify-out/
+.graphify*/
+
+# React Native / Expo
+BudgetAppExpo/.expo/
+
+# Claude worktrees
+.claude/
+
+# Social agent
+social-agent/
+
+# Temp
+*.tmp
+*.temp
+package-lock.json
+yarn.lock
