@@ -16,6 +16,29 @@ AppState.addEventListener('change', (state) => {
     }
 });
 
+let authFailureHandler: (() => void) | null = null;
+
+/**
+ * Registra il callback (AuthContext.logout) da invocare quando il backend
+ * risponde 403 (token JWT scaduto/non valido) su una nostra chiamata.
+ */
+export function setAuthFailureHandler(handler: () => void): void {
+    authFailureHandler = handler;
+}
+
+// Intercetta ogni fetch verso il nostro backend: su 403 il token è scaduto/non
+// valido (vedi authenticateToken in server/routes/auth.js) ma nessuna screen
+// lo gestiva, lasciando liste vuote senza logout dopo un periodo di inattivita.
+const originalFetch = global.fetch;
+global.fetch = (async (...args: Parameters<typeof fetch>) => {
+    const response = await originalFetch(...args);
+    const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url;
+    if (response.status === 403 && url?.startsWith(API_URL) && authFailureHandler) {
+        authFailureHandler();
+    }
+    return response;
+}) as typeof fetch;
+
 function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }

@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { warmupBackend } from '../utils/apiClient';
+import { warmupBackend, setAuthFailureHandler } from '../utils/apiClient';
 import { syncToken, clearToken } from '../utils/tokenSync';
 import { API_URL } from '../config';
 
@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     useEffect(() => {
         checkToken();
+        setAuthFailureHandler(logout);
     }, []);
 
     const checkToken = async () => {
