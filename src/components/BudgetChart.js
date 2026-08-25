@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
+  BarChart, Bar, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
 const BudgetChart = ({ sortedData, tipoTransazione, meseCorrente, annoCorrente }) => {
@@ -55,11 +55,17 @@ const BudgetChart = ({ sortedData, tipoTransazione, meseCorrente, annoCorrente }
             <>
               <Bar
                 dataKey="importoSpese"
-                fill="#ef4444"
                 name="Spese"
                 onClick={handleBarClick}
                 cursor="pointer"
-              />
+              >
+                {sortedData.map((entry, index) => (
+                  <Cell
+                    key={`cell-spese-${index}`}
+                    fill={entry.importoSpese <= entry.budget ? '#48bb78' : '#ef4444'}
+                  />
+                ))}
+              </Bar>
               <Bar
                 dataKey="importoEntrate"
                 fill="#48bb78"
@@ -68,14 +74,28 @@ const BudgetChart = ({ sortedData, tipoTransazione, meseCorrente, annoCorrente }
                 cursor="pointer"
               />
             </>
-          ) : (
+          ) : tipoTransazione === 'entrate' ? (
             <Bar
               dataKey="importo"
-              fill={tipoTransazione === 'entrate' ? '#48bb78' : '#ef4444'}
-              name={tipoTransazione === 'entrate' ? 'Entrate' : 'Spese'}
+              fill="#48bb78"
+              name="Entrate"
               onClick={handleBarClick}
               cursor="pointer"
             />
+          ) : (
+            <Bar
+              dataKey="importo"
+              name="Spese"
+              onClick={handleBarClick}
+              cursor="pointer"
+            >
+              {sortedData.map((entry, index) => (
+                <Cell
+                  key={`cell-importo-${index}`}
+                  fill={entry.importo <= entry.budget ? '#48bb78' : '#ef4444'}
+                />
+              ))}
+            </Bar>
           )}
         </BarChart>
       </ResponsiveContainer>

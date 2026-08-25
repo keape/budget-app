@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const { authenticateToken } = require('./auth');
+const CategoriaArchiviata = require('../models/CategoriaArchiviata');
 const router = express.Router();
 
 // GET Categories - Extract from budget settings
@@ -216,6 +217,63 @@ router.post('/rename', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('❌ Global Rename Error:', error);
     res.status(500).json({ message: "Errore durante la rinomina globale" });
+  }
+});
+
+// GET Archived Categories
+router.get('/archiviate', authenticateToken, async (req, res) => {
+  try {
+    const archiviate = await CategoriaArchiviata.find({ userId: req.user.userId });
+
+    res.json({
+      categorie: {
+        spese: archiviate.filter(c => c.tipo === 'spese').map(c => c.categoria),
+        entrate: archiviate.filter(c => c.tipo === 'entrate').map(c => c.categoria)
+      }
+    });
+  } catch (error) {
+    console.error('❌ GET Archived Categories Error:', error);
+    res.status(500).json({ message: "Errore nel recupero delle categorie archiviate" });
+  }
+});
+
+// POST Archive Category
+router.post('/archivia', authenticateToken, async (req, res) => {
+  try {
+    const { tipo, categoria } = req.body;
+
+    if (!tipo || !categoria || !['spese', 'entrate'].includes(tipo)) {
+      return res.status(400).json({ message: "Tipo e categoria richiesti" });
+    }
+
+    await CategoriaArchiviata.updateOne(
+      { userId: req.user.userId, tipo, categoria },
+      { $setOnInsert: { userId: req.user.userId, tipo, categoria } },
+      { upsert: true }
+    );
+
+    res.json({ message: "Categoria archiviata" });
+  } catch (error) {
+    console.error('❌ Archive Category Error:', error);
+    res.status(500).json({ message: "Errore durante l'archiviazione" });
+  }
+});
+
+// POST Unarchive Category
+router.post('/disarchivia', authenticateToken, async (req, res) => {
+  try {
+    const { tipo, categoria } = req.body;
+
+    if (!tipo || !categoria || !['spese', 'entrate'].includes(tipo)) {
+      return res.status(400).json({ message: "Tipo e categoria richiesti" });
+    }
+
+    await CategoriaArchiviata.deleteOne({ userId: req.user.userId, tipo, categoria });
+
+    res.json({ message: "Categoria riattivata" });
+  } catch (error) {
+    console.error('❌ Unarchive Category Error:', error);
+    res.status(500).json({ message: "Errore durante la riattivazione" });
   }
 });
 

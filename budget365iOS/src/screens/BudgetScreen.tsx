@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import {
   Modal,
   InputAccessoryView,
   Keyboard,
+  Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -26,18 +29,19 @@ const ACCENT = '#c4f23a';
 
 interface BudgetScreenProps {
   navigation: any;
+  route?: any;
 }
 
-const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
+const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
   const { userToken, logout } = useAuth();
-  const { currency, showBalance } = useSettings();
+  const { currency, showBalance, isDarkMode } = useSettings();
   const t = useAppTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
-  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(route?.params?.month ?? today.getMonth());
+  const [selectedYear, setSelectedYear] = useState(route?.params?.year ?? today.getFullYear());
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -57,6 +61,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const [categories, setCategories] = useState<string[]>([]);
   const [budgetSettings, setBudgetSettings] = useState<Record<string, number>>({});
   const [actualSpending, setActualSpending] = useState<Record<string, number>>({});
+  const [archivedCategories, setArchivedCategories] = useState<{ spese: string[]; entrate: string[] }>({ spese: [], entrate: [] });
 
   // Yearly aggregated state
   const [yearlyBudget, setYearlyBudget] = useState<Record<string, number>>({});
@@ -66,6 +71,32 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
   const [localBudget, setLocalBudget] = useState<Record<string, string>>({}); // Store as string for TextInput
 
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
+
+  // Collapsible period/tab header on scroll
+  const [collapsibleHeight, setCollapsibleHeight] = useState(0);
+  const headerAnim = useRef(new Animated.Value(1)).current;
+  const scrollOffsetRef = useRef(0);
+  const isHeaderVisibleRef = useRef(true);
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const currentY = e.nativeEvent.contentOffset.y;
+    const diff = currentY - scrollOffsetRef.current;
+
+    if (currentY <= 0) {
+      if (!isHeaderVisibleRef.current) {
+        isHeaderVisibleRef.current = true;
+        Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+      }
+    } else if (diff > 8 && isHeaderVisibleRef.current) {
+      isHeaderVisibleRef.current = false;
+      Animated.timing(headerAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+    } else if (diff < -8 && !isHeaderVisibleRef.current) {
+      isHeaderVisibleRef.current = true;
+      Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+    }
+
+    scrollOffsetRef.current = currentY;
+  };
 
   const totalBudget = categories.reduce((sum, cat) => {
     const limitStr = localBudget[cat] || '0';
@@ -105,9 +136,20 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
       });
       const catData = await catRes.json();
 
-      const targetCategories = activeTab === 'expenses'
+      // 1b. Fetch Archived Categories
+      const archRes = await fetch(`${BASE_URL}/api/categorie/archiviate`, {
+        headers: { 'Authorization': `Bearer ${userToken}` }
+      });
+      const archData = archRes.ok ? await archRes.json() : { categorie: { spese: [], entrate: [] } };
+      const archivedSpese: string[] = archData.categorie?.spese || [];
+      const archivedEntrate: string[] = archData.categorie?.entrate || [];
+      setArchivedCategories({ spese: archivedSpese, entrate: archivedEntrate });
+
+      const archivedForTab = activeTab === 'expenses' ? archivedSpese : archivedEntrate;
+      const targetCategories = (activeTab === 'expenses'
         ? (catData.categorie?.spese || [])
-        : (catData.categorie?.entrate || []);
+        : (catData.categorie?.entrate || [])
+      ).filter((cat: string) => !archivedForTab.includes(cat));
 
       setCategories(targetCategories);
 
@@ -602,6 +644,58 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
     );
   };
 
+  const handleArchiveCategory = async (catName: string) => {
+    const type = activeTab === 'expenses' ? 'spese' : 'entrate';
+
+    // Optimistic UI Update
+    const newCats = categories.filter(c => c !== catName);
+    setCategories(newCats);
+    setArchivedCategories(prev => ({
+      ...prev,
+      [type]: [...prev[type], catName]
+    }));
+
+    try {
+      await fetch(`${BASE_URL}/api/categorie/archivia`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tipo: type, categoria: catName })
+      });
+    } catch (error) {
+      console.error("Archive failed", error);
+      Alert.alert("Error", "Could not archive category.");
+      loadData();
+    }
+  };
+
+  const handleUnarchiveCategory = async (catName: string) => {
+    const type = activeTab === 'expenses' ? 'spese' : 'entrate';
+
+    setArchivedCategories(prev => ({
+      ...prev,
+      [type]: prev[type].filter(c => c !== catName)
+    }));
+    setCategories(prev => [...prev, catName]);
+
+    try {
+      await fetch(`${BASE_URL}/api/categorie/disarchivia`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tipo: type, categoria: catName })
+      });
+    } catch (error) {
+      console.error("Unarchive failed", error);
+      Alert.alert("Error", "Could not restore category.");
+      loadData();
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: t.bg }]}>
@@ -646,50 +740,68 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Period Selection */}
-      <View style={styles.periodContainer}>
-        <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsMonthModalVisible(true)}>
-          <Text style={[styles.periodButtonText, { color: t.text }]}>{isYearlyMode ? 'Full Year' : months[selectedMonth]}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsYearModalVisible(true)}>
-          <Text style={[styles.periodButtonText, { color: t.text }]}>{selectedYear}</Text>
-        </TouchableOpacity>
-      </View>
+      <Animated.View
+        style={{
+          height: collapsibleHeight ? headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, collapsibleHeight] }) : undefined,
+          opacity: headerAnim,
+          overflow: 'hidden',
+        }}
+      >
+        <View onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          setCollapsibleHeight(prev => (prev !== h ? h : prev));
+        }}>
+          {/* Period Selection */}
+          <View style={styles.periodContainer}>
+            <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsMonthModalVisible(true)}>
+              <Text style={[styles.periodButtonText, { color: t.text }]}>{isYearlyMode ? 'Full Year' : months[selectedMonth]}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsYearModalVisible(true)}>
+              <Text style={[styles.periodButtonText, { color: t.text }]}>{selectedYear}</Text>
+            </TouchableOpacity>
+          </View>
 
-      {!isYearlyMode ? (
-        <TouchableOpacity style={[styles.copyButton, { backgroundColor: t.surface, borderColor: t.line2 }]} onPress={handleCopyFromPrevious}>
-          <Text style={[styles.copyButtonText, { color: t.text2 }]}>
-            Copy values from {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.copyButton, { backgroundColor: t.surface, borderColor: t.line2 }]}
-          onPress={handleCopyPreviousYear}
-        >
-          <Text style={[styles.copyButtonText, { color: t.text2 }]}>
-            Copy {activeTab === 'expenses' ? 'expenses' : 'income'} from {selectedYear - 1}
-          </Text>
-        </TouchableOpacity>
-      )}
+          {!isYearlyMode ? (
+            <TouchableOpacity style={[styles.copyButton, { backgroundColor: t.surface, borderColor: t.line2 }]} onPress={handleCopyFromPrevious}>
+              <Text style={[styles.copyButtonText, { color: t.text2 }]}>
+                Copy values from {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.copyButton, { backgroundColor: t.surface, borderColor: t.line2 }]}
+              onPress={handleCopyPreviousYear}
+            >
+              <Text style={[styles.copyButtonText, { color: t.text2 }]}>
+                Copy {activeTab === 'expenses' ? 'expenses' : 'income'} from {selectedYear - 1}
+              </Text>
+            </TouchableOpacity>
+          )}
 
-      {/* Tabs */}
-      <View style={[styles.tabContainer, { backgroundColor: t.surface2 }]}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'expenses' && { backgroundColor: t.neg }]}
-          onPress={() => setActiveTab('expenses')}
-        >
-          <Text style={[styles.tabText, { color: t.text }, activeTab === 'expenses' && styles.activeTabText]}>Expenses</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'income' && { backgroundColor: t.pos }]}
-          onPress={() => setActiveTab('income')}
-        >
-          <Text style={[styles.tabText, { color: t.text }, activeTab === 'income' && styles.activeTabText]}>Income (Goals)</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Tabs */}
+          <View style={[styles.tabContainer, { backgroundColor: t.surface2 }]}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'expenses' && { backgroundColor: t.neg }]}
+              onPress={() => setActiveTab('expenses')}
+            >
+              <Text style={[styles.tabText, { color: t.text }, activeTab === 'expenses' && styles.activeTabText]}>Expenses</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'income' && { backgroundColor: t.pos }]}
+              onPress={() => setActiveTab('income')}
+            >
+              <Text style={[styles.tabText, { color: t.text }, activeTab === 'income' && styles.activeTabText]}>Income (Goals)</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
 
-      <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Add Category Button */}
         <TouchableOpacity
           style={[styles.addCategoryButton, { backgroundColor: t.surface, borderColor: t.line }]}
@@ -705,46 +817,9 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
           return (
             <View key={cat} style={[styles.budgetCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-              <View style={styles.cardHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCategoryToRename(cat);
-                      setRenamedCategoryName(cat);
-                      setIsRenameModalVisible(true);
-                    }}
-                    style={{
-                      marginRight: 8,
-                      backgroundColor: t.surface2,
-                      width: 34,
-                      height: 34,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: t.line
-                    }}
-                  >
-                    <Text style={{ fontSize: 16 }}>✏️</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteCategory(cat)}
-                    style={{
-                      marginRight: 8,
-                      backgroundColor: t.surface2,
-                      width: 34,
-                      height: 34,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: t.line
-                    }}
-                  >
-                    <Text style={{ fontSize: 16 }}>🗑️</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.catName, { color: t.text }]} numberOfLines={1}>{cat}</Text>
-                </View>
+              <Text style={[styles.catName, { color: t.text }]} numberOfLines={1}>{cat}</Text>
+
+              <View style={styles.budgetInputRow}>
                 <View style={[styles.inputContainer, { backgroundColor: t.surface2, borderColor: t.line }]}>
                   <Text style={[styles.currency, { color: t.text2 }]}>{currency}</Text>
                   <TextInput
@@ -762,6 +837,64 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                     inputAccessoryViewID="budgetInputAccessory"
                   />
                 </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity
+                    activeOpacity={0.6}
+                    onPress={() => {
+                      setCategoryToRename(cat);
+                      setRenamedCategoryName(cat);
+                      setIsRenameModalVisible(true);
+                    }}
+                    style={{
+                      marginLeft: 8,
+                      backgroundColor: isDarkMode ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.12)',
+                      width: 40,
+                      height: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: isDarkMode ? 'rgba(59,130,246,0.35)' : 'rgba(59,130,246,0.25)'
+                    }}
+                  >
+                    <Text style={{ fontSize: 15 }}>✏️</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.6}
+                    onPress={() => handleDeleteCategory(cat)}
+                    style={{
+                      marginLeft: 8,
+                      backgroundColor: isDarkMode ? 'rgba(255,107,107,0.15)' : 'rgba(220,38,38,0.10)',
+                      width: 40,
+                      height: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: isDarkMode ? 'rgba(255,107,107,0.30)' : 'rgba(220,38,38,0.22)'
+                    }}
+                  >
+                    <Text style={{ fontSize: 15 }}>🗑️</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.6}
+                    onPress={() => handleArchiveCategory(cat)}
+                    style={{
+                      marginLeft: 8,
+                      backgroundColor: t.surface2,
+                      width: 40,
+                      height: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: t.line
+                    }}
+                  >
+                    <Text style={{ fontSize: 15 }}>📦</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.statsRow}>
@@ -777,7 +910,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
                       styles.scrubberFill,
                       {
                         width: `${Math.min((spending / (limit || 1)) * 100, 100)}%`,
-                        backgroundColor: (limit > 0 && spending > limit) ? '#EF4444' : (activeTab === 'expenses' ? '#DC2626' : '#059669')
+                        backgroundColor: (limit > 0 && spending > limit) ? '#EF4444' : '#059669'
                       }
                     ]}
                   />
@@ -792,6 +925,35 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation }) => {
 
         {categories.length === 0 && (
           <Text style={[styles.emptyText, { color: t.text3 }]}>No categories found.</Text>
+        )}
+
+        {archivedCategories[activeTab === 'expenses' ? 'spese' : 'entrate'].length > 0 && (
+          <View style={{ marginTop: 24 }}>
+            <Text style={[styles.emptyText, { color: t.text3, textAlign: 'left', marginBottom: 8 }]}>
+              Archived Categories
+            </Text>
+            {archivedCategories[activeTab === 'expenses' ? 'spese' : 'entrate'].map((cat) => (
+              <View
+                key={cat}
+                style={[styles.budgetCard, { backgroundColor: t.surface, borderColor: t.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              >
+                <Text style={[styles.catName, { color: t.text2, flex: 1, textAlign: 'left', marginBottom: 0 }]} numberOfLines={1}>{cat}</Text>
+                <TouchableOpacity
+                  onPress={() => handleUnarchiveCategory(cat)}
+                  style={{
+                    backgroundColor: t.surface2,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: t.line
+                  }}
+                >
+                  <Text style={{ color: t.text, fontSize: 13, fontWeight: '600' }}>Restore</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
         )}
       </ScrollView>
 
@@ -1005,17 +1167,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   catName: {
-    fontSize: 15,
+    fontSize: 19,
     fontWeight: '700',
-    flex: 1,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  budgetInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -1023,7 +1191,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 8,
-    width: 100,
+    width: 130,
     height: 40,
   },
   currency: {

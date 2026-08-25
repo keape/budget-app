@@ -18,6 +18,7 @@ function BudgetSettings() {
   const [newCategory, setNewCategory] = useState({ type: null, name: '', value: '' });
   const [showAddCategory, setShowAddCategory] = useState({ spese: false, entrate: false });
   const [isFixing, setIsFixing] = useState(false);
+  const [archivedCategories, setArchivedCategories] = useState({ spese: [], entrate: [] });
   const adminRoutesEnabled = process.env.REACT_APP_ENABLE_ADMIN_ROUTES === 'true';
 
   const mesi = [
@@ -41,8 +42,11 @@ function BudgetSettings() {
   const getAllCategories = (tipo) => {
     const baseCategories = tipo === 'spese' ? categorieSpeseDiBase : categorieEntrateDiBase;
     const dbCategories = Object.keys(budgetSettings[tipo] || {});
-    // Unisce categorie base con quelle presenti nel database, evitando duplicati e ordinando alfabeticamente
-    return [...new Set([...baseCategories, ...dbCategories])].sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
+    const archived = archivedCategories[tipo] || [];
+    // Unisce categorie base con quelle presenti nel database, esclude le archiviate, ordina alfabeticamente
+    return [...new Set([...baseCategories, ...dbCategories])]
+      .filter(categoria => !archived.includes(categoria))
+      .sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
   };
 
   useEffect(() => {
@@ -70,6 +74,23 @@ function BudgetSettings() {
     }
     fetchBudgetSettings();
   }, [selectedYear, selectedMonth]);
+
+  useEffect(() => {
+    fetchArchivedCategories();
+  }, []);
+
+  const fetchArchivedCategories = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const response = await axios.get(`${BASE_URL}/api/categorie/archiviate`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setArchivedCategories(response.data.categorie);
+    } catch (error) {
+      console.error('❌ Errore nel recupero delle categorie archiviate:', error);
+    }
+  };
 
   const handleAuthError = (message) => {
       setError(message);
@@ -309,6 +330,39 @@ function BudgetSettings() {
         delete newSettings[tipo][categoria];
         return newSettings;
       });
+    }
+  };
+
+  // Gestione archiviazione categoria
+  const archiveCategory = async (tipo, categoria) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axios.post(`${BASE_URL}/api/categorie/archivia`, { tipo, categoria }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setArchivedCategories(prev => ({
+        ...prev,
+        [tipo]: [...prev[tipo], categoria]
+      }));
+    } catch (error) {
+      console.error('❌ Errore durante l\'archiviazione della categoria:', error);
+      alert('Errore durante l\'archiviazione della categoria');
+    }
+  };
+
+  const unarchiveCategory = async (tipo, categoria) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axios.post(`${BASE_URL}/api/categorie/disarchivia`, { tipo, categoria }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setArchivedCategories(prev => ({
+        ...prev,
+        [tipo]: prev[tipo].filter(c => c !== categoria)
+      }));
+    } catch (error) {
+      console.error('❌ Errore durante la riattivazione della categoria:', error);
+      alert('Errore durante la riattivazione della categoria');
     }
   };
 
@@ -775,7 +829,7 @@ function BudgetSettings() {
 
             <div className="space-y-4">
               {getAllCategories('spese').map(categoria => (
-                <div key={categoria} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div key={categoria} className="flex items-center gap-3 p-3.5 bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600/60 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-150">
                   {editingCategory.type === 'spese' && editingCategory.oldName === categoria ? (
                     <div className="flex-1 flex items-center gap-2">
                       <input
@@ -788,20 +842,20 @@ function BudgetSettings() {
                       />
                       <button
                         onClick={saveEditingCategory}
-                        className="p-1 text-green-600 hover:text-green-800"
+                        className="p-2 rounded-md text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300 transition-colors duration-150"
                         title="Salva"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </button>
                       <button
                         onClick={cancelEditingCategory}
-                        className="p-1 text-red-600 hover:text-red-800"
+                        className="p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-colors duration-150"
                         title="Annulla"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
@@ -810,20 +864,29 @@ function BudgetSettings() {
                       <label className="flex-1 text-gray-700 dark:text-gray-300">{categoria}</label>
                       <button
                         onClick={() => startEditingCategory('spese', categoria)}
-                        className="p-1 text-blue-600 hover:text-blue-800"
+                        className="p-2 rounded-md text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 transition-colors duration-150"
                         title="Modifica nome categoria"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
                       <button
                         onClick={() => deleteCategory('spese', categoria)}
-                        className="p-1 text-red-600 hover:text-red-800"
+                        className="p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-colors duration-150"
                         title="Elimina categoria"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => archiveCategory('spese', categoria)}
+                        className="p-2 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-600/50 dark:hover:text-gray-200 transition-colors duration-150"
+                        title="Archivia categoria"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                         </svg>
                       </button>
                     </div>
@@ -902,7 +965,7 @@ function BudgetSettings() {
 
             <div className="space-y-4">
               {getAllCategories('entrate').map(categoria => (
-                <div key={categoria} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div key={categoria} className="flex items-center gap-3 p-3.5 bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600/60 rounded-xl shadow-sm hover:shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-150">
                   {editingCategory.type === 'entrate' && editingCategory.oldName === categoria ? (
                     <div className="flex-1 flex items-center gap-2">
                       <input
@@ -915,20 +978,20 @@ function BudgetSettings() {
                       />
                       <button
                         onClick={saveEditingCategory}
-                        className="p-1 text-green-600 hover:text-green-800"
+                        className="p-2 rounded-md text-green-600 hover:bg-green-50 hover:text-green-700 dark:text-green-400 dark:hover:bg-green-900/30 dark:hover:text-green-300 transition-colors duration-150"
                         title="Salva"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       </button>
                       <button
                         onClick={cancelEditingCategory}
-                        className="p-1 text-red-600 hover:text-red-800"
+                        className="p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-colors duration-150"
                         title="Annulla"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                       </button>
                     </div>
@@ -937,20 +1000,29 @@ function BudgetSettings() {
                       <label className="flex-1 text-gray-700 dark:text-gray-300">{categoria}</label>
                       <button
                         onClick={() => startEditingCategory('entrate', categoria)}
-                        className="p-1 text-blue-600 hover:text-blue-800"
+                        className="p-2 rounded-md text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 transition-colors duration-150"
                         title="Modifica nome categoria"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
                       <button
                         onClick={() => deleteCategory('entrate', categoria)}
-                        className="p-1 text-red-600 hover:text-red-800"
+                        className="p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300 transition-colors duration-150"
                         title="Elimina categoria"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => archiveCategory('entrate', categoria)}
+                        className="p-2 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-600/50 dark:hover:text-gray-200 transition-colors duration-150"
+                        title="Archivia categoria"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                         </svg>
                       </button>
                     </div>
@@ -967,6 +1039,50 @@ function BudgetSettings() {
                   />
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sezione Categorie Archiviate */}
+      {(archivedCategories.spese.length > 0 || archivedCategories.entrate.length > 0) && (
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h2 className="text-xl font-bold text-gray-600 dark:text-gray-300 mb-4">Categorie Archiviate</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Categorie escluse dal budget. Le transazioni già assegnate restano invariate e continuano a essere calcolate normalmente.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Spese</h3>
+              <div className="space-y-2">
+                {archivedCategories.spese.map(categoria => (
+                  <div key={categoria} className="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <span className="text-gray-700 dark:text-gray-300">{categoria}</span>
+                    <button
+                      onClick={() => unarchiveCategory('spese', categoria)}
+                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      Riattiva
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-600 dark:text-green-400 mb-2">Entrate</h3>
+              <div className="space-y-2">
+                {archivedCategories.entrate.map(categoria => (
+                  <div key={categoria} className="flex items-center justify-between gap-3 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <span className="text-gray-700 dark:text-gray-300">{categoria}</span>
+                    <button
+                      onClick={() => unarchiveCategory('entrate', categoria)}
+                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      Riattiva
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
