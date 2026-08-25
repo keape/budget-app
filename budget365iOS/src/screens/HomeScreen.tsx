@@ -85,6 +85,15 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         selectedYear > new Date().getFullYear() ||
         (selectedYear === new Date().getFullYear() && selectedMonth > new Date().getMonth());
 
+    const monthDateRange = () => {
+        const month = String(selectedMonth + 1).padStart(2, '0');
+        const lastDay = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+        return {
+            startDate: `${selectedYear}-${month}-01`,
+            endDate: `${selectedYear}-${month}-${lastDay}`,
+        };
+    };
+
     // ── Dashboard data ──────────────────────────────────────
     const [riepilogoData, setRiepilogoData] = useState({
         totaleSpeseMese: 0,
@@ -405,13 +414,13 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 {/* ── Quick nav grid ── */}
                 <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
                     <View style={styles.navGrid}>
-                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Transactions')}>
+                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Transactions', monthDateRange())}>
                             <View style={[styles.navTile, { backgroundColor: navTileBg('transactions') }]}>
                                 <IconTransactions size={26} color={NAV_PALETTE.transactions.solid} />
                             </View>
                             <Text style={[styles.navLabel, { color: t.text2 }]}>Transactions</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Budget')}>
+                        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Budget', { month: selectedMonth, year: selectedYear })}>
                             <View style={[styles.navTile, { backgroundColor: navTileBg('budget') }]}>
                                 <IconBudget size={26} color={NAV_PALETTE.budget.solid} />
                             </View>
@@ -465,7 +474,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
                     <View style={styles.sectionHead}>
                         <Text style={[styles.sectionTitle, { color: t.text3 }]}>BUDGET VS ACTUAL</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Budget')}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Budget', { month: selectedMonth, year: selectedYear })}>
                             <Text style={[styles.sectionMeta, { color: t.text3 }]}>Edit ›</Text>
                         </TouchableOpacity>
                     </View>
@@ -516,7 +525,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
                         <View style={styles.sectionHead}>
                             <Text style={[styles.sectionTitle, { color: t.text3 }]}>TOP EXPENSES</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                            <TouchableOpacity onPress={() => navigation.navigate('Transactions', monthDateRange())}>
                                 <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
                             </TouchableOpacity>
                         </View>
@@ -556,7 +565,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
                         <View style={styles.sectionHead}>
                             <Text style={[styles.sectionTitle, { color: t.text3 }]}>TOP INCOME</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                            <TouchableOpacity onPress={() => navigation.navigate('Transactions', monthDateRange())}>
                                 <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
                             </TouchableOpacity>
                         </View>
@@ -597,7 +606,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
                     <View style={styles.sectionHead}>
                         <Text style={[styles.sectionTitle, { color: t.text3 }]}>RECENT ACTIVITY</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Transactions', monthDateRange())}>
                             <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
                         </TouchableOpacity>
                     </View>

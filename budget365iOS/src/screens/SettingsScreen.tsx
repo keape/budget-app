@@ -19,10 +19,7 @@ const BASE_URL = API_URL;
 const SettingsScreen: React.FC = () => {
     const { logout, userToken } = useAuth();
     const { theme, setTheme, currency, setCurrency, showBalance, setShowBalance, isDarkMode } = useSettings();
-    const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about' | 'customization' | 'email' | 'bug'>('menu');
-
-    // Profile Settings State
-    const [email, setEmail] = useState('');
+    const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about' | 'customization' | 'bug'>('menu');
 
     // Bug Report State
     const [bugDescription, setBugDescription] = useState('');
@@ -124,11 +121,6 @@ const SettingsScreen: React.FC = () => {
 
     const renderMenu = () => (
         <View style={styles.menuContainer}>
-            <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('email')}>
-                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>📧 Link Email</Text>
-                <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('password')}>
                 <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🔒 Change Password</Text>
                 <Text style={styles.chevron}>›</Text>
@@ -323,73 +315,6 @@ const SettingsScreen: React.FC = () => {
         </ScrollView>
     );
 
-    const handleUpdateEmail = async () => {
-        if (!email) {
-            Alert.alert('Error', 'Please enter an email address');
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await fetch(`${API_URL}/api/auth/update-email`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${userToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email })
-            });
-
-            const data = await response.json();
-            if (response.ok) {
-                Alert.alert('Success', 'Email updated successfully');
-                setActiveTab('menu');
-            } else {
-                Alert.alert('Error', data.message || 'Failed to update email');
-            }
-        } catch (error) {
-            Alert.alert('Error', 'Connection error');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const renderEmailUpdate = () => (
-        <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Email Settings</Text>
-            <Text style={[styles.description, isDarkMode && { color: '#9CA3AF' }]}>
-                Adding an email allows you to recover your account and log in more securely.
-            </Text>
-
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Email Address</Text>
-            <TextInput
-                style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Enter your email"
-                placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
-            />
-
-            <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleUpdateEmail}
-                disabled={isLoading}
-            >
-                {isLoading ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text style={styles.primaryButtonText}>Save Email</Text>
-                )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('menu')}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
-            </TouchableOpacity>
-        </View>
-    );
-
     const handleSendBugReport = async () => {
         if (!bugDescription.trim()) {
             Alert.alert('Error', 'Please describe the bug');
@@ -460,7 +385,6 @@ const SettingsScreen: React.FC = () => {
             {activeTab === 'password' && renderPasswordChange()}
             {activeTab === 'about' && renderAbout()}
             {activeTab === 'customization' && renderCustomization()}
-            {activeTab === 'email' && renderEmailUpdate()}
             {activeTab === 'bug' && renderBugReport()}
         </View>
     );

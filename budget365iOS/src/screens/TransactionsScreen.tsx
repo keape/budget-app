@@ -9,7 +9,10 @@ import {
   Alert,
   TextInput,
   Modal,
-  ScrollView
+  ScrollView,
+  Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
@@ -32,7 +35,7 @@ interface Transaction {
 
 const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const { userToken } = useAuth();
-  const { currency, showBalance } = useSettings();
+  const { currency, showBalance, isDarkMode } = useSettings();
   const t = useAppTheme();
   const navigation = useNavigation<any>();
 
@@ -53,6 +56,32 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const [categorieSpese, setCategorieSpese] = useState<string[]>([]);
   const [categorieEntrate, setCategorieEntrate] = useState<string[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Collapsible header on scroll
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const headerAnim = useRef(new Animated.Value(1)).current;
+  const scrollOffsetRef = useRef(0);
+  const isHeaderVisibleRef = useRef(true);
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const currentY = e.nativeEvent.contentOffset.y;
+    const diff = currentY - scrollOffsetRef.current;
+
+    if (currentY <= 0) {
+      if (!isHeaderVisibleRef.current) {
+        isHeaderVisibleRef.current = true;
+        Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+      }
+    } else if (diff > 8 && isHeaderVisibleRef.current) {
+      isHeaderVisibleRef.current = false;
+      Animated.timing(headerAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+    } else if (diff < -8 && !isHeaderVisibleRef.current) {
+      isHeaderVisibleRef.current = true;
+      Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+    }
+
+    scrollOffsetRef.current = currentY;
+  };
 
   // Apply filters from Stats screen navigation
   useEffect(() => {
@@ -249,16 +278,24 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
 
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: t.surface2, borderColor: t.line }]}
+            activeOpacity={0.6}
+            style={[styles.actionBtn, {
+              backgroundColor: isDarkMode ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.12)',
+              borderColor: isDarkMode ? 'rgba(59,130,246,0.35)' : 'rgba(59,130,246,0.25)',
+            }]}
             onPress={() => navigation.navigate('AddTransaction', { transactionToEdit: item })}
           >
-            <Text style={{ fontSize: 16 }}>✏️</Text>
+            <Text style={{ fontSize: 15 }}>✏️</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: t.surface2, borderColor: t.line }]}
+            activeOpacity={0.6}
+            style={[styles.actionBtn, {
+              backgroundColor: isDarkMode ? 'rgba(255,107,107,0.15)' : 'rgba(220,38,38,0.10)',
+              borderColor: isDarkMode ? 'rgba(255,107,107,0.30)' : 'rgba(220,38,38,0.22)',
+            }]}
             onPress={() => deleteTransaction(item._id, item.tipo)}
           >
-            <Text style={{ fontSize: 16 }}>🗑️</Text>
+            <Text style={{ fontSize: 15 }}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -297,6 +334,17 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
         </View>
       </View>
 
+      <Animated.View
+        style={{
+          height: headerHeight ? headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, headerHeight] }) : undefined,
+          opacity: headerAnim,
+          overflow: 'hidden',
+        }}
+      >
+      <View onLayout={(e) => {
+        const h = e.nativeEvent.layout.height;
+        setHeaderHeight(prev => (prev !== h ? h : prev));
+      }}>
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={[styles.actionPill, { backgroundColor: t.surface, borderColor: t.neg }]}
@@ -392,6 +440,8 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           </TouchableOpacity>
         </View>
       )}
+      </View>
+      </Animated.View>
 
       {/* List */}
       {isLoading ? (
@@ -404,6 +454,8 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           keyExtractor={item => item._id}
           renderItem={renderTransaction}
           contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           ListEmptyComponent={
             <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line }]}>
               <Text style={[styles.emptyText, { color: t.text3 }]}>No transactions found.</Text>
