@@ -113,9 +113,9 @@ echo "Widget path:"
 ls "$APP/PlugIns/"
 
 # Embed provisioning profiles App Store
-cp ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/d6228579-ab46-424b-aea5-1ebd327fdd5a.mobileprovision \
+cp ~/Library/MobileDevice/Provisioning\ Profiles/41d2d80a-c3ab-4086-91ad-799849b04952.mobileprovision \
    "$APP/embedded.mobileprovision"
-cp ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/6ee9d5cd-41f6-4a8a-8cee-cbf130bc273a.mobileprovision \
+cp ~/Library/MobileDevice/Provisioning\ Profiles/b5a2f08f-068c-4364-ab2a-6da2cc7fdd97.mobileprovision \
    "$APP/PlugIns/Budget365Widget.appex/embedded.mobileprovision"
 
 # Estrai entitlements dai profili (sempre aggiornati)
@@ -192,8 +192,8 @@ Attendi `UPLOAD SUCCEEDED` con Delivery UUID. Può richiedere 5-10 minuti.
 | Bundle ID app | `com.keape.budget365` |
 | Bundle ID widget | `com.keape.budget365.Budget365Widget` |
 | Distribution cert | `Apple Distribution: Alessandro Capobianco (4A5H2U7Q42)` |
-| Profile app UUID | `d6228579-ab46-424b-aea5-1ebd327fdd5a` |
-| Profile widget UUID | `6ee9d5cd-41f6-4a8a-8cee-cbf130bc273a` |
+| Profile app UUID | `41d2d80a-c3ab-4086-91ad-799849b04952` |
+| Profile widget UUID | `b5a2f08f-068c-4364-ab2a-6da2cc7fdd97` |
 | Workspace | `budget365iOS/ios/Budget365.xcworkspace` |
 | Scheme | `Budget365` |
 | Xcode buggy | 26.5 beta 17F42 — bug potrebbero essere risolti in versioni successive |

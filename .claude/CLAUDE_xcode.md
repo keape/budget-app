@@ -112,8 +112,8 @@ Payload/
 ### Prerequisiti (verificare UNA VOLTA):
 1. Certificato "Apple Distribution" nel keychain con partition list corretta (fix Bug 2 sopra)
 2. Provisioning profiles App Store scaricati in `~/Library/Developer/Xcode/UserData/Provisioning Profiles/`
-   - Main app: `d6228579-ab46-424b-aea5-1ebd327fdd5a.mobileprovision`
-   - Widget: `6ee9d5cd-41f6-4a8a-8cee-cbf130bc273a.mobileprovision`
+   - Main app: `41d2d80a-c3ab-4086-91ad-799849b04952.mobileprovision`
+   - Widget: `b5a2f08f-068c-4364-ab2a-6da2cc7fdd97.mobileprovision`
 3. App-specific password Apple ID generata su appleid.apple.com (Apple ID: `keape@me.com`)
 
 ### Step 1: Build archive
@@ -138,9 +138,9 @@ APP=/tmp/Budget365_ipa/Payload/Budget365.app
 DIST="Apple Distribution: Alessandro Capobianco (4A5H2U7Q42)"
 
 # Embed provisioning profiles App Store
-cp ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/d6228579-ab46-424b-aea5-1ebd327fdd5a.mobileprovision \
+cp ~/Library/MobileDevice/Provisioning\ Profiles/41d2d80a-c3ab-4086-91ad-799849b04952.mobileprovision \
    "$APP/embedded.mobileprovision"
-cp ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/6ee9d5cd-41f6-4a8a-8cee-cbf130bc273a.mobileprovision \
+cp ~/Library/MobileDevice/Provisioning\ Profiles/b5a2f08f-068c-4364-ab2a-6da2cc7fdd97.mobileprovision \
    "$APP/PlugIns/Budget365Widget.appex/embedded.mobileprovision"
 
 # Firma nell'ordine giusto: framework → extension → app
