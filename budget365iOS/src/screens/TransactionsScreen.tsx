@@ -10,10 +10,16 @@ import {
   TextInput,
   Modal,
   ScrollView,
-  Animated,
+  LayoutAnimation,
+  Platform,
+  UIManager,
   NativeSyntheticEvent,
   NativeScrollEvent
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -58,8 +64,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Collapsible header on scroll
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const headerAnim = useRef(new Animated.Value(1)).current;
+  const [headerVisible, setHeaderVisible] = useState(true);
   const scrollOffsetRef = useRef(0);
   const isHeaderVisibleRef = useRef(true);
 
@@ -68,19 +73,23 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
     const diff = currentY - scrollOffsetRef.current;
 
     if (currentY <= 0) {
+      scrollOffsetRef.current = currentY;
       if (!isHeaderVisibleRef.current) {
         isHeaderVisibleRef.current = true;
-        Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setHeaderVisible(true);
       }
     } else if (diff > 8 && isHeaderVisibleRef.current) {
+      scrollOffsetRef.current = currentY;
       isHeaderVisibleRef.current = false;
-      Animated.timing(headerAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setHeaderVisible(false);
     } else if (diff < -8 && !isHeaderVisibleRef.current) {
+      scrollOffsetRef.current = currentY;
       isHeaderVisibleRef.current = true;
-      Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setHeaderVisible(true);
     }
-
-    scrollOffsetRef.current = currentY;
   };
 
   // Apply filters from Stats screen navigation
@@ -334,17 +343,8 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
         </View>
       </View>
 
-      <Animated.View
-        style={{
-          height: headerHeight ? headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, headerHeight] }) : undefined,
-          opacity: headerAnim,
-          overflow: 'hidden',
-        }}
-      >
-      <View onLayout={(e) => {
-        const h = e.nativeEvent.layout.height;
-        setHeaderHeight(prev => (prev !== h ? h : prev));
-      }}>
+      {headerVisible && (
+      <View>
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={[styles.actionPill, { backgroundColor: t.surface, borderColor: t.neg }]}
@@ -441,7 +441,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
         </View>
       )}
       </View>
-      </Animated.View>
+      )}
 
       {/* List */}
       {isLoading ? (

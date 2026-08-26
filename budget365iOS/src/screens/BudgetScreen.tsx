@@ -13,10 +13,15 @@ import {
   Modal,
   InputAccessoryView,
   Keyboard,
-  Animated,
+  LayoutAnimation,
+  UIManager,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -72,9 +77,22 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
   const [activeTab, setActiveTab] = useState<'expenses' | 'income'>('expenses');
 
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const toggleCategoryExpanded = (cat: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) {
+        next.delete(cat);
+      } else {
+        next.add(cat);
+      }
+      return next;
+    });
+  };
+
   // Collapsible period/tab header on scroll
-  const [collapsibleHeight, setCollapsibleHeight] = useState(0);
-  const headerAnim = useRef(new Animated.Value(1)).current;
+  const [headerVisible, setHeaderVisible] = useState(true);
   const scrollOffsetRef = useRef(0);
   const isHeaderVisibleRef = useRef(true);
 
@@ -83,19 +101,23 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     const diff = currentY - scrollOffsetRef.current;
 
     if (currentY <= 0) {
+      scrollOffsetRef.current = currentY;
       if (!isHeaderVisibleRef.current) {
         isHeaderVisibleRef.current = true;
-        Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setHeaderVisible(true);
       }
     } else if (diff > 8 && isHeaderVisibleRef.current) {
+      scrollOffsetRef.current = currentY;
       isHeaderVisibleRef.current = false;
-      Animated.timing(headerAnim, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setHeaderVisible(false);
     } else if (diff < -8 && !isHeaderVisibleRef.current) {
+      scrollOffsetRef.current = currentY;
       isHeaderVisibleRef.current = true;
-      Animated.timing(headerAnim, { toValue: 1, duration: 200, useNativeDriver: false }).start();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setHeaderVisible(true);
     }
-
-    scrollOffsetRef.current = currentY;
   };
 
   const totalBudget = categories.reduce((sum, cat) => {
@@ -321,6 +343,21 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     } catch (e) {
       console.error("Autosave error", e);
     }
+  };
+
+  const getBudgetGradientColor = (pct: number) => {
+    const clamped = Math.max(0, Math.min(pct, 100));
+    const stops: [number, number, number][] = [
+      [5, 150, 105],   // #059669 verde @0%
+      [245, 158, 11],  // #F59E0B ambra @70%
+      [239, 68, 68],   // #EF4444 rosso @100%
+    ];
+    const t = clamped <= 70 ? clamped / 70 : (clamped - 70) / 30;
+    const [c1, c2] = clamped <= 70 ? [stops[0], stops[1]] : [stops[1], stops[2]];
+    const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+    const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+    const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+    return `rgb(${r}, ${g}, ${b})`;
   };
 
   const renderScrubber = (value: number, limit: number, color: string) => {
@@ -740,17 +777,8 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
         </View>
       </View>
 
-      <Animated.View
-        style={{
-          height: collapsibleHeight ? headerAnim.interpolate({ inputRange: [0, 1], outputRange: [0, collapsibleHeight] }) : undefined,
-          opacity: headerAnim,
-          overflow: 'hidden',
-        }}
-      >
-        <View onLayout={(e) => {
-          const h = e.nativeEvent.layout.height;
-          setCollapsibleHeight(prev => (prev !== h ? h : prev));
-        }}>
+      {headerVisible && (
+        <View>
           {/* Period Selection */}
           <View style={styles.periodContainer}>
             <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsMonthModalVisible(true)}>
@@ -794,7 +822,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
-      </Animated.View>
+      )}
 
       <ScrollView
         style={styles.scrollContent}
@@ -814,10 +842,41 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
           const spending = isYearlyMode ? (yearlyActual[cat] || 0) : (actualSpending[cat] || 0);
           const limitStr = localBudget[cat] || '0';
           const limit = isYearlyMode ? (yearlyBudget[cat] || 0) : (parseFloat(limitStr.replace(',', '.')) || 0);
+          const isExpanded = expandedCategories.has(cat);
+          const collapsedPct = limit > 0 ? Math.min((spending / limit) * 100, 100) : (spending > 0 ? 100 : 0);
 
           return (
             <View key={cat} style={[styles.budgetCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-              <Text style={[styles.catName, { color: t.text }]} numberOfLines={1}>{cat}</Text>
+              <TouchableOpacity
+                activeOpacity={0.6}
+                style={styles.collapsedRow}
+                onPress={() => toggleCategoryExpanded(cat)}
+              >
+                <Text style={[styles.catNameCollapsed, { color: t.text }]} numberOfLines={1}>{cat}</Text>
+                <View style={styles.collapsedValues}>
+                  <Text style={[styles.collapsedValueText, { color: t.text2 }]}>
+                    {currency}{limit.toFixed(2)}
+                  </Text>
+                  <Text style={[styles.collapsedValueText, { color: t.text2 }]}> / </Text>
+                  <Text style={[styles.collapsedValueText, { color: getBudgetGradientColor(collapsedPct) }]}>
+                    {currency}{spending.toFixed(2)}
+                  </Text>
+                </View>
+                <Text style={[styles.collapsedChevron, { color: t.text3 }]}>{isExpanded ? '▲' : '▼'}</Text>
+              </TouchableOpacity>
+
+              <View style={[styles.collapsedBarTrack, { backgroundColor: t.surface2 }]}>
+                <View
+                  style={[
+                    styles.collapsedBarFill,
+                    { width: `${collapsedPct}%`, backgroundColor: getBudgetGradientColor(collapsedPct) }
+                  ]}
+                />
+              </View>
+
+              {isExpanded && (
+              <>
+              <Text style={[styles.catName, { color: t.text, marginTop: 12 }]} numberOfLines={1}>{cat}</Text>
 
               <View style={styles.budgetInputRow}>
                 <View style={[styles.inputContainer, { backgroundColor: t.surface2, borderColor: t.line }]}>
@@ -910,7 +969,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                       styles.scrubberFill,
                       {
                         width: `${Math.min((spending / (limit || 1)) * 100, 100)}%`,
-                        backgroundColor: (limit > 0 && spending > limit) ? '#EF4444' : '#059669'
+                        backgroundColor: getBudgetGradientColor(Math.min((spending / (limit || 1)) * 100, 100))
                       }
                     ]}
                   />
@@ -919,6 +978,8 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                   {((spending / (limit || 1)) * 100).toFixed(0)}%
                 </Text>
               </View>
+              </>
+              )}
             </View>
           );
         })}
@@ -1165,13 +1226,44 @@ const styles = StyleSheet.create({
   budgetCard: {
     borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 1,
+  },
+  collapsedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  catNameCollapsed: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  collapsedValues: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  collapsedValueText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  collapsedChevron: {
+    fontSize: 11,
+  },
+  collapsedBarTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  collapsedBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   catName: {
     fontSize: 19,
