@@ -130,10 +130,12 @@ interface SavingsScreenProps {
   navigation: { navigate: (screen: string, params?: any) => void; goBack: () => void };
 }
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+const MONTHS_BY_LANG = {
+  it: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+  en: ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'],
+} as const;
 
 function getTickerColor(ticker: string): string {
   let hash = 0;
@@ -145,18 +147,209 @@ function getTickerColor(ticker: string): string {
 }
 
 const TABS: ActiveTab[] = ['mese', 'piano', 'portfolio'];
-const TAB_LABELS: Record<ActiveTab, string> = {
-  mese: 'Month',
-  piano: 'Plan',
-  portfolio: 'Portfolio',
+const TAB_LABELS_BY_LANG: Record<'it' | 'en', Record<ActiveTab, string>> = {
+  it: { mese: 'Mese', piano: 'Piano', portfolio: 'Portfolio' },
+  en: { mese: 'Month', piano: 'Plan', portfolio: 'Portfolio' },
 };
+
+const STRINGS = {
+  it: {
+    errore: 'Errore',
+    futureMonth: 'Impossibile aggiungere allocazioni per mesi futuri',
+    invalidAmount: 'Inserisci un importo valido maggiore di 0',
+    qtyMustBeGreater: 'La quantità deve essere maggiore di 0',
+    priceMustBeGreater: 'Il prezzo deve essere maggiore di 0',
+    couldNotPrepareMonth: 'Impossibile preparare il record del mese',
+    couldNotGetMonthId: 'Impossibile ottenere l\'ID del mese',
+    couldNotAddAllocation: 'Impossibile aggiungere l\'allocazione',
+    networkError: 'Errore di rete',
+    elimina: 'Elimina',
+    deleteAllocationMsg: 'Eliminare questa allocazione?',
+    annulla: 'Annulla',
+    couldNotDeleteAllocation: 'Impossibile eliminare l\'allocazione.',
+    qtyRange: (max: number) => `La quantità deve essere tra 0 e ${max}`,
+    invalidSalePrice: 'Inserisci un prezzo di vendita valido',
+    couldNotSaveSale: 'Impossibile salvare la vendita',
+    deleteSaleTitle: 'Elimina vendita',
+    deleteSaleMsg: 'Eliminare questo record di vendita?',
+    couldNotDeleteSale: 'Impossibile eliminare la vendita.',
+    invalidPercentage: 'Inserisci una percentuale valida',
+    couldNotSavePlan: 'Impossibile salvare il piano.',
+    invalidAmountGeneric: 'Inserisci un importo valido',
+    couldNotSaveGoal: 'Impossibile salvare l\'obiettivo di risparmio.',
+    noDataMonth: 'Nessun dato per questo mese',
+    savingsEyebrow: (month: string, year: number) => `Risparmi · ${month} ${year}`,
+    income: 'ENTRATE',
+    expenses: 'USCITE',
+    allocated: 'Allocato',
+    invested: 'INVESTITO',
+    available: 'DISPONIBILE',
+    allocationsTitle: 'ALLOCAZIONI',
+    itemsCount: (n: number) => `${n} elementi`,
+    noAllocationsYet: 'Nessuna allocazione ancora',
+    pctOfSavings: (pct: string) => `${pct}% dei risparmi`,
+    addAllocation: '+ Aggiungi allocazione',
+    salesTitle: 'VENDITE',
+    proceedsSuffix: (amt: string) => `${amt} ricavo`,
+    monthView: 'Mese',
+    yearView: 'Anno',
+    annualSavingsGoal: 'OBIETTIVO ANNUALE DI RISPARMIO',
+    monthlySavingsGoal: 'OBIETTIVO MENSILE DI RISPARMIO',
+    annualGoal: 'Obiettivo annuale',
+    monthlyGoal: 'Obiettivo mensile',
+    cancel: 'Annulla',
+    save: 'Salva',
+    edit: 'Modifica',
+    monthsPlanned: (n: number) => `${n} mes${n !== 1 ? 'i' : 'e'} pianificat${n !== 1 ? 'i' : 'o'}`,
+    savedThisYear: 'RISPARMIATO QUEST\'ANNO',
+    savedThisMonth: 'RISPARMIATO QUESTO MESE',
+    setSavingsGoal: '+ Imposta obiettivo di risparmio',
+    noMonthlyGoals: (year: number) => `Nessun obiettivo mensile impostato per il ${year}.\nPassa alla vista Mese per aggiungerli.`,
+    yearSavingsEyebrow: (year: number) => `Risparmi annuali · ${year}`,
+    instrumentsCount: (n: number) => `${n} strumenti`,
+    targetAllocation: 'ALLOCAZIONE TARGET',
+    noPlanSet: 'Nessun piano impostato',
+    actualPct: (pct: string) => `Reale ${pct}%`,
+    addInstrument: '+ Aggiungi strumento',
+    portfolioValue: 'Valore portfolio',
+    investedPrefix: (amt: string) => `Investito ${amt}`,
+    noInvestments: 'Nessun investimento registrato',
+    holdings: 'POSIZIONI',
+    positionsCount: (n: number) => `${n} posizioni`,
+    closed: 'CHIUSA',
+    realizedPrefix: (amt: string) => `Realizzato ${amt}`,
+    sell: 'Vendi',
+    investedLabel: 'Investito',
+    currentValue: 'Valore attuale',
+    unrealizedPnL: 'Plusvalenza non realizzata',
+    realizedPnL: 'Plusvalenza realizzata',
+    addAllocationTitle: 'Aggiungi allocazione',
+    searchInstrumentAmounts: 'Cerca strumento (VWCE, BTC, …)',
+    whatToEnter: 'Cosa vuoi inserire?',
+    amount: 'Importo',
+    quantity: 'Quantità',
+    autoSuffix: ' (auto)',
+    price: 'Prezzo',
+    fetching: 'Recupero…',
+    addInstrumentToPlan: 'Aggiungi strumento al piano',
+    searchInstrumentGeneric: 'Cerca strumento…',
+    targetPctLabel: '% Target',
+    egThirty: 'es. 30',
+    monthlyGoalOptional: 'Obiettivo mensile (opzionale)',
+    egFiveHundred: 'es. 500',
+    sellAsset: 'Vendi asset',
+    availableColon: (qty: string) => `Disponibile: ×${qty}`,
+    avgCost: (val: string) => `prezzo medio ${val}`,
+    priceAtSale: 'Prezzo di vendita',
+    proceedsLabel: 'Ricavo',
+    costBasis: 'Costo base (PMC)',
+    estPnL: 'Plusvalenza stimata',
+    confirmSell: 'Conferma vendita',
+  },
+  en: {
+    errore: 'Error',
+    futureMonth: 'Cannot add allocations for future months',
+    invalidAmount: 'Please enter a valid amount greater than 0',
+    qtyMustBeGreater: 'Quantity must be greater than 0',
+    priceMustBeGreater: 'Price must be greater than 0',
+    couldNotPrepareMonth: 'Could not prepare month record',
+    couldNotGetMonthId: 'Could not get month ID',
+    couldNotAddAllocation: 'Could not add allocation',
+    networkError: 'Network error',
+    elimina: 'Delete',
+    deleteAllocationMsg: 'Delete this allocation?',
+    annulla: 'Cancel',
+    couldNotDeleteAllocation: 'Could not delete allocation.',
+    qtyRange: (max: number) => `Quantity must be between 0 and ${max}`,
+    invalidSalePrice: 'Enter a valid sale price',
+    couldNotSaveSale: 'Could not save sale',
+    deleteSaleTitle: 'Delete sale',
+    deleteSaleMsg: 'Delete this sale record?',
+    couldNotDeleteSale: 'Could not delete sale.',
+    invalidPercentage: 'Please enter a valid percentage',
+    couldNotSavePlan: 'Could not save plan.',
+    invalidAmountGeneric: 'Please enter a valid amount',
+    couldNotSaveGoal: 'Could not save savings goal.',
+    noDataMonth: 'No data for this month',
+    savingsEyebrow: (month: string, year: number) => `Savings · ${month} ${year}`,
+    income: 'INCOME',
+    expenses: 'EXPENSES',
+    allocated: 'Allocated',
+    invested: 'INVESTED',
+    available: 'AVAILABLE',
+    allocationsTitle: 'ALLOCATIONS',
+    itemsCount: (n: number) => `${n} items`,
+    noAllocationsYet: 'No allocations yet',
+    pctOfSavings: (pct: string) => `${pct}% of savings`,
+    addAllocation: '+ Add allocation',
+    salesTitle: 'SALES',
+    proceedsSuffix: (amt: string) => `${amt} proceeds`,
+    monthView: 'Month',
+    yearView: 'Year',
+    annualSavingsGoal: 'ANNUAL SAVINGS GOAL',
+    monthlySavingsGoal: 'MONTHLY SAVINGS GOAL',
+    annualGoal: 'Annual goal',
+    monthlyGoal: 'Monthly goal',
+    cancel: 'Cancel',
+    save: 'Save',
+    edit: 'Edit',
+    monthsPlanned: (n: number) => `${n} month${n !== 1 ? 's' : ''} planned`,
+    savedThisYear: 'SAVED THIS YEAR',
+    savedThisMonth: 'SAVED THIS MONTH',
+    setSavingsGoal: '+ Set savings goal',
+    noMonthlyGoals: (year: number) => `No monthly goals set for ${year}.\nSwitch to Month view to add them.`,
+    yearSavingsEyebrow: (year: number) => `Year savings · ${year}`,
+    instrumentsCount: (n: number) => `${n} instruments`,
+    targetAllocation: 'TARGET ALLOCATION',
+    noPlanSet: 'No plan set',
+    actualPct: (pct: string) => `Actual ${pct}%`,
+    addInstrument: '+ Add instrument',
+    portfolioValue: 'Portfolio value',
+    investedPrefix: (amt: string) => `Invested ${amt}`,
+    noInvestments: 'No investments recorded',
+    holdings: 'HOLDINGS',
+    positionsCount: (n: number) => `${n} positions`,
+    closed: 'CLOSED',
+    realizedPrefix: (amt: string) => `Realized ${amt}`,
+    sell: 'Sell',
+    investedLabel: 'Invested',
+    currentValue: 'Current value',
+    unrealizedPnL: 'Unrealized P&L',
+    realizedPnL: 'Realized P&L',
+    addAllocationTitle: 'Add allocation',
+    searchInstrumentAmounts: 'Search instrument (VWCE, BTC, …)',
+    whatToEnter: 'What do you want to enter?',
+    amount: 'Amount',
+    quantity: 'Quantity',
+    autoSuffix: ' (auto)',
+    price: 'Price',
+    fetching: 'Fetching…',
+    addInstrumentToPlan: 'Add instrument to plan',
+    searchInstrumentGeneric: 'Search instrument…',
+    targetPctLabel: 'Target %',
+    egThirty: 'e.g. 30',
+    monthlyGoalOptional: 'Monthly goal (optional)',
+    egFiveHundred: 'e.g. 500',
+    sellAsset: 'Sell asset',
+    availableColon: (qty: string) => `Available: ×${qty}`,
+    avgCost: (val: string) => `avg cost ${val}`,
+    priceAtSale: 'Price at sale',
+    proceedsLabel: 'Proceeds',
+    costBasis: 'Cost basis (PCM)',
+    estPnL: 'Est. P&L',
+    confirmSell: 'Confirm Sell',
+  },
+} as const;
 
 // ============================================================
 // SavingsScreen
 // ============================================================
 const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const { userToken } = useAuth();
-  const { currency, showBalance } = useSettings();
+  const { currency, showBalance, language } = useSettings();
+  const L = STRINGS[language];
+  const MONTHS = MONTHS_BY_LANG[language];
+  const TAB_LABELS = TAB_LABELS_BY_LANG[language];
 
   // ── Theme ─────────────────────────────────────────────────
   const t = useAppTheme();
@@ -576,21 +769,21 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       selectedYear > now.getFullYear() ||
       (selectedYear === now.getFullYear() && selectedMonth > now.getMonth());
     if (isFuture) {
-      Alert.alert('Error', 'Cannot add allocations for future months');
+      Alert.alert(L.errore, L.futureMonth);
       return;
     }
     const parsedAmount = parseFloat(newAmount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount greater than 0');
+      Alert.alert(L.errore, L.invalidAmount);
       return;
     }
     if (newQuantity) {
       const q = parseFloat(newQuantity);
-      if (isNaN(q) || q <= 0) { Alert.alert('Error', 'Quantity must be greater than 0'); return; }
+      if (isNaN(q) || q <= 0) { Alert.alert(L.errore, L.qtyMustBeGreater); return; }
     }
     if (newPrice) {
       const p = parseFloat(newPrice);
-      if (isNaN(p) || p <= 0) { Alert.alert('Error', 'Price must be greater than 0'); return; }
+      if (isNaN(p) || p <= 0) { Alert.alert(L.errore, L.priceMustBeGreater); return; }
     }
     try {
       let monthId = savingsMonth?._id;
@@ -600,10 +793,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ anno: selectedYear, mese: selectedMonth }),
         });
-        if (!ensureRes.ok) { Alert.alert('Error', 'Could not prepare month record'); return; }
+        if (!ensureRes.ok) { Alert.alert(L.errore, L.couldNotPrepareMonth); return; }
         const ensureJson = await ensureRes.json();
         monthId = ensureJson.data?._id;
-        if (!monthId) { Alert.alert('Error', 'Could not get month ID'); return; }
+        if (!monthId) { Alert.alert(L.errore, L.couldNotGetMonthId); return; }
       }
 
       const body: any = { instrumentId: selectedInstrument._id, amount: parsedAmount };
@@ -620,20 +813,20 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       if (res.ok) { resetAllocationModal(); reloadData(); }
       else {
         const errJson = await res.json().catch(() => ({}));
-        Alert.alert('Error', errJson.error ?? 'Could not add allocation');
+        Alert.alert(L.errore, errJson.error ?? L.couldNotAddAllocation);
       }
     } catch (e) {
       console.error(e);
-      Alert.alert('Error', 'Network error');
+      Alert.alert(L.errore, L.networkError);
     }
   };
 
   const handleDeleteAllocation = (allId: string) => {
     if (!savingsMonth) return;
-    Alert.alert('Delete', 'Delete this allocation?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(L.elimina, L.deleteAllocationMsg, [
+      { text: L.annulla, style: 'cancel' },
       {
-        text: 'Delete',
+        text: L.elimina,
         style: 'destructive',
         onPress: async () => {
           try {
@@ -641,7 +834,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               `${BASE_URL}/api/savings/months/${savingsMonth._id}/allocations/${allId}`,
               { method: 'DELETE', headers: { Authorization: `Bearer ${userToken}` } },
             );
-            if (!response.ok) { Alert.alert('Error', 'Could not delete allocation.'); return; }
+            if (!response.ok) { Alert.alert(L.errore, L.couldNotDeleteAllocation); return; }
             reloadData();
           } catch (e) { console.error(e); }
         },
@@ -664,11 +857,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
     const qty = parseFloat(sellQuantity);
     const price = parseFloat(sellPrice);
     if (!qty || qty <= 0 || qty > (sellItem.currentQuantity ?? 0) + 1e-9) {
-      Alert.alert('Error', `Quantity must be between 0 and ${sellItem.currentQuantity}`);
+      Alert.alert(L.errore, L.qtyRange(sellItem.currentQuantity));
       return;
     }
     if (!price || price <= 0) {
-      Alert.alert('Error', 'Enter a valid sale price');
+      Alert.alert(L.errore, L.invalidSalePrice);
       return;
     }
     setIsSavingSell(true);
@@ -679,10 +872,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ anno: selectedYear, mese: selectedMonth }),
       });
-      if (!ensureRes.ok) { Alert.alert('Error', 'Could not prepare month record'); return; }
+      if (!ensureRes.ok) { Alert.alert(L.errore, L.couldNotPrepareMonth); return; }
       const ensureJson = await ensureRes.json();
       const monthId = ensureJson.data?._id;
-      if (!monthId) { Alert.alert('Error', 'Could not get month ID'); return; }
+      if (!monthId) { Alert.alert(L.errore, L.couldNotGetMonthId); return; }
 
       const saleRes = await fetch(`${BASE_URL}/api/savings/months/${monthId}/sales`, {
         method: 'POST',
@@ -695,7 +888,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       });
       if (!saleRes.ok) {
         const errJson = await saleRes.json().catch(() => ({}));
-        Alert.alert('Error', errJson.error ?? 'Could not save sale');
+        Alert.alert(L.errore, errJson.error ?? L.couldNotSaveSale);
         return;
       }
       setShowSellModal(false);
@@ -703,17 +896,17 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       reloadData();
     } catch (e) {
       console.error('handleConfirmSell error:', e);
-      Alert.alert('Error', 'Network error');
+      Alert.alert(L.errore, L.networkError);
     } finally {
       setIsSavingSell(false);
     }
   };
 
   const handleDeleteSale = (saleId: string, monthId: string) => {
-    Alert.alert('Delete sale', 'Delete this sale record?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(L.deleteSaleTitle, L.deleteSaleMsg, [
+      { text: L.annulla, style: 'cancel' },
       {
-        text: 'Delete',
+        text: L.elimina,
         style: 'destructive',
         onPress: async () => {
           try {
@@ -721,7 +914,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               `${BASE_URL}/api/savings/months/${monthId}/sales/${saleId}`,
               { method: 'DELETE', headers: { Authorization: `Bearer ${userToken}` } },
             );
-            if (!res.ok) { Alert.alert('Error', 'Could not delete sale.'); return; }
+            if (!res.ok) { Alert.alert(L.errore, L.couldNotDeleteSale); return; }
             reloadData();
           } catch (e) { console.error(e); }
         },
@@ -735,7 +928,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
   const handleSavePlanEntry = async () => {
     if (!planSelectedInstrument || !pianoPct) return;
     const pct = parseFloat(pianoPct);
-    if (isNaN(pct) || pct <= 0) { Alert.alert('Error', 'Please enter a valid percentage'); return; }
+    if (isNaN(pct) || pct <= 0) { Alert.alert(L.errore, L.invalidPercentage); return; }
     const currentAllocations: any[] = plan?.allocations ?? [];
     const newEntry: any = { instrumentId: planSelectedInstrument._id, targetPercentage: pct };
     if (pianoTargetAmount) {
@@ -765,14 +958,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ allocations: allocationsArr }),
       });
-      if (!response.ok) Alert.alert('Error', 'Could not save plan.');
+      if (!response.ok) Alert.alert(L.errore, L.couldNotSavePlan);
     } catch (e) { console.error('savePlan error:', e); }
   };
 
   const handleConfirmTargetSavings = async () => {
     const val = targetSavingsInput.trim() === '' ? null : parseFloat(targetSavingsInput);
     if (val !== null && (isNaN(val) || val < 0)) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert(L.errore, L.invalidAmountGeneric);
       return;
     }
     setIsEditingTargetSavings(false);
@@ -782,7 +975,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         headers: { Authorization: `Bearer ${userToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ anno: selectedYear, mese: selectedMonth, targetSavings: val }),
       });
-      if (!res.ok) Alert.alert('Error', 'Could not save savings goal.');
+      if (!res.ok) Alert.alert(L.errore, L.couldNotSaveGoal);
     } catch (e) { console.error('handleConfirmTargetSavings error:', e); }
     reloadData();
   };
@@ -883,7 +1076,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       >
         {savingsMonth === null ? (
           <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-            <Text style={[styles.emptyText, { color: t.text3 }]}>No data for this month</Text>
+            <Text style={[styles.emptyText, { color: t.text3 }]}>{L.noDataMonth}</Text>
             <Text style={[styles.emptySubText, { color: t.text3 }]}>
               {MONTHS[selectedMonth]} {selectedYear}
             </Text>
@@ -893,7 +1086,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* ── Hero ── */}
             <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
               <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
-                Savings · {MONTHS[selectedMonth]} {selectedYear}
+                {L.savingsEyebrow(MONTHS[selectedMonth], selectedYear)}
               </Text>
               <Text style={[styles.heroAmount, { color: t.text }]}>
                 {formatCurrency(savings)}
@@ -902,7 +1095,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 <View style={styles.flowCell}>
                   <View style={[styles.flowDot, { backgroundColor: t.pos }]} />
                   <View>
-                    <Text style={[styles.flowLabel, { color: t.text3 }]}>INCOME</Text>
+                    <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.income}</Text>
                     <Text style={[styles.flowVal, { color: t.pos }]}>{formatCurrency(income)}</Text>
                   </View>
                 </View>
@@ -910,7 +1103,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 <View style={styles.flowCell}>
                   <View style={[styles.flowDot, { backgroundColor: t.neg }]} />
                   <View>
-                    <Text style={[styles.flowLabel, { color: t.text3 }]}>EXPENSES</Text>
+                    <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.expenses}</Text>
                     <Text style={[styles.flowVal, { color: t.neg }]}>{formatCurrency(expenses)}</Text>
                   </View>
                 </View>
@@ -920,7 +1113,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* ── Allocated card ── */}
             <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
               <View style={styles.rowBetween}>
-                <Text style={[styles.cardLabel, { color: t.text2 }]}>Allocated</Text>
+                <Text style={[styles.cardLabel, { color: t.text2 }]}>{L.allocated}</Text>
                 <Text style={[styles.cardPct, { color: ACCENT }]}>{allocPct.toFixed(0)}%</Text>
               </View>
               <View style={[styles.track, { backgroundColor: t.surface2 }]}>
@@ -928,11 +1121,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </View>
               <View style={[styles.rowBetween, { marginTop: 12 }]}>
                 <View>
-                  <Text style={[styles.microLabel, { color: t.text3 }]}>INVESTED</Text>
+                  <Text style={[styles.microLabel, { color: t.text3 }]}>{L.invested}</Text>
                   <Text style={[styles.microVal, { color: t.text }]}>{formatCurrency(totalAlloc)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[styles.microLabel, { color: t.text3 }]}>AVAILABLE</Text>
+                  <Text style={[styles.microLabel, { color: t.text3 }]}>{L.available}</Text>
                   <Text style={[styles.microVal, { color: available >= 0 ? ACCENT : t.neg }]}>
                     {showBalance
                       ? `${available < 0 ? '−' : ''}${currency}${Math.abs(available).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -944,13 +1137,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
             {/* ── Allocations ── */}
             <View style={[styles.sectionHead, { marginTop: 4 }]}>
-              <Text style={[styles.sectionTitle, { color: t.text3 }]}>ALLOCATIONS</Text>
-              <Text style={[styles.sectionMeta, { color: t.text3 }]}>{allocations.length} items</Text>
+              <Text style={[styles.sectionTitle, { color: t.text3 }]}>{L.allocationsTitle}</Text>
+              <Text style={[styles.sectionMeta, { color: t.text3 }]}>{L.itemsCount(allocations.length)}</Text>
             </View>
 
             {allocations.length === 0 ? (
               <Text style={[styles.emptyText, { color: t.text3, textAlign: 'center', marginVertical: 8 }]}>
-                No allocations yet
+                {L.noAllocationsYet}
               </Text>
             ) : (
               allocations.map(alloc => {
@@ -982,7 +1175,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                           {qty ? ` · ×${qty}` : ''}
                         </Text>
                         <Text style={[styles.allocPct, { color: t.text2 }]}>
-                          {pctOfSavings.toFixed(1)}% of savings
+                          {L.pctOfSavings(pctOfSavings.toFixed(1))}
                         </Text>
                       </View>
                     </View>
@@ -1005,15 +1198,15 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 setShowAddAllocationModal(true);
               }}
             >
-              <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add allocation</Text>
+              <Text style={[styles.ghostBtnText, { color: t.text2 }]}>{L.addAllocation}</Text>
             </TouchableOpacity>
 
             {/* ── Sales ── */}
             {sales.length > 0 && (
               <>
                 <View style={[styles.sectionHead, { marginTop: 16 }]}>
-                  <Text style={[styles.sectionTitle, { color: t.text3 }]}>SALES</Text>
-                  <Text style={[styles.sectionMeta, { color: t.text3 }]}>{sales.length} items</Text>
+                  <Text style={[styles.sectionTitle, { color: t.text3 }]}>{L.salesTitle}</Text>
+                  <Text style={[styles.sectionMeta, { color: t.text3 }]}>{L.itemsCount(sales.length)}</Text>
                 </View>
                 {sales.map(sale => {
                   const ticker = sale.instrumentId?.ticker ?? '?';
@@ -1043,7 +1236,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                             ×{sale.quantity} @ {currency}{sale.priceAtSale?.toFixed(2)}
                           </Text>
                           <Text style={[styles.allocPct, { color: t.text2 }]}>
-                            {formatCurrency(sale.proceeds)} proceeds
+                            {L.proceedsSuffix(formatCurrency(sale.proceeds))}
                           </Text>
                         </View>
                       </View>
@@ -1122,7 +1315,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               }}
             >
               <Text style={[styles.planViewBtnText, { color: planView === v ? t.text : t.text3 }]}>
-                {v === 'month' ? 'Month' : 'Year'}
+                {v === 'month' ? L.monthView : L.yearView}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1131,14 +1324,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         {/* ── Savings goal card ── */}
         <View style={[styles.card, { backgroundColor: t.surface, borderColor: isEditingTargetSavings ? ACCENT : t.line }]}>
           <Text style={[styles.microLabel, { color: t.text3 }]}>
-            {planView === 'year' ? 'ANNUAL SAVINGS GOAL' : 'MONTHLY SAVINGS GOAL'}
+            {planView === 'year' ? L.annualSavingsGoal : L.monthlySavingsGoal}
           </Text>
 
           {isEditingTargetSavings ? (
             <>
               <View style={[styles.field, { backgroundColor: t.surface2, borderColor: ACCENT, marginTop: 14, marginBottom: 0 }]}>
                 <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>
-                  {planView === 'year' ? 'Annual goal' : 'Monthly goal'}
+                  {planView === 'year' ? L.annualGoal : L.monthlyGoal}
                 </Text>
                 <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
                 <TextInput
@@ -1158,13 +1351,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                   style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
                   onPress={() => setIsEditingTargetSavings(false)}
                 >
-                  <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                  <Text style={[styles.sheetCancelText, { color: t.text }]}>{L.cancel}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.sheetSave, { backgroundColor: ACCENT }]}
                   onPress={handleConfirmTargetSavings}
                 >
-                  <Text style={styles.sheetSaveText}>Save</Text>
+                  <Text style={styles.sheetSaveText}>{L.save}</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -1182,11 +1375,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                       setIsEditingTargetSavings(true);
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: t.text2 }}>Edit</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: t.text2 }}>{L.edit}</Text>
                   </TouchableOpacity>
                 ) : (
                   <Text style={{ fontSize: 11, color: t.text3, flexShrink: 1, textAlign: 'right' }}>
-                    {yearTargets.length} month{yearTargets.length !== 1 ? 's' : ''} planned
+                    {L.monthsPlanned(yearTargets.length)}
                   </Text>
                 )}
               </View>
@@ -1195,7 +1388,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </View>
               <View style={[styles.rowBetween, { marginTop: 8 }]}>
                 <Text style={[styles.microLabel, { color: t.text3 }]}>
-                  {planView === 'year' ? 'SAVED THIS YEAR' : 'SAVED THIS MONTH'}
+                  {planView === 'year' ? L.savedThisYear : L.savedThisMonth}
                 </Text>
                 <Text style={{ fontSize: 12, fontWeight: '600', color: goalMet ? t.pos : t.text2 }}>
                   {formatCurrency(actualSavingsForGoal)} / {formatCurrency(displayGoalTarget)} · {goalPct.toFixed(0)}%
@@ -1219,11 +1412,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 setIsEditingTargetSavings(true);
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: t.text3 }}>+ Set savings goal</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: t.text3 }}>{L.setSavingsGoal}</Text>
             </TouchableOpacity>
           ) : (
             <Text style={{ fontSize: 13, color: t.text3, marginTop: 10, textAlign: 'center' }}>
-              No monthly goals set for {selectedYear}.{'\n'}Switch to Month view to add them.
+              {L.noMonthlyGoals(selectedYear)}
             </Text>
           )}
         </View>
@@ -1232,7 +1425,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         {planView === 'year' && planYearSummary && planYearSummary.monthCount > 0 && (
           <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
             <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
-              Year savings · {selectedYear}
+              {L.yearSavingsEyebrow(selectedYear)}
             </Text>
             <Text style={[styles.heroAmount, { color: t.text }]}>
               {formatCurrency(planYearSummary.totalSavings)}
@@ -1241,7 +1434,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               <View style={styles.flowCell}>
                 <View style={[styles.flowDot, { backgroundColor: t.pos }]} />
                 <View>
-                  <Text style={[styles.flowLabel, { color: t.text3 }]}>INCOME</Text>
+                  <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.income}</Text>
                   <Text style={[styles.flowVal, { color: t.pos }]}>
                     {formatCurrency(planYearSummary.totalIncome)}
                   </Text>
@@ -1251,7 +1444,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               <View style={styles.flowCell}>
                 <View style={[styles.flowDot, { backgroundColor: t.neg }]} />
                 <View>
-                  <Text style={[styles.flowLabel, { color: t.text3 }]}>EXPENSES</Text>
+                  <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.expenses}</Text>
                   <Text style={[styles.flowVal, { color: t.neg }]}>
                     {formatCurrency(planYearSummary.totalExpenses)}
                   </Text>
@@ -1280,7 +1473,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 {totalPlanPct.toFixed(0)}%
               </Text>
               <Text style={[styles.planCircleSub, { color: t.text3 }]}>
-                {planAllocations.length} instruments
+                {L.instrumentsCount(planAllocations.length)}
               </Text>
             </View>
             <View style={[styles.stackedBar, { backgroundColor: t.surface2 }]}>
@@ -1296,12 +1489,12 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
         {/* ── Section head ── */}
         <View style={[styles.sectionHead, { marginTop: planAllocations.length > 0 ? 4 : 0 }]}>
-          <Text style={[styles.sectionTitle, { color: t.text3 }]}>TARGET ALLOCATION</Text>
+          <Text style={[styles.sectionTitle, { color: t.text3 }]}>{L.targetAllocation}</Text>
         </View>
 
         {planAllocations.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-            <Text style={[styles.emptyText, { color: t.text3 }]}>No plan set</Text>
+            <Text style={[styles.emptyText, { color: t.text3 }]}>{L.noPlanSet}</Text>
           </View>
         ) : (
           planAllocations.map((p, idx) => {
@@ -1381,7 +1574,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
                 <View style={styles.rowBetween}>
                   <Text style={[styles.planActualLabel, { color: t.text2 }]}>
-                    Actual {actualPct.toFixed(1)}%
+                    {L.actualPct(actualPct.toFixed(1))}
                   </Text>
                   <Text style={[styles.planDrift, { color: driftColor }]}>
                     {drift > 0 ? '↑' : drift < 0 ? '↓' : '·'} {Math.abs(drift).toFixed(1)}%
@@ -1394,7 +1587,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                     <View style={{ flex: 1, gap: 6 }}>
                       <View style={styles.rowBetween}>
                         <Text style={[styles.planActualLabel, { color: t.text3 }]}>
-                          {planView === 'year' ? 'Annual goal' : 'Monthly goal'}
+                          {planView === 'year' ? L.annualGoal : L.monthlyGoal}
                         </Text>
                         <Text style={[styles.planActualLabel, { color: t.text2 }]}>
                           {formatCurrency(instrAllocAmount)} / {formatCurrency(displayTarget)}
@@ -1426,7 +1619,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           style={[styles.ghostBtn, { borderColor: t.line2 }]}
           onPress={() => setShowAddPlanModal(true)}
         >
-          <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add instrument</Text>
+          <Text style={[styles.ghostBtnText, { color: t.text2 }]}>{L.addInstrument}</Text>
         </TouchableOpacity>
       </ScrollView>
     );
@@ -1450,7 +1643,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
       >
         {/* ── Portfolio hero ── */}
         <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
-          <Text style={[styles.heroEyebrow, { color: t.text3 }]}>Portfolio value</Text>
+          <Text style={[styles.heroEyebrow, { color: t.text3 }]}>{L.portfolioValue}</Text>
           <Text style={[styles.heroAmount, { color: t.text }]}>
             {formatCurrency(hasValue ? portfolioTotalCurrentValue : portfolioTotalInvested)}
           </Text>
@@ -1475,7 +1668,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 </Text>
               </View>
               <Text style={[styles.heroSubMeta, { color: t.text3 }]}>
-                Invested {formatCurrency(portfolioTotalInvested)}
+                {L.investedPrefix(formatCurrency(portfolioTotalInvested))}
               </Text>
             </View>
           )}
@@ -1483,14 +1676,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
 
         {portfolio.length === 0 ? (
           <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-            <Text style={[styles.emptyText, { color: t.text3 }]}>No investments recorded</Text>
+            <Text style={[styles.emptyText, { color: t.text3 }]}>{L.noInvestments}</Text>
           </View>
         ) : (
           <>
             <View style={styles.sectionHead}>
-              <Text style={[styles.sectionTitle, { color: t.text3 }]}>HOLDINGS</Text>
+              <Text style={[styles.sectionTitle, { color: t.text3 }]}>{L.holdings}</Text>
               <Text style={[styles.sectionMeta, { color: t.text3 }]}>
-                {portfolio.length} positions
+                {L.positionsCount(portfolio.length)}
               </Text>
             </View>
 
@@ -1521,11 +1714,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                     <Text style={[styles.portMeta, { color: t.text3 }]}>
                       {ticker}
                       {itemCurrency ? ` · ${itemCurrency}` : ''}
-                      {isClosed ? ' · CLOSED' : item.currentQuantity > 0 ? ` · ×${item.currentQuantity.toFixed(4)}` : ''}
+                      {isClosed ? ` · ${L.closed}` : item.currentQuantity > 0 ? ` · ×${item.currentQuantity.toFixed(4)}` : ''}
                     </Text>
                     {realized !== 0 && (
                       <Text style={[styles.portMeta, { color: realized >= 0 ? t.pos : t.neg }]}>
-                        Realized {formatReturnAbs(realized)}
+                        {L.realizedPrefix(formatReturnAbs(realized))}
                       </Text>
                     )}
                   </View>
@@ -1546,7 +1739,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                         style={[styles.sellBtn, { borderColor: t.neg }]}
                         onPress={() => handleOpenSell(item)}
                       >
-                        <Text style={[styles.sellBtnText, { color: t.neg }]}>Sell</Text>
+                        <Text style={[styles.sellBtnText, { color: t.neg }]}>{L.sell}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1557,14 +1750,14 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             {/* ── Summary card ── */}
             <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
               <View style={styles.rowBetween}>
-                <Text style={[styles.summaryLabel, { color: t.text2 }]}>Invested</Text>
+                <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.investedLabel}</Text>
                 <Text style={[styles.summaryVal, { color: t.text }]}>
                   {formatCurrency(portfolioTotalInvested)}
                 </Text>
               </View>
               {hasValue && (
                 <View style={[styles.rowBetween, { marginTop: 6 }]}>
-                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>Current value</Text>
+                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.currentValue}</Text>
                   <Text style={[styles.summaryVal, { color: t.text }]}>
                     {formatCurrency(portfolioTotalCurrentValue)}
                   </Text>
@@ -1572,7 +1765,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               )}
               {hasValue && (
                 <View style={[styles.rowBetween, { marginTop: 6 }]}>
-                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>Unrealized P&L</Text>
+                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.unrealizedPnL}</Text>
                   <Text style={[styles.summaryReturnVal, { color: portfolioTotalUnrealizedGain >= 0 ? t.pos : t.neg }]}>
                     {formatReturnAbs(portfolioTotalUnrealizedGain)}
                     {portfolioTotalReturnPct != null ? `  ${formatReturnPct(portfolioTotalReturnPct)}` : ''}
@@ -1586,7 +1779,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                     { borderTopColor: t.line, marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
                   ]}
                 >
-                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>Realized P&L</Text>
+                  <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.realizedPnL}</Text>
                   <Text
                     style={[
                       styles.summaryReturnVal,
@@ -1621,7 +1814,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, { backgroundColor: t.surface }]}>
             <View style={[styles.sheetGrab, { backgroundColor: t.line2 }]} />
-            <Text style={[styles.modalTitle, { color: t.text }]}>Add allocation</Text>
+            <Text style={[styles.modalTitle, { color: t.text }]}>{L.addAllocationTitle}</Text>
 
             {selectedInstrument ? (
               <View style={[styles.pickedRow, { backgroundColor: t.surface2, borderRadius: 12 }]}>
@@ -1645,7 +1838,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               <>
                 <TextInput
                   style={[styles.sheetInput, { backgroundColor: t.surface2, color: t.text, borderColor: t.line }]}
-                  placeholder="Search instrument (VWCE, BTC, …)"
+                  placeholder={L.searchInstrumentAmounts}
                   placeholderTextColor={t.text3}
                   value={searchQuery}
                   onChangeText={handleSearchChange}
@@ -1676,7 +1869,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             )}
 
             {/* Mode toggle */}
-            <Text style={[styles.modeLabel, { color: t.text3 }]}>What do you want to enter?</Text>
+            <Text style={[styles.modeLabel, { color: t.text3 }]}>{L.whatToEnter}</Text>
             <View style={[styles.modeToggle, { backgroundColor: t.surface2 }]}>
               <View
                 style={[
@@ -1700,7 +1893,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                       { color: allocationMode === m ? '#0c0c0c' : t.text2 },
                     ]}
                   >
-                    {m === 'amount' ? 'Amount' : 'Quantity'}
+                    {m === 'amount' ? L.amount : L.quantity}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1717,7 +1910,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               ]}
             >
               <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: allocationMode === 'amount' ? t.surface : t.surface2 }]}>
-                Amount{allocationMode !== 'amount' ? ' (auto)' : ''}
+                {L.amount}{allocationMode !== 'amount' ? L.autoSuffix : ''}
               </Text>
               <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
               <TextInput
@@ -1741,7 +1934,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               ]}
             >
               <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: allocationMode === 'quantity' ? t.surface : t.surface2 }]}>
-                Quantity{allocationMode !== 'quantity' ? ' (auto)' : ''}
+                {L.quantity}{allocationMode !== 'quantity' ? L.autoSuffix : ''}
               </Text>
               <TextInput
                 style={[styles.fieldInput, { color: t.text }]}
@@ -1760,11 +1953,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 { backgroundColor: t.surface2, borderColor: t.line, opacity: isPriceFetching ? 0.6 : 1 },
               ]}
             >
-              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Price</Text>
+              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>{L.price}</Text>
               <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
               <TextInput
                 style={[styles.fieldInput, { color: t.text }]}
-                placeholder={isPriceFetching ? 'Fetching…' : '0.00'}
+                placeholder={isPriceFetching ? L.fetching : '0.00'}
                 placeholderTextColor={t.text3}
                 keyboardType="numeric"
                 editable={!isPriceFetching}
@@ -1778,13 +1971,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
                 onPress={resetAllocationModal}
               >
-                <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                <Text style={[styles.sheetCancelText, { color: t.text }]}>{L.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.sheetSave, { backgroundColor: ACCENT }]}
                 onPress={handleSaveAllocation}
               >
-                <Text style={styles.sheetSaveText}>Save</Text>
+                <Text style={styles.sheetSaveText}>{L.save}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1810,7 +2003,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContainer, { backgroundColor: t.surface }]}>
             <View style={[styles.sheetGrab, { backgroundColor: t.line2 }]} />
-            <Text style={[styles.modalTitle, { color: t.text }]}>Add instrument to plan</Text>
+            <Text style={[styles.modalTitle, { color: t.text }]}>{L.addInstrumentToPlan}</Text>
 
             {planSelectedInstrument ? (
               <View style={[styles.pickedRow, { backgroundColor: t.surface2, borderRadius: 12 }]}>
@@ -1829,7 +2022,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               <>
                 <TextInput
                   style={[styles.sheetInput, { backgroundColor: t.surface2, color: t.text, borderColor: t.line }]}
-                  placeholder="Search instrument…"
+                  placeholder={L.searchInstrumentGeneric}
                   placeholderTextColor={t.text3}
                   value={planSearchQuery}
                   onChangeText={handlePlanSearchChange}
@@ -1864,10 +2057,10 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             )}
 
             <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
-              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Target %</Text>
+              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>{L.targetPctLabel}</Text>
               <TextInput
                 style={[styles.fieldInput, { color: t.text }]}
-                placeholder="e.g. 30"
+                placeholder={L.egThirty}
                 placeholderTextColor={t.text3}
                 keyboardType="numeric"
                 value={pianoPct}
@@ -1876,11 +2069,11 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line }]}>
-              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Monthly goal (optional)</Text>
+              <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>{L.monthlyGoalOptional}</Text>
               <Text style={[styles.fieldPrefix, { color: t.text3 }]}>{currency}</Text>
               <TextInput
                 style={[styles.fieldInput, { color: t.text }]}
-                placeholder="e.g. 500"
+                placeholder={L.egFiveHundred}
                 placeholderTextColor={t.text3}
                 keyboardType="numeric"
                 value={pianoTargetAmount}
@@ -1900,13 +2093,13 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                   setPlanSearchResults([]);
                 }}
               >
-                <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                <Text style={[styles.sheetCancelText, { color: t.text }]}>{L.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.sheetSave, { backgroundColor: ACCENT }]}
                 onPress={handleSavePlanEntry}
               >
-                <Text style={styles.sheetSaveText}>Save</Text>
+                <Text style={styles.sheetSaveText}>{L.save}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1947,7 +2140,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContainer, { backgroundColor: t.surface }]}>
               <View style={[styles.sheetGrab, { backgroundColor: t.line2 }]} />
-              <Text style={[styles.modalTitle, { color: t.text }]}>Sell asset</Text>
+              <Text style={[styles.modalTitle, { color: t.text }]}>{L.sellAsset}</Text>
 
               {sellItem && (
                 <View style={[styles.pickedRow, { backgroundColor: t.surface2, borderRadius: 12 }]}>
@@ -1957,15 +2150,15 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                       {sellItem.instrument?.name ?? sellItem.instrument?.ticker}
                     </Text>
                     <Text style={[styles.pickedMeta, { color: t.text3 }]}>
-                      Available: ×{sellItem.currentQuantity?.toFixed(6)}
-                      {avgCost > 0 ? `  ·  avg cost ${currency}${avgCost.toFixed(2)}` : ''}
+                      {L.availableColon(sellItem.currentQuantity?.toFixed(6) ?? '0')}
+                      {avgCost > 0 ? `  ·  ${L.avgCost(`${currency}${avgCost.toFixed(2)}`)}` : ''}
                     </Text>
                   </View>
                 </View>
               )}
 
               <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 12 }]}>
-                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Quantity</Text>
+                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>{L.quantity}</Text>
                 <TextInput
                   style={[styles.fieldInput, { color: t.text }]}
                   placeholder="0.00"
@@ -1977,7 +2170,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               </View>
 
               <View style={[styles.field, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
-                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>Price at sale</Text>
+                <Text style={[styles.fieldLabel, { color: t.text3, backgroundColor: t.surface2 }]}>{L.priceAtSale}</Text>
                 <TextInput
                   style={[styles.fieldInput, { color: t.text }]}
                   placeholder="0.00"
@@ -1991,15 +2184,15 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
               {sellQtyNum > 0 && sellPriceNum > 0 && (
                 <View style={[styles.card, { backgroundColor: t.surface2, borderColor: t.line, marginTop: 8 }]}>
                   <View style={styles.rowBetween}>
-                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Proceeds</Text>
+                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.proceedsLabel}</Text>
                     <Text style={[styles.summaryVal, { color: t.text }]}>{formatCurrency(sellProceeds)}</Text>
                   </View>
                   <View style={[styles.rowBetween, { marginTop: 6 }]}>
-                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Cost basis (PCM)</Text>
+                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.costBasis}</Text>
                     <Text style={[styles.summaryVal, { color: t.text2 }]}>{formatCurrency(sellCostBasis)}</Text>
                   </View>
                   <View style={[styles.rowBetween, { marginTop: 6, borderTopWidth: 1, borderTopColor: t.line, paddingTop: 6 }]}>
-                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>Est. P&L</Text>
+                    <Text style={[styles.summaryLabel, { color: t.text2 }]}>{L.estPnL}</Text>
                     <Text style={[styles.summaryReturnVal, { color: pnlPos ? t.pos : t.neg }]}>
                       {formatReturnAbs(sellEstPnL)}
                     </Text>
@@ -2012,7 +2205,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                   style={[styles.sheetCancel, { backgroundColor: t.surface2 }]}
                   onPress={() => setShowSellModal(false)}
                 >
-                  <Text style={[styles.sheetCancelText, { color: t.text }]}>Cancel</Text>
+                  <Text style={[styles.sheetCancelText, { color: t.text }]}>{L.cancel}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -2024,7 +2217,7 @@ const SavingsScreen: React.FC<SavingsScreenProps> = ({ navigation }) => {
                 >
                   {isSavingSell
                     ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={[styles.sheetSaveText, { color: isValidSell ? '#fff' : t.text3 }]}>Confirm Sell</Text>
+                    : <Text style={[styles.sheetSaveText, { color: isValidSell ? '#fff' : t.text3 }]}>{L.confirmSell}</Text>
                   }
                 </TouchableOpacity>
               </View>

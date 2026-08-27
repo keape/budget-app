@@ -16,9 +16,133 @@ import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
 
+const STRINGS = {
+    it: {
+        errorTitle: 'Errore',
+        fillAllFields: 'Compila tutti i campi',
+        passwordMismatch: 'Le nuove password non coincidono',
+        passwordTooShort: 'La nuova password deve avere almeno 6 caratteri',
+        successTitle: 'Successo',
+        passwordChanged: 'Password modificata con successo!',
+        passwordChangeError: 'Errore durante la modifica della password',
+        connectionError: 'Errore di connessione',
+        deleteWarningTitle: '⚠️ Attenzione',
+        deleteWarningMsg: "Sei sicuro di voler eliminare il tuo account? Questa azione è IRREVERSIBILE e tutti i tuoi dati verranno eliminati definitivamente.",
+        cancel: 'Annulla',
+        deleteForever: 'Elimina Definitivamente',
+        accountDeletedTitle: 'Account Eliminato',
+        accountDeletedMsg: 'Il tuo account e tutti i dati sono stati rimossi.',
+        deleteAccountError: "Impossibile eliminare l'account",
+        menuChangePassword: '🔒 Cambia Password',
+        menuCustomization: '🎨 Personalizzazione App',
+        menuAbout: 'ℹ️ Chi Siamo',
+        menuBug: '🐛 Segnala un Bug',
+        menuLogout: '🚪 Esci',
+        changePasswordTitle: 'Cambia Password',
+        currentPasswordLabel: 'Password Attuale',
+        currentPasswordPlaceholder: 'Inserisci la password attuale',
+        newPasswordLabel: 'Nuova Password',
+        newPasswordPlaceholder: 'Inserisci la nuova password',
+        confirmPasswordLabel: 'Conferma Nuova Password',
+        confirmPasswordPlaceholder: 'Conferma la nuova password',
+        updatePassword: 'Aggiorna Password',
+        back: 'Indietro',
+        aboutTitle: 'Chi è Budget 365',
+        aboutDescription: 'Budget 365 è la tua soluzione completa per la gestione delle finanze personali. Progettata per essere semplice ma potente, ti aiuta a tenere traccia di entrate e uscite in modo intuitivo.',
+        goalsHeader: '🎯 I Nostri Obiettivi',
+        goal1: '✓ Gestione semplice e accessibile',
+        goal2: '✓ Strumenti potenti senza complessità',
+        goal3: '✓ Sicurezza e privacy garantite',
+        privacyPolicyHeader: '🔒 Privacy Policy',
+        contactHeader: '✉️ Contattaci',
+        contactDescription: 'Domande o suggerimenti? Scrivici a keape@me.com',
+        customizationTitle: 'Personalizzazione App',
+        themeHeader: '🌓 Tema',
+        themeLight: 'Chiaro',
+        themeDark: 'Scuro',
+        themeSystem: 'Sistema',
+        currencyHeader: '💰 Valuta',
+        languageHeader: '🌐 Lingua',
+        privacyHeader: '🛡️ Privacy',
+        showBalanceLabel: 'Mostra Saldo nella Dashboard',
+        dangerZoneHeader: '⚠️ Zona Pericolosa',
+        dangerZoneDescription: "L'eliminazione dell'account è permanente e rimuove tutti i tuoi dati.",
+        deleteAccountBtn: '🗑️ Elimina Account',
+        describeBug: 'Descrivi il bug',
+        noEmailClientTitle: 'Nessun Client Email',
+        noEmailClientMsg: 'Nessun client email disponibile trovato. Se sei su un simulatore, è normale. Scrivi direttamente a keape@me.com.',
+        openEmailClientError: 'Impossibile aprire il client email. Scrivi direttamente a keape@me.com.',
+        bugReportTitle: 'Segnala un Bug',
+        bugReportDescription: 'Hai trovato un problema? Faccelo sapere così possiamo risolverlo!',
+        bugPlaceholder: 'Descrivi qui il bug...',
+        sendReport: 'Invia Segnalazione',
+    },
+    en: {
+        errorTitle: 'Error',
+        fillAllFields: 'Please fill in all fields',
+        passwordMismatch: 'New passwords do not match',
+        passwordTooShort: 'New password must be at least 6 characters long',
+        successTitle: 'Success',
+        passwordChanged: 'Password changed successfully!',
+        passwordChangeError: 'Error changing password',
+        connectionError: 'Connection error',
+        deleteWarningTitle: '⚠️ Warning',
+        deleteWarningMsg: 'Are you sure you want to delete your account? This action is IRREVERSIBLE and all your data will be permanently deleted.',
+        cancel: 'Cancel',
+        deleteForever: 'Delete Permanently',
+        accountDeletedTitle: 'Account Deleted',
+        accountDeletedMsg: 'Your account and all data have been removed.',
+        deleteAccountError: 'Unable to delete account',
+        menuChangePassword: '🔒 Change Password',
+        menuCustomization: '🎨 App Customization',
+        menuAbout: 'ℹ️ About Us',
+        menuBug: '🐛 Report a Bug',
+        menuLogout: '🚪 Logout',
+        changePasswordTitle: 'Change Password',
+        currentPasswordLabel: 'Current Password',
+        currentPasswordPlaceholder: 'Enter current password',
+        newPasswordLabel: 'New Password',
+        newPasswordPlaceholder: 'Enter new password',
+        confirmPasswordLabel: 'Confirm New Password',
+        confirmPasswordPlaceholder: 'Confirm new password',
+        updatePassword: 'Update Password',
+        back: 'Back',
+        aboutTitle: 'About Budget 365',
+        aboutDescription: 'Budget 365 is your complete solution for personal finance management. Designed to be simple yet powerful, it helps you track your income and expenses intuitively.',
+        goalsHeader: '🎯 Our Goals',
+        goal1: '✓ Simple and accessible management',
+        goal2: '✓ Powerful tools without complexity',
+        goal3: '✓ Guaranteed security and privacy',
+        privacyPolicyHeader: '🔒 Privacy Policy',
+        contactHeader: '✉️ Contact Us',
+        contactDescription: 'Have questions or suggestions? Email us at keape@me.com',
+        customizationTitle: 'App Customization',
+        themeHeader: '🌓 Theme',
+        themeLight: 'Light',
+        themeDark: 'Dark',
+        themeSystem: 'System',
+        currencyHeader: '💰 Currency',
+        languageHeader: '🌐 Language',
+        privacyHeader: '🛡️ Privacy',
+        showBalanceLabel: 'Show Balance on Dashboard',
+        dangerZoneHeader: '⚠️ Danger Zone',
+        dangerZoneDescription: 'Deleting your account is permanent and removes all your data.',
+        deleteAccountBtn: '🗑️ Delete Account',
+        describeBug: 'Please describe the bug',
+        noEmailClientTitle: 'No Email Client',
+        noEmailClientMsg: 'Available email client not found. If you are on a simulator, this is expected. Please email keape@me.com directly.',
+        openEmailClientError: 'Could not open email client. Please email keape@me.com directly.',
+        bugReportTitle: 'Report a Bug',
+        bugReportDescription: 'Found an issue? Let us know so we can fix it!',
+        bugPlaceholder: 'Describe the bug here...',
+        sendReport: 'Send Report',
+    },
+} as const;
+
 const SettingsScreen: React.FC = () => {
     const { logout, userToken } = useAuth();
-    const { theme, setTheme, currency, setCurrency, showBalance, setShowBalance, isDarkMode } = useSettings();
+    const { theme, setTheme, currency, setCurrency, showBalance, setShowBalance, language, setLanguage, isDarkMode } = useSettings();
+    const t = STRINGS[language];
     const [activeTab, setActiveTab] = useState<'menu' | 'password' | 'about' | 'customization' | 'bug'>('menu');
 
     // Bug Report State
@@ -33,17 +157,17 @@ const SettingsScreen: React.FC = () => {
 
     const handleChangePassword = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
-            Alert.alert('Error', 'Please fill in all fields');
+            Alert.alert(t.errorTitle, t.fillAllFields);
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            Alert.alert('Error', 'New passwords do not match');
+            Alert.alert(t.errorTitle, t.passwordMismatch);
             return;
         }
 
         if (newPassword.length < 6) {
-            Alert.alert('Error', 'New password must be at least 6 characters long');
+            Alert.alert(t.errorTitle, t.passwordTooShort);
             return;
         }
 
@@ -64,16 +188,16 @@ const SettingsScreen: React.FC = () => {
             const data = await response.json();
 
             if (response.ok) {
-                Alert.alert('Success', 'Password changed successfully!');
+                Alert.alert(t.successTitle, t.passwordChanged);
                 setCurrentPassword('');
                 setNewPassword('');
                 setConfirmPassword('');
                 setActiveTab('menu');
             } else {
-                Alert.alert('Error', data.message || 'Error changing password');
+                Alert.alert(t.errorTitle, data.message || t.passwordChangeError);
             }
         } catch (error) {
-            Alert.alert('Error', 'Connection error');
+            Alert.alert(t.errorTitle, t.connectionError);
         } finally {
             setIsLoading(false);
         }
@@ -81,12 +205,12 @@ const SettingsScreen: React.FC = () => {
 
     const handleDeleteAccount = () => {
         Alert.alert(
-            '⚠️ Warning',
-            'Are you sure you want to delete your account? This action is IRREVERSIBLE and all your data will be permanently deleted.',
+            t.deleteWarningTitle,
+            t.deleteWarningMsg,
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Delete Permanently',
+                    text: t.deleteForever,
                     style: 'destructive',
                     onPress: confirmDeleteAccount
                 }
@@ -106,14 +230,14 @@ const SettingsScreen: React.FC = () => {
             });
 
             if (response.ok) {
-                Alert.alert('Account Deleted', 'Your account and all data have been removed.');
+                Alert.alert(t.accountDeletedTitle, t.accountDeletedMsg);
                 logout();
             } else {
                 const data = await response.json();
-                Alert.alert('Error', data.message || 'Unable to delete account');
+                Alert.alert(t.errorTitle, data.message || t.deleteAccountError);
             }
         } catch (error) {
-            Alert.alert('Error', 'Connection error');
+            Alert.alert(t.errorTitle, t.connectionError);
         } finally {
             setIsLoading(false);
         }
@@ -122,62 +246,62 @@ const SettingsScreen: React.FC = () => {
     const renderMenu = () => (
         <View style={styles.menuContainer}>
             <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('password')}>
-                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🔒 Change Password</Text>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>{t.menuChangePassword}</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('customization')}>
-                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🎨 App Customization</Text>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>{t.menuCustomization}</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('about')}>
-                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>ℹ️ About Us</Text>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>{t.menuAbout}</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.menuItem, isDarkMode && { backgroundColor: '#1F2937' }]} onPress={() => setActiveTab('bug')}>
-                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>🐛 Report a Bug</Text>
+                <Text style={[styles.menuItemText, isDarkMode && { color: '#E5E7EB' }]}>{t.menuBug}</Text>
                 <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.menuItem, styles.logoutButton, isDarkMode && { backgroundColor: '#450a0a', borderColor: '#7f1d1d' }]} onPress={logout}>
-                <Text style={[styles.menuItemText, styles.logoutText, isDarkMode && { color: '#ef4444' }]}>🚪 Logout</Text>
+                <Text style={[styles.menuItemText, styles.logoutText, isDarkMode && { color: '#ef4444' }]}>{t.menuLogout}</Text>
             </TouchableOpacity>
         </View>
     );
 
     const renderPasswordChange = () => (
         <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Change Password</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.changePasswordTitle}</Text>
 
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Current Password</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.currentPasswordLabel}</Text>
             <TextInput
                 style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                 secureTextEntry
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                placeholder="Enter current password"
+                placeholder={t.currentPasswordPlaceholder}
                 placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
             />
 
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>New Password</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.newPasswordLabel}</Text>
             <TextInput
                 style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                 secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="Enter new password"
+                placeholder={t.newPasswordPlaceholder}
                 placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
             />
 
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Confirm New Password</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.confirmPasswordLabel}</Text>
             <TextInput
                 style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Confirm new password"
+                placeholder={t.confirmPasswordPlaceholder}
                 placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
             />
 
@@ -189,29 +313,28 @@ const SettingsScreen: React.FC = () => {
                 {isLoading ? (
                     <ActivityIndicator color="white" />
                 ) : (
-                    <Text style={styles.primaryButtonText}>Update Password</Text>
+                    <Text style={styles.primaryButtonText}>{t.updatePassword}</Text>
                 )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('menu')}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
+                <Text style={styles.secondaryButtonText}>{t.back}</Text>
             </TouchableOpacity>
         </View>
     );
 
     const renderAbout = () => (
         <ScrollView style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>About Budget 365</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.aboutTitle}</Text>
             <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
-                Budget 365 is your complete solution for personal finance management.
-                Designed to be simple yet powerful, it helps you track your income and expenses intuitively.
+                {t.aboutDescription}
             </Text>
 
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937', borderBottomColor: '#374151' }]}>
-                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🎯 Our Goals</Text>
-                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Simple and accessible management</Text>
-                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Powerful tools without complexity</Text>
-                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>✓ Guaranteed security and privacy</Text>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.goalsHeader}</Text>
+                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>{t.goal1}</Text>
+                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>{t.goal2}</Text>
+                <Text style={[styles.listItem, isDarkMode && { color: '#E5E7EB' }]}>{t.goal3}</Text>
             </View>
 
             <TouchableOpacity
@@ -220,40 +343,40 @@ const SettingsScreen: React.FC = () => {
                 activeOpacity={0.8}
             >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🔒 Privacy Policy</Text>
+                    <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.privacyPolicyHeader}</Text>
                     <Text style={{ fontSize: 18, color: '#4F46E5', fontWeight: 'bold' }}>↗️</Text>
                 </View>
             </TouchableOpacity>
 
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937', borderBottomColor: '#374151' }]}>
-                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>✉️ Contact Us</Text>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.contactHeader}</Text>
                 <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
-                    Have questions or suggestions? Email us at keape@me.com
+                    {t.contactDescription}
                 </Text>
             </View>
 
             <TouchableOpacity style={[styles.secondaryButton, { marginBottom: 40 }]} onPress={() => setActiveTab('menu')}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
+                <Text style={styles.secondaryButtonText}>{t.back}</Text>
             </TouchableOpacity>
         </ScrollView>
     );
 
     const renderCustomization = () => (
         <ScrollView style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>App Customization</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.customizationTitle}</Text>
 
             {/* Theme Section */}
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🌓 Theme</Text>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.themeHeader}</Text>
                 <View style={styles.optionsRow}>
-                    {(['light', 'dark', 'system'] as const).map((t) => (
+                    {(['light', 'dark', 'system'] as const).map((themeOption) => (
                         <TouchableOpacity
-                            key={t}
-                            style={[styles.optionBtn, isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' }, theme === t && styles.activeOptionBtn]}
-                            onPress={() => setTheme(t)}
+                            key={themeOption}
+                            style={[styles.optionBtn, isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' }, theme === themeOption && styles.activeOptionBtn]}
+                            onPress={() => setTheme(themeOption)}
                         >
-                            <Text style={[styles.optionBtnText, isDarkMode && { color: '#9CA3AF' }, theme === t && styles.activeOptionBtnText]}>
-                                {t.charAt(0) + t.slice(1)}
+                            <Text style={[styles.optionBtnText, isDarkMode && { color: '#9CA3AF' }, theme === themeOption && styles.activeOptionBtnText]}>
+                                {themeOption === 'light' ? t.themeLight : themeOption === 'dark' ? t.themeDark : t.themeSystem}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -262,7 +385,7 @@ const SettingsScreen: React.FC = () => {
 
             {/* Currency Section */}
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>💰 Currency</Text>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.currencyHeader}</Text>
                 <View style={styles.optionsRow}>
                     {(['€', '$', '£'] as const).map((c) => (
                         <TouchableOpacity
@@ -276,11 +399,29 @@ const SettingsScreen: React.FC = () => {
                 </View>
             </View>
 
+            {/* Language Section */}
+            <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.languageHeader}</Text>
+                <View style={styles.optionsRow}>
+                    {([{ code: 'it' as const, label: '🇮🇹 Italiano' }, { code: 'en' as const, label: '🇬🇧 English' }]).map(({ code, label }) => (
+                        <TouchableOpacity
+                            key={code}
+                            style={[styles.optionBtn, isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' }, language === code && styles.activeOptionBtn]}
+                            onPress={() => setLanguage(code)}
+                        >
+                            <Text style={[styles.optionBtnText, isDarkMode && { color: '#9CA3AF' }, language === code && styles.activeOptionBtnText]}>
+                                {label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
             {/* Privacy Section */}
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>🛡️ Privacy</Text>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.privacyHeader}</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }, { marginBottom: 0 }]}>Show Balance on Dashboard</Text>
+                    <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }, { marginBottom: 0 }]}>{t.showBalanceLabel}</Text>
                     <TouchableOpacity
                         style={[styles.toggleBtn, showBalance && styles.activeToggleBtn, isDarkMode && !showBalance && { backgroundColor: '#4B5563' }]}
                         onPress={() => setShowBalance(!showBalance)}
@@ -292,9 +433,9 @@ const SettingsScreen: React.FC = () => {
 
             {/* Danger Zone */}
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
-                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>⚠️ Danger Zone</Text>
+                <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.dangerZoneHeader}</Text>
                 <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
-                    Deleting your account is permanent and removes all your data.
+                    {t.dangerZoneDescription}
                 </Text>
                 <TouchableOpacity
                     style={[styles.dangerButton, isDarkMode && { backgroundColor: '#450a0a', borderColor: '#7f1d1d' }]}
@@ -304,20 +445,20 @@ const SettingsScreen: React.FC = () => {
                     {isLoading ? (
                         <ActivityIndicator color="#DC2626" />
                     ) : (
-                        <Text style={styles.dangerButtonText}>🗑️ Delete Account</Text>
+                        <Text style={styles.dangerButtonText}>{t.deleteAccountBtn}</Text>
                     )}
                 </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={[styles.secondaryButton, { marginBottom: 40 }]} onPress={() => setActiveTab('menu')}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
+                <Text style={styles.secondaryButtonText}>{t.back}</Text>
             </TouchableOpacity>
         </ScrollView>
     );
 
     const handleSendBugReport = async () => {
         if (!bugDescription.trim()) {
-            Alert.alert('Error', 'Please describe the bug');
+            Alert.alert(t.errorTitle, t.describeBug);
             return;
         }
 
@@ -330,8 +471,8 @@ const SettingsScreen: React.FC = () => {
 
             if (!canOpen) {
                 Alert.alert(
-                    'No Email Client',
-                    'Available email client not found. If you are on a simulator, this is expected. Please email keape@me.com directly.'
+                    t.noEmailClientTitle,
+                    t.noEmailClientMsg
                 );
                 return;
             }
@@ -341,8 +482,8 @@ const SettingsScreen: React.FC = () => {
             setBugDescription('');
         } catch (err) {
             Alert.alert(
-                'Error',
-                'Could not open email client. Please email keape@me.com directly.'
+                t.errorTitle,
+                t.openEmailClientError
             );
             console.error('An error occurred', err);
         }
@@ -350,9 +491,9 @@ const SettingsScreen: React.FC = () => {
 
     const renderBugReport = () => (
         <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Report a Bug</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.bugReportTitle}</Text>
             <Text style={[styles.description, isDarkMode && { color: '#9CA3AF' }]}>
-                Found an issue? Let us know so we can fix it!
+                {t.bugReportDescription}
             </Text>
 
             <TextInput
@@ -361,7 +502,7 @@ const SettingsScreen: React.FC = () => {
                 numberOfLines={6}
                 value={bugDescription}
                 onChangeText={setBugDescription}
-                placeholder="Describe the bug here..."
+                placeholder={t.bugPlaceholder}
                 placeholderTextColor={isDarkMode ? '#6B7280' : '#9CA3AF'}
                 textAlignVertical="top"
             />
@@ -370,11 +511,11 @@ const SettingsScreen: React.FC = () => {
                 style={styles.primaryButton}
                 onPress={handleSendBugReport}
             >
-                <Text style={styles.primaryButtonText}>Send Report</Text>
+                <Text style={styles.primaryButtonText}>{t.sendReport}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.secondaryButton} onPress={() => setActiveTab('menu')}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
+                <Text style={styles.secondaryButtonText}>{t.back}</Text>
             </TouchableOpacity>
         </View>
     );

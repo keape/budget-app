@@ -40,7 +40,7 @@ security set-key-partition-list \
 ## Step 1 — Build Archive
 
 ```bash
-cd /Users/keape/Documents/budget365/budget365iOS/ios
+cd "/Volumes/Ext.Lexar/Costola del Mac/budget365/budget365iOS/ios"
 xcodebuild \
   -workspace Budget365.xcworkspace \
   -scheme Budget365 \
@@ -101,12 +101,22 @@ else:
 rm -rf /tmp/Budget365_ipa /tmp/Budget365.ipa
 
 # Struttura Payload
+# ATTENZIONE: Products/Applications/Budget365.app/PlugIns/Budget365Widget.appex è un
+# symlink rotto (-> ../../InstallationBuildProductsLocation/... che non esiste).
+# cp -r normale fallisce su quel path. Escludilo e copia il .appex reale (sibling
+# di Budget365.app dentro Products/Applications/) direttamente in PlugIns/.
+rm -rf /tmp/Budget365_ipa
 mkdir -p /tmp/Budget365_ipa/Payload
-cp -r /tmp/Budget365.xcarchive/Products/Applications/Budget365.app \
-      /tmp/Budget365_ipa/Payload/
+rsync -a --exclude 'PlugIns/Budget365Widget.appex' \
+  "/tmp/Budget365.xcarchive/Products/Applications/Budget365.app/" \
+  /tmp/Budget365_ipa/Payload/Budget365.app/
 
 APP=/tmp/Budget365_ipa/Payload/Budget365.app
 DIST="Apple Distribution: Alessandro Capobianco (4A5H2U7Q42)"
+
+mkdir -p "$APP/PlugIns"
+cp -r "/tmp/Budget365.xcarchive/Products/Applications/Budget365Widget.appex" \
+      "$APP/PlugIns/"
 
 # Verifica struttura widget — DEVE essere in PlugIns, non in Payload
 echo "Widget path:"
@@ -154,14 +164,18 @@ echo "Dimensione: $(du -sh /tmp/Budget365.ipa | cut -f1)"
 
 ## Step 4 — Upload
 
-Chiedi all'utente l'app-specific password (da appleid.apple.com → Password specifiche per le app) se non disponibile.
+App-specific password salvata nel Keychain macOS (non in questo file, mai in chiaro — repo è pubblico su GitHub):
+```bash
+security add-generic-password -a "keape@me.com" -s "budget365-asc-app-password" -w "PASSWORD" -U   # solo se non esiste già
+```
 
 ```bash
+APP_PASSWORD=$(security find-generic-password -a "keape@me.com" -s "budget365-asc-app-password" -w)
 xcrun altool --upload-app \
   -f /tmp/Budget365.ipa \
   -t ios \
   -u keape@me.com \
-  --app-password APP_SPECIFIC_PASSWORD \
+  --app-password "$APP_PASSWORD" \
   --verbose
 ```
 
