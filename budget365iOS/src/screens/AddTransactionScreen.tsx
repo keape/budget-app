@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { API_URL } from '../config';
+import { warmupBackend, fetchWithRetry } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
@@ -120,7 +121,8 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
     if (!userToken) return;
 
     try {
-      const response = await fetch(`${BASE_URL}/api/categorie`, {
+      await warmupBackend();
+      const response = await fetchWithRetry(`${BASE_URL}/api/categorie`, {
         headers: { 'Authorization': `Bearer ${userToken}` }
       });
 

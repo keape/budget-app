@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { warmupBackend, setAuthFailureHandler } from '../utils/apiClient';
+import { warmupBackend, setAuthFailureHandler, setNewTokenHandler } from '../utils/apiClient';
 import { syncToken, clearToken } from '../utils/tokenSync';
 import { API_URL } from '../config';
 
@@ -38,7 +38,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     useEffect(() => {
         checkToken();
         setAuthFailureHandler(logout);
+        setNewTokenHandler(onNewToken);
     }, []);
+
+    const onNewToken = async (token: string) => {
+        try {
+            await AsyncStorage.setItem('token', token);
+            setUserToken(token);
+            const username = await AsyncStorage.getItem('username');
+            if (username) {
+                syncToken(token, username);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const checkToken = async () => {
         try {
