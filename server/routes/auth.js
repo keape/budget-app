@@ -241,6 +241,11 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Refresh silenzioso: se il token ha meno di questa soglia di vita residua,
+// ne emettiamo uno nuovo nell'header X-New-Token così il client non deve
+// mai forzare un re-login manuale durante un uso regolare dell'app.
+const REFRESH_THRESHOLD_SECONDS = 12 * 60 * 60; // 12h su 24h totali
+
 // Middleware per l'autenticazione JWT
 const authenticateToken = (req, res, next) => {
   debugLog('🔐 AUTHENTICATETOKEN START - headers:', req.headers['authorization'] ? 'PRESENTE' : 'MANCANTE');
@@ -263,6 +268,15 @@ const authenticateToken = (req, res, next) => {
     debugLog('✅ TOKEN VALIDO - User data:', user);
     debugLog('🆔 USER ID ESTRATTO:', user.userId);
     debugLog('👤 USERNAME ESTRATTO:', user.username);
+
+    if (user.exp && (user.exp - Date.now() / 1000) < REFRESH_THRESHOLD_SECONDS) {
+      const newToken = jwt.sign(
+        { userId: user.userId, username: user.username },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      res.setHeader('X-New-Token', newToken);
+    }
 
     req.user = user;
     next();

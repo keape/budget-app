@@ -18,7 +18,7 @@ import {
     IconStats,
 } from '../components/NavIcons';
 import { API_URL } from '../config';
-import { warmupBackend } from '../utils/apiClient';
+import { warmupBackend, fetchWithRetry } from '../utils/apiClient';
 import { useFocusEffect } from '@react-navigation/native';
 
 const BASE_URL = API_URL;
@@ -140,9 +140,9 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             const inizioMese = new Date(anno, mese, 1);
 
             const [speseRes, entrateRes, budgetRes] = await Promise.all([
-                fetch(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
-                fetch(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
-                fetch(`${BASE_URL}/api/budget-settings?anno=${anno}&mese=${mese}`, {
+                fetchWithRetry(`${BASE_URL}/api/spese?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
+                fetchWithRetry(`${BASE_URL}/api/entrate?limit=1000`, { headers: { 'Authorization': `Bearer ${userToken}` }, signal }),
+                fetchWithRetry(`${BASE_URL}/api/budget-settings?anno=${anno}&mese=${mese}`, {
                     headers: { 'Authorization': `Bearer ${userToken}` },
                     signal,
                 })
@@ -221,7 +221,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
             // Fetch savings months
             if (!isFutureMonth) {
-                const savingsRes = await fetch(`${BASE_URL}/api/savings/months`, {
+                const savingsRes = await fetchWithRetry(`${BASE_URL}/api/savings/months`, {
                     headers: { 'Authorization': `Bearer ${userToken}` },
                     signal,
                 });
@@ -233,7 +233,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             (m: any) => m.anno === anno && m.mese === mese
                         );
                         if (latestMonth) {
-                            const allocRes = await fetch(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
+                            const allocRes = await fetchWithRetry(`${BASE_URL}/api/savings/months/${latestMonth._id}/allocations`, {
                                 headers: { 'Authorization': `Bearer ${userToken}` },
                                 signal,
                             });

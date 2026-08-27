@@ -1,4 +1,5 @@
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
 
 const HEALTH_URL = `${API_URL}/api/health`;
@@ -17,6 +18,7 @@ AppState.addEventListener('change', (state) => {
 });
 
 let authFailureHandler: (() => void) | null = null;
+let newTokenHandler: ((token: string) => void) | null = null;
 
 /**
  * Registra il callback (AuthContext.logout) da invocare quando il backend
@@ -26,15 +28,32 @@ export function setAuthFailureHandler(handler: () => void): void {
     authFailureHandler = handler;
 }
 
+/**
+ * Registra il callback (AuthContext) da invocare quando il backend emette
+ * un token rinnovato (refresh silenzioso, vedi X-New-Token in
+ * server/routes/auth.js authenticateToken).
+ */
+export function setNewTokenHandler(handler: (token: string) => void): void {
+    newTokenHandler = handler;
+}
+
 // Intercetta ogni fetch verso il nostro backend: su 403 il token è scaduto/non
 // valido (vedi authenticateToken in server/routes/auth.js) ma nessuna screen
 // lo gestiva, lasciando liste vuote senza logout dopo un periodo di inattivita.
+// Su X-New-Token il backend ha rinnovato il token (refresh silenzioso, meno
+// di 12h di vita residua) e va persistito senza intervento dell'utente.
 const originalFetch = global.fetch;
 global.fetch = (async (...args: Parameters<typeof fetch>) => {
     const response = await originalFetch(...args);
     const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url;
-    if (response.status === 403 && url?.startsWith(API_URL) && authFailureHandler) {
-        authFailureHandler();
+    if (url?.startsWith(API_URL)) {
+        if (response.status === 403 && authFailureHandler) {
+            authFailureHandler();
+        }
+        const newToken = response.headers.get('X-New-Token');
+        if (newToken && newTokenHandler) {
+            newTokenHandler(newToken);
+        }
     }
     return response;
 }) as typeof fetch;
@@ -98,4 +117,29 @@ async function doWarmup(): Promise<boolean> {
 
     inflight = null;
     return false;
+}
+
+/**
+ * Esegue una fetch con retry (backoff breve) per assorbire il caso in cui
+ * warmupBackend() sia riuscito ma il backend Render sia ancora instabile
+ * subito dopo il risveglio (TypeError: Network request failed a livello di
+ * trasporto, senza risposta HTTP). Rilancia solo su errori di rete, non su
+ * AbortError (cleanup dello screen) né su risposte HTTP con status code.
+ */
+export async function fetchWithRetry(
+    input: RequestInfo,
+    init?: RequestInit,
+    retries = 2,
+): Promise<Response> {
+    const delays = [1000, 2000];
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await fetch(input, init);
+        } catch (err: any) {
+            if (err?.name === 'AbortError' || attempt >= retries) {
+                throw err;
+            }
+            await sleep(delays[Math.min(attempt, delays.length - 1)]);
+        }
+    }
 }
