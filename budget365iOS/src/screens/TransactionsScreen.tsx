@@ -30,6 +30,69 @@ import { warmupBackend } from '../utils/apiClient';
 const BASE_URL = API_URL;
 const ACCENT = '#c4f23a';
 
+const STRINGS = {
+  it: {
+    confirmDeleteTitle: 'Conferma eliminazione',
+    confirmDeleteMsg: 'Sei sicuro di voler eliminare questa transazione?',
+    cancel: 'Annulla',
+    delete: 'Elimina',
+    successTitle: 'Fatto',
+    successMsg: 'Transazione eliminata',
+    errorTitle: 'Errore',
+    errorMsg: 'Impossibile eliminare la transazione',
+    income: 'Entrata',
+    expense: 'Spesa',
+    incomes: 'Entrate',
+    expenses: 'Spese',
+    all: 'Tutte',
+    eyebrowTransactions: 'TRANSAZIONI',
+    found: 'TROVATE',
+    filter: 'FILTRO',
+    addExpense: '+ Spesa',
+    addIncome: '+ Entrata',
+    searchPlaceholder: '🔍 Cerca nelle descrizioni...',
+    hideFilters: 'Nascondi filtri',
+    showFilters: 'Mostra filtri',
+    transactionType: 'TIPO TRANSAZIONE',
+    category: 'CATEGORIA',
+    dateRange: 'INTERVALLO DATE (AAAA-MM-GG)',
+    fromPlaceholder: 'Da (es. 2024-01-01)',
+    toPlaceholder: 'A (es. 2024-12-31)',
+    resetFilters: 'Reimposta filtri',
+    emptyState: 'Nessuna transazione trovata.',
+  },
+  en: {
+    confirmDeleteTitle: 'Confirm deletion',
+    confirmDeleteMsg: 'Are you sure you want to delete this transaction?',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    successTitle: 'Success',
+    successMsg: 'Transaction deleted',
+    errorTitle: 'Error',
+    errorMsg: 'Unable to delete transaction',
+    income: 'Income',
+    expense: 'Expense',
+    incomes: 'Income',
+    expenses: 'Expense',
+    all: 'All',
+    eyebrowTransactions: 'TRANSACTIONS',
+    found: 'FOUND',
+    filter: 'FILTER',
+    addExpense: '+ Expense',
+    addIncome: '+ Income',
+    searchPlaceholder: '🔍 Search in descriptions...',
+    hideFilters: 'Hide Filters',
+    showFilters: 'Show Filters',
+    transactionType: 'TRANSACTION TYPE',
+    category: 'CATEGORY',
+    dateRange: 'DATE RANGE (YYYY-MM-DD)',
+    fromPlaceholder: 'From (e.g. 2024-01-01)',
+    toPlaceholder: 'To (e.g. 2024-12-31)',
+    resetFilters: 'Reset Filters',
+    emptyState: 'No transactions found.',
+  },
+} as const;
+
 interface Transaction {
   _id: string;
   importo: number;
@@ -41,9 +104,10 @@ interface Transaction {
 
 const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   const { userToken } = useAuth();
-  const { currency, showBalance, isDarkMode } = useSettings();
+  const { currency, showBalance, isDarkMode, language } = useSettings();
   const t = useAppTheme();
   const navigation = useNavigation<any>();
+  const s = STRINGS[language];
 
   // Data State
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -227,12 +291,12 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
 
   const deleteTransaction = async (id: string, tipo: string) => {
     Alert.alert(
-      'Confirm deletion',
-      'Are you sure you want to delete this transaction?',
+      s.confirmDeleteTitle,
+      s.confirmDeleteMsg,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: s.cancel, style: 'cancel' },
         {
-          text: 'Delete',
+          text: s.delete,
           style: 'destructive',
           onPress: async () => {
             try {
@@ -247,9 +311,9 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
               if (response.ok) {
                 // Remove from local state immediately for responsiveness
                 setAllTransactions(prev => prev.filter(t => t._id !== id));
-                Alert.alert('Success', 'Transaction deleted');
+                Alert.alert(s.successTitle, s.successMsg);
               } else {
-                Alert.alert('Error', 'Unable to delete transaction');
+                Alert.alert(s.errorTitle, s.errorMsg);
               }
             } catch (error) {
               console.error('Error deleting:', error);
@@ -269,7 +333,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
             <Text style={[styles.catText, { color: t.text }]} numberOfLines={1}>{item.categoria}</Text>
             <View style={[styles.badge, { backgroundColor: isEntrata ? 'rgba(22,163,74,0.14)' : 'rgba(220,38,38,0.14)' }]}>
               <Text style={[styles.badgeText, { color: isEntrata ? t.pos : t.neg }]}>
-                {isEntrata ? 'Income' : 'Expense'}
+                {isEntrata ? s.income : s.expense}
               </Text>
             </View>
           </View>
@@ -282,7 +346,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
             <Text style={[styles.descText, { color: t.text2 }]} numberOfLines={2}>{item.descrizione}</Text>
           ) : null}
 
-          <Text style={[styles.dateText, { color: t.text3 }]}>{new Date(item.data).toLocaleDateString('it-IT')}</Text>
+          <Text style={[styles.dateText, { color: t.text3 }]}>{new Date(item.data).toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US')}</Text>
         </View>
 
         <View style={styles.actionButtons}>
@@ -318,7 +382,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
   return (
     <View style={[styles.container, { backgroundColor: t.bg }]}>
       <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
-        <Text style={[styles.heroEyebrow, { color: t.text3 }]}>TRANSACTIONS</Text>
+        <Text style={[styles.heroEyebrow, { color: t.text3 }]}>{s.eyebrowTransactions}</Text>
         <Text style={[styles.heroAmount, { color: calculateTotal() >= 0 ? t.pos : t.neg }]}>
           {formatCurrency(calculateTotal(), true)}
         </Text>
@@ -326,7 +390,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           <View style={styles.flowCell}>
             <View style={[styles.flowDot, { backgroundColor: ACCENT }]} />
             <View>
-              <Text style={[styles.flowLabel, { color: t.text3 }]}>FOUND</Text>
+              <Text style={[styles.flowLabel, { color: t.text3 }]}>{s.found}</Text>
               <Text style={[styles.flowVal, { color: t.text }]}>{filteredTransactions.length}</Text>
             </View>
           </View>
@@ -334,9 +398,9 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           <View style={styles.flowCell}>
             <View style={[styles.flowDot, { backgroundColor: filterType === 'entrata' ? t.pos : filterType === 'uscita' ? t.neg : t.text3 }]} />
             <View>
-              <Text style={[styles.flowLabel, { color: t.text3 }]}>FILTER</Text>
+              <Text style={[styles.flowLabel, { color: t.text3 }]}>{s.filter}</Text>
               <Text style={[styles.flowVal, { color: t.text }]}>
-                {filterType === 'tutte' ? 'All' : filterType === 'entrata' ? 'Income' : 'Expense'}
+                {filterType === 'tutte' ? s.all : filterType === 'entrata' ? s.incomes : s.expenses}
               </Text>
             </View>
           </View>
@@ -350,13 +414,13 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           style={[styles.actionPill, { backgroundColor: t.surface, borderColor: t.neg }]}
           onPress={() => navigation.navigate('AddTransaction')}
         >
-          <Text style={[styles.actionPillText, { color: t.neg }]}>+ Expense</Text>
+          <Text style={[styles.actionPillText, { color: t.neg }]}>{s.addExpense}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionPill, { backgroundColor: t.surface, borderColor: t.pos }]}
           onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
         >
-          <Text style={[styles.actionPillText, { color: t.pos }]}>+ Income</Text>
+          <Text style={[styles.actionPillText, { color: t.pos }]}>{s.addIncome}</Text>
         </TouchableOpacity>
       </View>
 
@@ -364,20 +428,20 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
       <View style={[styles.searchContainer, { backgroundColor: t.surface, borderColor: t.line }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: t.surface2, color: t.text, borderColor: searchQuery ? ACCENT : t.line }]}
-          placeholder="🔍 Search in descriptions..."
+          placeholder={s.searchPlaceholder}
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor={t.text3}
         />
         <TouchableOpacity style={[styles.filterToggleBtn, { borderColor: t.line2 }]} onPress={() => setShowFilters(!showFilters)}>
-          <Text style={[styles.filterToggleText, { color: t.text2 }]}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
+          <Text style={[styles.filterToggleText, { color: t.text2 }]}>{showFilters ? s.hideFilters : s.showFilters}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Filters Section */}
       {showFilters && (
         <View style={[styles.filtersSection, { backgroundColor: t.surface, borderColor: t.line }]}>
-          <Text style={[styles.filterLabel, { color: t.text3 }]}>TRANSACTION TYPE</Text>
+          <Text style={[styles.filterLabel, { color: t.text3 }]}>{s.transactionType}</Text>
           <View style={[styles.typeRow, { backgroundColor: t.surface2 }]}>
             {(['tutte', 'entrata', 'uscita'] as const).map(option => (
               <TouchableOpacity
@@ -392,19 +456,19 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
                 }}
               >
                 <Text style={[styles.typeBtnText, { color: filterType === option ? '#0c0c0c' : t.text2 }, filterType === 'entrata' && option === 'entrata' && { color: '#fff' }, filterType === 'uscita' && option === 'uscita' && { color: '#fff' }]}>
-                  {option === 'tutte' ? 'All' : option === 'entrata' ? 'Income' : 'Expense'}
+                  {option === 'tutte' ? s.all : option === 'entrata' ? s.incomes : s.expenses}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={[styles.filterLabel, { color: t.text3 }]}>CATEGORY</Text>
+          <Text style={[styles.filterLabel, { color: t.text3 }]}>{s.category}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
             <TouchableOpacity
               style={[styles.catBtn, { backgroundColor: t.surface2, borderColor: t.line }, filterCategory === '' && { backgroundColor: ACCENT, borderColor: ACCENT }]}
               onPress={() => setFilterCategory('')}
             >
-              <Text style={[styles.catBtnText, { color: filterCategory === '' ? '#0c0c0c' : t.text2 }]}>All</Text>
+              <Text style={[styles.catBtnText, { color: filterCategory === '' ? '#0c0c0c' : t.text2 }]}>{s.all}</Text>
             </TouchableOpacity>
             {currentCategories.map(cat => (
               <TouchableOpacity
@@ -417,18 +481,18 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
             ))}
           </ScrollView>
 
-          <Text style={[styles.filterLabel, { color: t.text3 }]}>DATE RANGE (YYYY-MM-DD)</Text>
+          <Text style={[styles.filterLabel, { color: t.text3 }]}>{s.dateRange}</Text>
           <View style={styles.dateRow}>
             <TextInput
               style={[styles.dateInput, { backgroundColor: t.surface2, borderColor: t.line, color: t.text }]}
-              placeholder="From (e.g. 2024-01-01)"
+              placeholder={s.fromPlaceholder}
               value={startDate}
               onChangeText={setStartDate}
               placeholderTextColor={t.text3}
             />
             <TextInput
               style={[styles.dateInput, { backgroundColor: t.surface2, borderColor: t.line, color: t.text }]}
-              placeholder="To (e.g. 2024-12-31)"
+              placeholder={s.toPlaceholder}
               value={endDate}
               onChangeText={setEndDate}
               placeholderTextColor={t.text3}
@@ -436,7 +500,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           </View>
 
           <TouchableOpacity style={[styles.resetBtn, { backgroundColor: t.surface2, borderColor: t.line2 }]} onPress={resetFilters}>
-            <Text style={[styles.resetBtnText, { color: t.text2 }]}>Reset Filters</Text>
+            <Text style={[styles.resetBtnText, { color: t.text2 }]}>{s.resetFilters}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -458,7 +522,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
           scrollEventThrottle={16}
           ListEmptyComponent={
             <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-              <Text style={[styles.emptyText, { color: t.text3 }]}>No transactions found.</Text>
+              <Text style={[styles.emptyText, { color: t.text3 }]}>{s.emptyState}</Text>
             </View>
           }
         />

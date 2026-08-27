@@ -32,6 +32,139 @@ import { warmupBackend } from '../utils/apiClient';
 const BASE_URL = API_URL;
 const ACCENT = '#c4f23a';
 
+const STRINGS = {
+  it: {
+    months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+    fullYear: 'Anno Intero',
+    loadErrorTitle: 'Errore',
+    loadErrorMsg: 'Impossibile caricare i dati del budget.',
+    sessionExpiredTitle: 'Sessione scaduta',
+    sessionExpiredMsg: "La tua sessione non è valida. Effettua di nuovo l'accesso.",
+    copySuccessTitle: 'Successo',
+    copySuccessMsg: (monthName: string, year: number) => `Valori copiati da ${monthName} ${year}`,
+    copyErrorTitle: 'Errore',
+    copyErrorMsg: 'Impossibile copiare i valori dal mese precedente',
+    copyYearSuccessTitle: 'Successo',
+    copyYearSuccessMsg: (activeTab: 'expenses' | 'income', fromYear: number, toYear: number) => `Budget ${activeTab === 'expenses' ? 'spese' : 'entrate'} copiati da ${fromYear} a ${toYear}`,
+    copyYearErrorTitle: 'Errore',
+    copyYearErrorMsg: "Impossibile copiare i valori dell'anno precedente",
+    selectMonth: 'Seleziona mese',
+    selectYear: 'Seleziona anno',
+    close: 'Chiudi',
+    nameRequiredTitle: 'Errore',
+    nameRequiredMsg: 'Inserisci un nome per la categoria',
+    categoryExistsTitle: 'Errore',
+    categoryExistsMsg: 'La categoria esiste già',
+    invalidNameTitle: 'Errore',
+    invalidNameMsg: 'Inserisci un nome valido',
+    categoryNameExistsTitle: 'Errore',
+    categoryNameExistsMsg: 'Il nome della categoria esiste già',
+    renameErrorTitle: 'Errore',
+    renameErrorMsg: 'Impossibile rinominare la categoria globalmente. Riprova.',
+    deleteCategoryTitle: 'Elimina categoria',
+    deleteCategoryMsg: (catName: string) => `Sei sicuro di voler eliminare "${catName}"? Verrà rimossa da TUTTO lo storico.`,
+    cancel: 'Annulla',
+    deleteEverywhere: 'Elimina ovunque',
+    deleteErrorTitle: 'Errore',
+    deleteErrorMsg: 'Impossibile eliminare la categoria globalmente.',
+    archiveErrorTitle: 'Errore',
+    archiveErrorMsg: 'Impossibile archiviare la categoria.',
+    restoreErrorTitle: 'Errore',
+    restoreErrorMsg: 'Impossibile ripristinare la categoria.',
+    heroEyebrowExpense: 'BUDGET SPESE',
+    heroEyebrowIncome: 'OBIETTIVI ENTRATE',
+    actual: 'EFFETTIVO',
+    earned: 'GUADAGNATO',
+    used: 'UTILIZZATO',
+    copyFromMonth: (monthName: string) => `Copia i valori da ${monthName}`,
+    copyFromYear: (typeLabel: string, year: number) => `Copia ${typeLabel} da ${year}`,
+    expensesLower: 'le spese',
+    incomeLower: 'le entrate',
+    expensesTab: 'Spese',
+    incomeTab: 'Entrate (Obiettivi)',
+    addCategoryBtn: '+ Aggiungi nuova categoria',
+    actualColon: 'Effettivo:',
+    noCategories: 'Nessuna categoria trovata.',
+    archivedCategoriesTitle: 'Categorie archiviate',
+    restoreBtn: 'Ripristina',
+    modifyCategoryTitle: 'Modifica categoria',
+    renameSubtitle: (catName: string) => `Rinomina "${catName}" in:`,
+    newNamePlaceholder: 'Nuovo nome...',
+    renameBtn: 'Rinomina',
+    newCategoryTitle: 'Nuova categoria',
+    newCategorySubtitle: (typeLabel: string) => `Inserisci il nome della categoria per ${typeLabel}`,
+    categoryPlaceholder: 'es. Vacanze, Hobby',
+    addBtn: 'Aggiungi',
+    saving: 'Salvataggio...',
+    done: 'Fine',
+  },
+  en: {
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    fullYear: 'Full Year',
+    loadErrorTitle: 'Error',
+    loadErrorMsg: 'Failed to load budget data.',
+    sessionExpiredTitle: 'Session Expired',
+    sessionExpiredMsg: 'Your session is invalid. Please login again.',
+    copySuccessTitle: 'Success',
+    copySuccessMsg: (monthName: string, year: number) => `Values copied from ${monthName} ${year}`,
+    copyErrorTitle: 'Error',
+    copyErrorMsg: 'Unable to copy values from the previous month',
+    copyYearSuccessTitle: 'Success',
+    copyYearSuccessMsg: (activeTab: 'expenses' | 'income', fromYear: number, toYear: number) => `${activeTab === 'expenses' ? 'Expense' : 'Income'} budgets copied from ${fromYear} to ${toYear}`,
+    copyYearErrorTitle: 'Error',
+    copyYearErrorMsg: 'Unable to copy previous year values',
+    selectMonth: 'Select Month',
+    selectYear: 'Select Year',
+    close: 'Close',
+    nameRequiredTitle: 'Error',
+    nameRequiredMsg: 'Please enter a category name',
+    categoryExistsTitle: 'Error',
+    categoryExistsMsg: 'Category already exists',
+    invalidNameTitle: 'Error',
+    invalidNameMsg: 'Please enter a valid name',
+    categoryNameExistsTitle: 'Error',
+    categoryNameExistsMsg: 'Category name already exists',
+    renameErrorTitle: 'Error',
+    renameErrorMsg: 'Could not rename category globally. Please try again.',
+    deleteCategoryTitle: 'Delete Category',
+    deleteCategoryMsg: (catName: string) => `Are you sure you want to delete "${catName}"? This will remove it from ALL history.`,
+    cancel: 'Cancel',
+    deleteEverywhere: 'Delete Everywhere',
+    deleteErrorTitle: 'Error',
+    deleteErrorMsg: 'Could not delete category globally.',
+    archiveErrorTitle: 'Error',
+    archiveErrorMsg: 'Could not archive category.',
+    restoreErrorTitle: 'Error',
+    restoreErrorMsg: 'Could not restore category.',
+    heroEyebrowExpense: 'EXPENSE BUDGET',
+    heroEyebrowIncome: 'INCOME GOALS',
+    actual: 'ACTUAL',
+    earned: 'EARNED',
+    used: 'USED',
+    copyFromMonth: (monthName: string) => `Copy values from ${monthName}`,
+    copyFromYear: (typeLabel: string, year: number) => `Copy ${typeLabel} from ${year}`,
+    expensesLower: 'expenses',
+    incomeLower: 'income',
+    expensesTab: 'Expenses',
+    incomeTab: 'Income (Goals)',
+    addCategoryBtn: '+ Add New Category',
+    actualColon: 'Actual:',
+    noCategories: 'No categories found.',
+    archivedCategoriesTitle: 'Archived Categories',
+    restoreBtn: 'Restore',
+    modifyCategoryTitle: 'Modify Category',
+    renameSubtitle: (catName: string) => `Rename "${catName}" to:`,
+    newNamePlaceholder: 'New name...',
+    renameBtn: 'Rename',
+    newCategoryTitle: 'New Category',
+    newCategorySubtitle: (typeLabel: string) => `Enter category name for ${typeLabel}`,
+    categoryPlaceholder: 'e.g. Vacation, Hobbies',
+    addBtn: 'Add',
+    saving: 'Saving...',
+    done: 'Done',
+  },
+} as const;
+
 interface BudgetScreenProps {
   navigation: any;
   route?: any;
@@ -39,8 +172,9 @@ interface BudgetScreenProps {
 
 const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
   const { userToken, logout } = useAuth();
-  const { currency, showBalance, isDarkMode } = useSettings();
+  const { currency, showBalance, isDarkMode, language } = useSettings();
   const t = useAppTheme();
+  const L = STRINGS[language];
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -48,13 +182,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
   const [selectedMonth, setSelectedMonth] = useState(route?.params?.month ?? today.getMonth());
   const [selectedYear, setSelectedYear] = useState(route?.params?.year ?? today.getFullYear());
 
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  const months = L.months;
 
   const YEARLY_SENTINEL = 12;
-  const monthsWithYearly = [...months, 'Full Year'];
+  const monthsWithYearly = [...months, L.fullYear];
   const isYearlyMode = selectedMonth === YEARLY_SENTINEL;
 
   const years = [2024, 2025, 2026, 2027];
@@ -273,7 +404,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
     } catch (error) {
       console.error("Error loading budget planner:", error);
-      Alert.alert("Error", "Failed to load budget data.");
+      Alert.alert(L.loadErrorTitle, L.loadErrorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -333,7 +464,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
         console.log("Autosave success");
       } else {
         if (saveRes.status === 401 || saveRes.status === 403) {
-          Alert.alert("Session Expired", "Your session is invalid. Please login again.");
+          Alert.alert(L.sessionExpiredTitle, L.sessionExpiredMsg);
           logout();
           return;
         }
@@ -432,10 +563,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       // Persist the entire new budget state for this month
       await persistBudget(newLocal, activeTab);
 
-      Alert.alert("Success", `Values copied from ${months[prevMonth]} ${prevYear}`);
+      Alert.alert(L.copySuccessTitle, L.copySuccessMsg(months[prevMonth], prevYear));
     } catch (error) {
       console.error(error);
-      Alert.alert("Error", "Unable to copy values from the previous month");
+      Alert.alert(L.copyErrorTitle, L.copyErrorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -492,13 +623,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       );
 
       Alert.alert(
-        'Success',
-        `${activeTab === 'expenses' ? 'Expense' : 'Income'} budgets copied from ${prevYear} to ${selectedYear}`
+        L.copyYearSuccessTitle,
+        L.copyYearSuccessMsg(activeTab, prevYear, selectedYear)
       );
       loadData();
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Unable to copy previous year values');
+      Alert.alert(L.copyYearErrorTitle, L.copyYearErrorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -508,7 +639,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     <Modal visible={isMonthModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
         <View style={[styles.pickerModalContent, { backgroundColor: t.surface }]}>
-          <Text style={[styles.modalTitlePicker, { color: t.text }]}>Select Month</Text>
+          <Text style={[styles.modalTitlePicker, { color: t.text }]}>{L.selectMonth}</Text>
           <ScrollView>
             {monthsWithYearly.map((m, idx) => (
               <TouchableOpacity
@@ -524,7 +655,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
             ))}
           </ScrollView>
           <TouchableOpacity style={styles.closeButtonPicker} onPress={() => setIsMonthModalVisible(false)}>
-            <Text style={styles.closeButtonTextPicker}>Close</Text>
+            <Text style={styles.closeButtonTextPicker}>{L.close}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -535,7 +666,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     <Modal visible={isYearModalVisible} transparent animationType="slide">
       <View style={styles.modalOverlayPicker}>
         <View style={[styles.pickerModalContent, { backgroundColor: t.surface }]}>
-          <Text style={[styles.modalTitlePicker, { color: t.text }]}>Select Year</Text>
+          <Text style={[styles.modalTitlePicker, { color: t.text }]}>{L.selectYear}</Text>
           <ScrollView>
             {years.map(y => (
               <TouchableOpacity
@@ -551,7 +682,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
             ))}
           </ScrollView>
           <TouchableOpacity style={styles.closeButtonPicker} onPress={() => setIsYearModalVisible(false)}>
-            <Text style={styles.closeButtonTextPicker}>Close</Text>
+            <Text style={styles.closeButtonTextPicker}>{L.close}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -570,12 +701,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) {
-      Alert.alert('Error', 'Please enter a category name');
+      Alert.alert(L.nameRequiredTitle, L.nameRequiredMsg);
       return;
     }
 
     if (categories.includes(newCategoryName.trim())) {
-      Alert.alert('Error', 'Category already exists');
+      Alert.alert(L.categoryExistsTitle, L.categoryExistsMsg);
       return;
     }
 
@@ -594,7 +725,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
   const handleRenameCategory = async () => {
     if (!categoryToRename || !renamedCategoryName.trim()) {
-      Alert.alert('Error', 'Please enter a valid name');
+      Alert.alert(L.invalidNameTitle, L.invalidNameMsg);
       return;
     }
 
@@ -603,7 +734,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     const type = activeTab === 'expenses' ? 'spese' : 'entrate';
 
     if (categories.includes(newName)) {
-      Alert.alert('Error', 'Category name already exists');
+      Alert.alert(L.categoryNameExistsTitle, L.categoryNameExistsMsg);
       return;
     }
 
@@ -637,7 +768,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
     } catch (error) {
       console.error("Rename failed", error);
-      Alert.alert("Error", "Could not rename category globally. Please try again.");
+      Alert.alert(L.renameErrorTitle, L.renameErrorMsg);
       // Rollback (optional, but good for UX)
       loadData();
     }
@@ -645,12 +776,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
   const handleDeleteCategory = (catName: string) => {
     Alert.alert(
-      'Delete Category',
-      `Are you sure you want to delete "${catName}"? This will remove it from ALL history.`,
+      L.deleteCategoryTitle,
+      L.deleteCategoryMsg(catName),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: L.cancel, style: 'cancel' },
         {
-          text: 'Delete Everywhere', style: 'destructive', onPress: async () => {
+          text: L.deleteEverywhere, style: 'destructive', onPress: async () => {
             try {
               // Optimistic UI Update
               const newCats = categories.filter(c => c !== catName);
@@ -673,7 +804,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
             } catch (error) {
               console.error("Delete failed", error);
-              Alert.alert("Error", "Could not delete category globally.");
+              Alert.alert(L.deleteErrorTitle, L.deleteErrorMsg);
             }
           }
         }
@@ -703,7 +834,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       });
     } catch (error) {
       console.error("Archive failed", error);
-      Alert.alert("Error", "Could not archive category.");
+      Alert.alert(L.archiveErrorTitle, L.archiveErrorMsg);
       loadData();
     }
   };
@@ -728,7 +859,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       });
     } catch (error) {
       console.error("Unarchive failed", error);
-      Alert.alert("Error", "Could not restore category.");
+      Alert.alert(L.restoreErrorTitle, L.restoreErrorMsg);
       loadData();
     }
   };
@@ -749,7 +880,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     >
       <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
         <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
-          {activeTab === 'expenses' ? 'EXPENSE BUDGET' : 'INCOME GOALS'}
+          {activeTab === 'expenses' ? L.heroEyebrowExpense : L.heroEyebrowIncome}
         </Text>
         <Text style={[styles.heroAmount, { color: t.text }]}>
           {formatCurrency(totalBudget)}
@@ -759,7 +890,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
             <View style={[styles.flowDot, { backgroundColor: activeTab === 'expenses' ? t.neg : t.pos }]} />
             <View>
               <Text style={[styles.flowLabel, { color: t.text3 }]}>
-                {activeTab === 'expenses' ? 'ACTUAL' : 'EARNED'}
+                {activeTab === 'expenses' ? L.actual : L.earned}
               </Text>
               <Text style={[styles.flowVal, { color: activeTab === 'expenses' ? t.neg : t.pos }]}>
                 {formatCurrency(totalActual)}
@@ -770,7 +901,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
           <View style={styles.flowCell}>
             <View style={[styles.flowDot, { backgroundColor: ACCENT }]} />
             <View>
-              <Text style={[styles.flowLabel, { color: t.text3 }]}>USED</Text>
+              <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.used}</Text>
               <Text style={[styles.flowVal, { color: t.text }]}>{totalPct}%</Text>
             </View>
           </View>
@@ -782,7 +913,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
           {/* Period Selection */}
           <View style={styles.periodContainer}>
             <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsMonthModalVisible(true)}>
-              <Text style={[styles.periodButtonText, { color: t.text }]}>{isYearlyMode ? 'Full Year' : months[selectedMonth]}</Text>
+              <Text style={[styles.periodButtonText, { color: t.text }]}>{isYearlyMode ? L.fullYear : months[selectedMonth]}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.periodButton, { backgroundColor: t.surface, borderColor: t.line }]} onPress={() => setIsYearModalVisible(true)}>
               <Text style={[styles.periodButtonText, { color: t.text }]}>{selectedYear}</Text>
@@ -792,7 +923,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
           {!isYearlyMode ? (
             <TouchableOpacity style={[styles.copyButton, { backgroundColor: t.surface, borderColor: t.line2 }]} onPress={handleCopyFromPrevious}>
               <Text style={[styles.copyButtonText, { color: t.text2 }]}>
-                Copy values from {months[selectedMonth === 0 ? 11 : selectedMonth - 1]}
+                {L.copyFromMonth(months[selectedMonth === 0 ? 11 : selectedMonth - 1])}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -801,7 +932,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
               onPress={handleCopyPreviousYear}
             >
               <Text style={[styles.copyButtonText, { color: t.text2 }]}>
-                Copy {activeTab === 'expenses' ? 'expenses' : 'income'} from {selectedYear - 1}
+                {L.copyFromYear(activeTab === 'expenses' ? L.expensesLower : L.incomeLower, selectedYear - 1)}
               </Text>
             </TouchableOpacity>
           )}
@@ -812,13 +943,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
               style={[styles.tab, activeTab === 'expenses' && { backgroundColor: t.neg }]}
               onPress={() => setActiveTab('expenses')}
             >
-              <Text style={[styles.tabText, { color: t.text }, activeTab === 'expenses' && styles.activeTabText]}>Expenses</Text>
+              <Text style={[styles.tabText, { color: t.text }, activeTab === 'expenses' && styles.activeTabText]}>{L.expensesTab}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === 'income' && { backgroundColor: t.pos }]}
               onPress={() => setActiveTab('income')}
             >
-              <Text style={[styles.tabText, { color: t.text }, activeTab === 'income' && styles.activeTabText]}>Income (Goals)</Text>
+              <Text style={[styles.tabText, { color: t.text }, activeTab === 'income' && styles.activeTabText]}>{L.incomeTab}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -835,7 +966,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
           style={[styles.addCategoryButton, { backgroundColor: t.surface, borderColor: t.line }]}
           onPress={() => setIsAddCatModalVisible(true)}
         >
-          <Text style={[styles.addCategoryText, { color: t.text2 }]}>+ Add New Category</Text>
+          <Text style={[styles.addCategoryText, { color: t.text2 }]}>{L.addCategoryBtn}</Text>
         </TouchableOpacity>
 
         {categories.map((cat) => {
@@ -958,7 +1089,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
 
               <View style={styles.statsRow}>
                 <Text style={[styles.spentText, { color: t.text2 }]}>
-                  Actual: <Text style={{ fontWeight: 'bold' }}>{currency}{spending.toFixed(2)}</Text>
+                  {L.actualColon} <Text style={{ fontWeight: 'bold' }}>{currency}{spending.toFixed(2)}</Text>
                 </Text>
               </View>
 
@@ -985,13 +1116,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
         })}
 
         {categories.length === 0 && (
-          <Text style={[styles.emptyText, { color: t.text3 }]}>No categories found.</Text>
+          <Text style={[styles.emptyText, { color: t.text3 }]}>{L.noCategories}</Text>
         )}
 
         {archivedCategories[activeTab === 'expenses' ? 'spese' : 'entrate'].length > 0 && (
           <View style={{ marginTop: 24 }}>
             <Text style={[styles.emptyText, { color: t.text3, textAlign: 'left', marginBottom: 8 }]}>
-              Archived Categories
+              {L.archivedCategoriesTitle}
             </Text>
             {archivedCategories[activeTab === 'expenses' ? 'spese' : 'entrate'].map((cat) => (
               <View
@@ -1010,7 +1141,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                     borderColor: t.line
                   }}
                 >
-                  <Text style={{ color: t.text, fontSize: 13, fontWeight: '600' }}>Restore</Text>
+                  <Text style={{ color: t.text, fontSize: 13, fontWeight: '600' }}>{L.restoreBtn}</Text>
                 </TouchableOpacity>
               </View>
             ))}
@@ -1027,12 +1158,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: t.surface }]}>
-            <Text style={[styles.modalTitle, { color: t.text }]}>Modify Category</Text>
-            <Text style={[styles.modalSubtitle, { color: t.text2 }]}>Rename "{categoryToRename}" to:</Text>
+            <Text style={[styles.modalTitle, { color: t.text }]}>{L.modifyCategoryTitle}</Text>
+            <Text style={[styles.modalSubtitle, { color: t.text2 }]}>{L.renameSubtitle(categoryToRename ?? '')}</Text>
 
             <TextInput
               style={[styles.modalInput, { backgroundColor: t.surface2, color: t.text }]}
-              placeholder="New name..."
+              placeholder={L.newNamePlaceholder}
               placeholderTextColor={t.text3}
               value={renamedCategoryName}
               onChangeText={setRenamedCategoryName}
@@ -1043,13 +1174,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                 style={[styles.modalBtn, styles.modalBtnCancel, { backgroundColor: t.surface2 }]}
                 onPress={() => setIsRenameModalVisible(false)}
               >
-                <Text style={[styles.modalBtnTextCancel, { color: t.text }]}>Cancel</Text>
+                <Text style={[styles.modalBtnTextCancel, { color: t.text }]}>{L.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}
                 onPress={handleRenameCategory}
               >
-                <Text style={styles.modalBtnTextSave}>Rename</Text>
+                <Text style={styles.modalBtnTextSave}>{L.renameBtn}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1065,12 +1196,12 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: t.surface }]}>
-            <Text style={[styles.modalTitle, { color: t.text }]}>New Category</Text>
-            <Text style={[styles.modalSubtitle, { color: t.text2 }]}>Enter category name for {activeTab}</Text>
+            <Text style={[styles.modalTitle, { color: t.text }]}>{L.newCategoryTitle}</Text>
+            <Text style={[styles.modalSubtitle, { color: t.text2 }]}>{L.newCategorySubtitle(activeTab === 'expenses' ? L.expensesLower : L.incomeLower)}</Text>
 
             <TextInput
               style={[styles.modalInput, { backgroundColor: t.surface2, color: t.text }]}
-              placeholder="e.g. Vacation, Hobbies"
+              placeholder={L.categoryPlaceholder}
               placeholderTextColor={t.text3}
               value={newCategoryName}
               onChangeText={setNewCategoryName}
@@ -1081,13 +1212,13 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                 style={[styles.modalBtn, styles.modalBtnCancel, { backgroundColor: t.surface2 }]}
                 onPress={() => setIsAddCatModalVisible(false)}
               >
-                <Text style={[styles.modalBtnTextCancel, { color: t.text }]}>Cancel</Text>
+                <Text style={[styles.modalBtnTextCancel, { color: t.text }]}>{L.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnSave]}
                 onPress={handleAddCategory}
               >
-                <Text style={styles.modalBtnTextSave}>Add</Text>
+                <Text style={styles.modalBtnTextSave}>{L.addBtn}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1097,7 +1228,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       {isSaving && (
         <View style={[styles.savingIndicator, { backgroundColor: t.surface2 }]}>
           <ActivityIndicator size="small" color={ACCENT} />
-          <Text style={[styles.savingText, { color: t.text2 }]}>Saving...</Text>
+          <Text style={[styles.savingText, { color: t.text2 }]}>{L.saving}</Text>
         </View>
       )}
 
@@ -1113,7 +1244,7 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
             }}
             style={styles.keyboardDoneButton}
           >
-            <Text style={styles.keyboardDoneText}>Done</Text>
+            <Text style={styles.keyboardDoneText}>{L.done}</Text>
           </TouchableOpacity>
         </View>
       </InputAccessoryView>

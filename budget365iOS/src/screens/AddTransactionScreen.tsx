@@ -24,6 +24,81 @@ import { warmupBackend, fetchWithRetry } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
+const STRINGS = {
+  it: {
+    editTitle: 'Modifica Transazione',
+    frequenzaMensile: 'Mensile',
+    frequenzaSettimanale: 'Settimanale',
+    frequenzaAnnuale: 'Annuale',
+    errore: 'Errore',
+    campiObbligatori: 'Compila tutti i campi obbligatori',
+    utenteNonAutenticato: 'Utente non autenticato',
+    successo: 'Successo',
+    transazioneEsito: (tipo: 'spesa' | 'entrata', isEditing: boolean) =>
+      `${tipo === 'spesa' ? 'Spesa' : 'Entrata'} ${isEditing ? 'aggiornata' : 'aggiunta'} con successo!`,
+    ok: 'OK',
+    aggiungiUnAltra: "Aggiungi un'altra",
+    impossibileInserire: 'Impossibile inserire la transazione',
+    ricorrenzaDescrizione: (categoria: string) => `Ricorrenza ${categoria}`,
+    transazioneRicorrenteCreata: 'Transazione ricorrente creata con successo!',
+    impossibileCreareRicorrente: 'Impossibile creare la transazione ricorrente',
+    erroreRete: 'Errore di rete. Riprova più tardi.',
+    modalitaSingola: '📅 Singola',
+    modalitaRicorrente: '🔄 Ricorrente',
+    vediElencoRicorrenti: '📑 Vedi elenco ricorrenti',
+    spesa: 'Spesa',
+    entrata: 'Entrata',
+    importoPlaceholder: (currency: string) => `Importo (${currency} es. 12,50)`,
+    fine: 'Fine',
+    categoria: 'Categoria',
+    descrizionePlaceholder: 'Descrizione (opzionale)',
+    data: 'Data',
+    opzioniRicorrenza: 'Opzioni Ricorrenza',
+    frequenza: 'Frequenza',
+    dataInizio: 'Data Inizio',
+    ricorrenzaInfinita: 'Ricorrenza Infinita',
+    dataFine: 'Data Fine',
+    submitButton: (isEditing: boolean, periodica: boolean) =>
+      isEditing ? 'Aggiorna Transazione' : (periodica ? 'Crea Transazione Ricorrente' : 'Aggiungi'),
+  },
+  en: {
+    editTitle: 'Edit Transaction',
+    frequenzaMensile: 'Monthly',
+    frequenzaSettimanale: 'Weekly',
+    frequenzaAnnuale: 'Yearly',
+    errore: 'Error',
+    campiObbligatori: 'Please fill in all mandatory fields',
+    utenteNonAutenticato: 'User not authenticated',
+    successo: 'Success',
+    transazioneEsito: (tipo: 'spesa' | 'entrata', isEditing: boolean) =>
+      `${tipo === 'spesa' ? 'Expense' : 'Income'} ${isEditing ? 'updated' : 'added'} successfully!`,
+    ok: 'OK',
+    aggiungiUnAltra: 'Add another',
+    impossibileInserire: 'Unable to insert transaction',
+    ricorrenzaDescrizione: (categoria: string) => `Recurrence ${categoria}`,
+    transazioneRicorrenteCreata: 'Recurring transaction created successfully!',
+    impossibileCreareRicorrente: 'Unable to create recurring transaction',
+    erroreRete: 'Network error. Please try again later.',
+    modalitaSingola: '📅 One-time',
+    modalitaRicorrente: '🔄 Recurring',
+    vediElencoRicorrenti: '📑 View recurring list',
+    spesa: 'Expense',
+    entrata: 'Income',
+    importoPlaceholder: (currency: string) => `Amount (${currency} e.g. 12.50)`,
+    fine: 'Done',
+    categoria: 'Category',
+    descrizionePlaceholder: 'Description (optional)',
+    data: 'Date',
+    opzioniRicorrenza: 'Recurring Options',
+    frequenza: 'Frequency',
+    dataInizio: 'Start Date',
+    ricorrenzaInfinita: 'Infinite Recurrence',
+    dataFine: 'End Date',
+    submitButton: (isEditing: boolean, periodica: boolean) =>
+      isEditing ? 'Update Transaction' : (periodica ? 'Create Recurring Transaction' : 'Add'),
+  },
+};
+
 interface AddTransactionScreenProps {
   navigation: any;
   route?: any;
@@ -31,7 +106,8 @@ interface AddTransactionScreenProps {
 
 const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation, route }) => {
   const { userToken, logout } = useAuth();
-  const { currency, isDarkMode } = useSettings();
+  const { currency, isDarkMode, language } = useSettings();
+  const t = STRINGS[language];
   const [tipo, setTipo] = useState<'spesa' | 'entrata'>('spesa');
   const [importo, setImporto] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -57,7 +133,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
       setDescrizione(tx.descrizione || '');
       setData(tx.data ? tx.data.split('T')[0] : new Date().toISOString().split('T')[0]);
       setModalitaTransazione('una_tantum');
-      navigation.setOptions({ title: 'Edit Transaction' });
+      navigation.setOptions({ title: t.editTitle });
     } else if (route?.params?.type) {
       // Handle direct type navigation (e.g. widget shortcuts)
       setTipo(route.params.type);
@@ -85,9 +161,9 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
   const [activeDateField, setActiveDateField] = useState<'data' | 'dataInizio' | 'dataFine' | null>(null);
 
   const tipiRipetizione = [
-    { value: 'mensile', label: 'Monthly' },
-    { value: 'settimanale', label: 'Weekly' },
-    { value: 'annuale', label: 'Yearly' },
+    { value: 'mensile', label: t.frequenzaMensile },
+    { value: 'settimanale', label: t.frequenzaSettimanale },
+    { value: 'annuale', label: t.frequenzaAnnuale },
   ];
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -147,12 +223,12 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
 
   const aggiungiTransazione = async () => {
     if (!importo || !categoria) {
-      Alert.alert('Error', 'Please fill in all mandatory fields');
+      Alert.alert(t.errore, t.campiObbligatori);
       return;
     }
 
     if (!userToken) {
-      Alert.alert('Error', 'User not authenticated');
+      Alert.alert(t.errore, t.utenteNonAutenticato);
       return;
     }
 
@@ -185,21 +261,21 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
 
         if (response.ok) {
           Alert.alert(
-            'Success',
-            `${tipo === 'spesa' ? 'Expense' : 'Income'} ${isEditing ? 'updated' : 'added'} successfully!`,
+            t.successo,
+            t.transazioneEsito(tipo, isEditing),
             isEditing
-              ? [{ text: 'OK', onPress: () => navigation.goBack() }]
+              ? [{ text: t.ok, onPress: () => navigation.goBack() }]
               : [
-                  { text: 'OK', onPress: () => navigation.goBack() },
-                  { text: 'Add another', onPress: () => resetForm() },
+                  { text: t.ok, onPress: () => navigation.goBack() },
+                  { text: t.aggiungiUnAltra, onPress: () => resetForm() },
                 ]
           );
         } else {
           try {
             const errorData = await response.json();
-            Alert.alert('Error', errorData.message || 'Unable to insertion transaction');
+            Alert.alert(t.errore, errorData.message || t.impossibileInserire);
           } catch (e) {
-            Alert.alert('Error', 'Unable to insert transaction');
+            Alert.alert(t.errore, t.impossibileInserire);
           }
         }
 
@@ -218,7 +294,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         const abbonamento = {
           importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
           categoria,
-          descrizione: descrizione || `Recurrence ${categoria}`,
+          descrizione: descrizione || t.ricorrenzaDescrizione(categoria),
           tipo_ripetizione: tipoRipetizione,
           configurazione: configurazioneDefault,
           data_inizio: dataInizio,
@@ -243,21 +319,21 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
           }).catch(err => console.error("Error generating transactions:", err));
 
           Alert.alert(
-            'Success',
-            'Recurring transaction created successfully!',
+            t.successo,
+            t.transazioneRicorrenteCreata,
             [
-              { text: 'OK', onPress: () => navigation.goBack() },
-              { text: 'Add another', onPress: () => resetForm() },
+              { text: t.ok, onPress: () => navigation.goBack() },
+              { text: t.aggiungiUnAltra, onPress: () => resetForm() },
             ]
           );
         } else {
           const errorData = await response.json();
-          Alert.alert('Error', errorData.message || 'Unable to create recurring transaction');
+          Alert.alert(t.errore, errorData.message || t.impossibileCreareRicorrente);
         }
       }
     } catch (error) {
       console.error('Errore nell\'inserimento:', error);
-      Alert.alert('Error', 'Network error. Please try again later.');
+      Alert.alert(t.errore, t.erroreRete);
     } finally {
       setIsLoading(false);
     }
@@ -305,7 +381,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
               isDarkMode && { color: '#D1D5DB' },
               modalitaTransazione === 'una_tantum' && styles.modalityButtonTextActive
             ]}>
-              📅 One-time
+              {t.modalitaSingola}
             </Text>
           </TouchableOpacity>
 
@@ -321,7 +397,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
               isDarkMode && { color: '#D1D5DB' },
               modalitaTransazione === 'periodica' && styles.modalityButtonTextActive
             ]}>
-              🔄 Recurring
+              {t.modalitaRicorrente}
             </Text>
           </TouchableOpacity>
         </View>
@@ -333,7 +409,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
           style={styles.viewRecurringBtn}
           onPress={() => navigation.navigate('PeriodicTransactions')}
         >
-          <Text style={styles.viewRecurringBtnText}>📑 View recurring list</Text>
+          <Text style={styles.viewRecurringBtnText}>{t.vediElencoRicorrenti}</Text>
         </TouchableOpacity>
       )}
 
@@ -354,7 +430,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
               isDarkMode && { color: '#D1D5DB' },
               tipo === 'spesa' && styles.tipoButtonTextActive
             ]}>
-              Expense
+              {t.spesa}
             </Text>
           </TouchableOpacity>
 
@@ -372,7 +448,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
               isDarkMode && { color: '#D1D5DB' },
               tipo === 'entrata' && styles.tipoButtonTextActive
             ]}>
-              Income
+              {t.entrata}
             </Text>
           </TouchableOpacity>
         </View>
@@ -381,7 +457,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-            placeholder={`Amount (${currency} e.g. 12.50)`}
+            placeholder={t.importoPlaceholder(currency)}
             value={importo}
             onChangeText={(text) => setImporto(text.replace(',', '.'))}
             keyboardType="decimal-pad"
@@ -393,14 +469,14 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         <InputAccessoryView nativeID="importoAccessory">
           <View style={[styles.keyboardAccessory, isDarkMode && { backgroundColor: '#1F2937', borderTopColor: '#374151' }]}>
             <TouchableOpacity onPress={() => Keyboard.dismiss()} style={styles.keyboardDoneButton}>
-              <Text style={styles.keyboardDoneText}>Done</Text>
+              <Text style={styles.keyboardDoneText}>{t.fine}</Text>
             </TouchableOpacity>
           </View>
         </InputAccessoryView>
 
         {/* Category */}
         <View style={styles.inputContainer}>
-          <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Category</Text>
+          <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.categoria}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categorieContainer}>
             {(tipo === 'spesa' ? categorieSpese : categorieEntrate).map(cat => (
               <TouchableOpacity
@@ -428,7 +504,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         <View style={styles.inputContainer}>
           <TextInput
             style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-            placeholder="Description (optional)"
+            placeholder={t.descrizionePlaceholder}
             value={descrizione}
             onChangeText={setDescrizione}
             placeholderTextColor="#9CA3AF"
@@ -438,7 +514,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         {/* Data - Solo per una_tantum */}
         {modalitaTransazione === 'una_tantum' && (
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Date</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.data}</Text>
             <TouchableOpacity onPress={() => openDatePicker('data')}>
               <TextInput
                 style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
@@ -455,10 +531,10 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
         {/* CAMPI AGGIUNTIVI PER TRANS. PERIODICA */}
         {modalitaTransazione === 'periodica' ? (
           <View style={[styles.periodicaContainer, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151' }]}>
-            <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>Recurring Options</Text>
+            <Text style={[styles.sectionTitle, isDarkMode && { color: '#F9FAFB' }]}>{t.opzioniRicorrenza}</Text>
 
             {/* Tipo Ripetizione */}
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Frequency</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.frequenza}</Text>
             <View style={styles.chipContainer}>
               {tipiRipetizione.map((rep) => (
                 <TouchableOpacity
@@ -480,7 +556,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             </View>
 
             {/* Data Inizio */}
-            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Start Date</Text>
+            <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.dataInizio}</Text>
             <TouchableOpacity onPress={() => openDatePicker('dataInizio')}>
               <TextInput
                 style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
@@ -494,7 +570,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
 
             {/* Infinito Switch */}
             <View style={styles.switchContainer}>
-              <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>Infinite Recurrence</Text>
+              <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.ricorrenzaInfinita}</Text>
               <Switch
                 value={isInfinito}
                 onValueChange={setIsInfinito}
@@ -506,7 +582,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             {/* Data Fine (se non infinito) */}
             {!isInfinito && (
               <View>
-                <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>End Date</Text>
+                <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.dataFine}</Text>
                 <TouchableOpacity onPress={() => openDatePicker('dataFine')}>
                   <TextInput
                     style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
@@ -532,7 +608,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.addButtonText}>
-              {isEditing ? 'Update Transaction' : (modalitaTransazione === 'periodica' ? 'Create Recurring Transaction' : 'Add')}
+              {t.submitButton(isEditing, modalitaTransazione === 'periodica')}
             </Text>
           )}
         </TouchableOpacity>
@@ -559,7 +635,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             <View style={[styles.modalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={[styles.modalDoneText, isDarkMode && { color: '#818CF8' }]}>Done</Text>
+                  <Text style={[styles.modalDoneText, isDarkMode && { color: '#818CF8' }]}>{t.fine}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker

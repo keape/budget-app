@@ -23,14 +23,71 @@ interface CategoryStats {
     actual: number;
 }
 
-const MONTH_ABBRS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const CAT_COLORS = ['#4F46E5', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 const TREND_BAR_MAX_H = 70;
 
+const STRINGS = {
+    it: {
+        months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+        monthAbbrs: ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'],
+        eyebrow: 'STATISTICHE',
+        income: 'ENTRATE',
+        expenses: 'USCITE',
+        expensesBtn: '💸 Uscite',
+        incomeBtn: '💰 Entrate',
+        year: 'Anno',
+        month: 'Mese',
+        budget: 'Budget',
+        spent: 'Speso',
+        earned: 'Guadagnato',
+        diff: 'Diff.',
+        savings: 'Risparmio',
+        overbudget: 'Fuori budget',
+        exceededGoal: 'Obiettivo superato',
+        belowGoal: 'Sotto obiettivo',
+        monthlyTrend: 'Andamento mensile · tocca una barra per vedere quel mese',
+        distribution: (typeMode: 'spese' | 'entrate') => `Distribuzione ${typeMode === 'spese' ? 'uscite' : 'entrate'}`,
+        moreCategories: (n: number) => `+${n} altre`,
+        noData: 'Nessun dato disponibile per questo periodo.',
+        over: 'oltre',
+        remaining: 'rimanenti',
+        tapToView: 'Tocca per vedere le transazioni →',
+        uncategorized: 'Senza categoria',
+    },
+    en: {
+        months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+        monthAbbrs: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        eyebrow: 'STATS',
+        income: 'INCOME',
+        expenses: 'EXPENSES',
+        expensesBtn: '💸 Expenses',
+        incomeBtn: '💰 Income',
+        year: 'Year',
+        month: 'Month',
+        budget: 'Budget',
+        spent: 'Spent',
+        earned: 'Earned',
+        diff: 'Diff',
+        savings: 'Savings',
+        overbudget: 'Overbudget',
+        exceededGoal: 'Exceeded Goal',
+        belowGoal: 'Below Goal',
+        monthlyTrend: 'Monthly trend · tap a bar to view that month',
+        distribution: (typeMode: 'spese' | 'entrate') => `${typeMode === 'spese' ? 'Expense' : 'Income'} distribution`,
+        moreCategories: (n: number) => `+${n} more`,
+        noData: 'No data available for this period.',
+        over: 'over',
+        remaining: 'remaining',
+        tapToView: 'Tap to view transactions →',
+        uncategorized: 'Uncategorized',
+    },
+};
+
 const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navigation }) => {
     const { userToken } = useAuth();
-    const { currency, showBalance } = useSettings();
+    const { currency, showBalance, language } = useSettings();
     const t = useAppTheme();
+    const L = STRINGS[language];
 
     const [periodMode, setPeriodMode] = useState<'year' | 'month'>('year');
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -42,10 +99,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
     const [netData, setNetData] = useState<{ income: number; expenses: number }>({ income: 0, expenses: 0 });
     const [isLoading, setIsLoading] = useState(false);
 
-    const months = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ];
+    const months = L.months;
 
     // Apply initialType param from Home navigation
     useFocusEffect(
@@ -137,7 +191,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
             const filteredTx = typeMode === 'spese' ? filteredSpese : filteredEntrate;
             const actuals: Record<string, number> = {};
             filteredTx.forEach((t: any) => {
-                const cat = t.categoria || 'Uncategorized';
+                const cat = t.categoria || L.uncategorized;
                 actuals[cat] = (actuals[cat] || 0) + Math.abs(t.importo);
             });
             const allCats = new Set([...Object.keys(combinedBudget), ...Object.keys(actuals)]);
@@ -162,8 +216,8 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
     }), { budget: 0, actual: 0, diff: 0 });
 
     const diffLabel = typeMode === 'spese'
-        ? (totals.diff >= 0 ? 'Savings' : 'Overbudget')
-        : (totals.diff <= 0 ? 'Exceeded Goal' : 'Below Goal');
+        ? (totals.diff >= 0 ? L.savings : L.overbudget)
+        : (totals.diff <= 0 ? L.exceededGoal : L.belowGoal);
 
     const net = netData.income - netData.expenses;
     const netPositive = net >= 0;
@@ -185,7 +239,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
         <View style={[styles.container, { backgroundColor: t.bg }]}>
             <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
                 <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
-                    STATS · {periodLabelText}
+                    {L.eyebrow} · {periodLabelText}
                 </Text>
                 <Text style={[styles.heroAmount, { color: netPositive ? t.pos : t.neg }]}>
                     {formatCurrency(net, true)}
@@ -194,7 +248,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                     <View style={styles.flowCell}>
                         <View style={[styles.flowDot, { backgroundColor: t.pos }]} />
                         <View>
-                            <Text style={[styles.flowLabel, { color: t.text3 }]}>INCOME</Text>
+                            <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.income}</Text>
                             <Text style={[styles.flowVal, { color: t.pos }]}>{formatCurrency(netData.income)}</Text>
                         </View>
                     </View>
@@ -202,7 +256,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                     <View style={styles.flowCell}>
                         <View style={[styles.flowDot, { backgroundColor: t.neg }]} />
                         <View>
-                            <Text style={[styles.flowLabel, { color: t.text3 }]}>EXPENSES</Text>
+                            <Text style={[styles.flowLabel, { color: t.text3 }]}>{L.expenses}</Text>
                             <Text style={[styles.flowVal, { color: t.neg }]}>{formatCurrency(netData.expenses)}</Text>
                         </View>
                     </View>
@@ -218,13 +272,13 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                         style={[styles.typeBtn, typeMode === 'spese' && { backgroundColor: t.neg }]}
                         onPress={() => setTypeMode('spese')}
                     >
-                        <Text style={[styles.typeBtnText, { color: t.text }, typeMode === 'spese' && styles.activeTypeBtnText]}>💸 Expenses</Text>
+                        <Text style={[styles.typeBtnText, { color: t.text }, typeMode === 'spese' && styles.activeTypeBtnText]}>{L.expensesBtn}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.typeBtn, typeMode === 'entrate' && { backgroundColor: t.pos }]}
                         onPress={() => setTypeMode('entrate')}
                     >
-                        <Text style={[styles.typeBtnText, { color: t.text }, typeMode === 'entrate' && styles.activeTypeBtnText]}>💰 Income</Text>
+                        <Text style={[styles.typeBtnText, { color: t.text }, typeMode === 'entrate' && styles.activeTypeBtnText]}>{L.incomeBtn}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -235,13 +289,13 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                             style={[styles.smallBtn, { backgroundColor: t.surface, borderColor: t.line }, periodMode === 'year' && { backgroundColor: ACCENT, borderColor: ACCENT }]}
                             onPress={() => setPeriodMode('year')}
                         >
-                            <Text style={[styles.smallBtnText, { color: t.text }, periodMode === 'year' && styles.activeSmallBtnText]}>Year</Text>
+                            <Text style={[styles.smallBtnText, { color: t.text }, periodMode === 'year' && styles.activeSmallBtnText]}>{L.year}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.smallBtn, { backgroundColor: t.surface, borderColor: t.line }, periodMode === 'month' && { backgroundColor: ACCENT, borderColor: ACCENT }]}
                             onPress={() => setPeriodMode('month')}
                         >
-                            <Text style={[styles.smallBtnText, { color: t.text }, periodMode === 'month' && styles.activeSmallBtnText]}>Month</Text>
+                            <Text style={[styles.smallBtnText, { color: t.text }, periodMode === 'month' && styles.activeSmallBtnText]}>{L.month}</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={styles.periodNav}>
@@ -266,15 +320,15 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                         {/* Summary cards — Budget / Spent / Diff */}
                         <View style={styles.summaryRow}>
                             <View style={[styles.summaryCardH, { backgroundColor: t.surface, borderColor: t.line }]}>
-                                <Text style={[styles.cardLabelH, { color: t.text3 }]}>Budget</Text>
+                                <Text style={[styles.cardLabelH, { color: t.text3 }]}>{L.budget}</Text>
                                 <Text style={[styles.cardValueH, { color: t.text }]}>{formatCurrency(totals.budget)}</Text>
                             </View>
                             <View style={[styles.summaryCardH, { backgroundColor: t.surface, borderColor: t.line }]}>
-                                <Text style={[styles.cardLabelH, { color: t.text3 }]}>{typeMode === 'spese' ? 'Spent' : 'Earned'}</Text>
+                                <Text style={[styles.cardLabelH, { color: t.text3 }]}>{typeMode === 'spese' ? L.spent : L.earned}</Text>
                                 <Text style={[styles.cardValueH, { color: typeMode === 'spese' ? t.neg : t.pos }]}>{formatCurrency(totals.actual)}</Text>
                             </View>
                             <View style={[styles.summaryCardH, { backgroundColor: t.surface, borderColor: t.line }]}>
-                                <Text style={[styles.cardLabelH, { color: t.text3 }]}>Diff</Text>
+                                <Text style={[styles.cardLabelH, { color: t.text3 }]}>{L.diff}</Text>
                                 <Text style={[styles.cardValueH, { color: t.text }]}>{formatCurrency(totals.diff)}</Text>
                                 <Text style={[styles.cardInfoH, { color: t.text3 }]}>{diffLabel}</Text>
                             </View>
@@ -284,7 +338,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                         {periodMode === 'year' && (
                             <View style={[styles.trendCard, { backgroundColor: t.surface, borderColor: t.line }]}>
                                 <Text style={[styles.trendTitle, { color: t.text3 }]}>
-                                    Monthly trend · tap a bar to view that month
+                                    {L.monthlyTrend}
                                 </Text>
                                 <View style={styles.trendBars}>
                                     {monthlyTotals.map((val, idx) => {
@@ -305,7 +359,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                                                     { color: t.text3 },
                                                     isCurrent && { color: t.text, fontWeight: '700' }
                                                 ]}>
-                                                    {MONTH_ABBRS[idx]}
+                                                    {L.monthAbbrs[idx]}
                                                 </Text>
                                             </TouchableOpacity>
                                         );
@@ -318,7 +372,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                         {proportionTotal > 0 && (
                             <View style={[styles.proportionCard, { backgroundColor: t.surface, borderColor: t.line }]}>
                                 <Text style={[styles.proportionTitle, { color: t.text3 }]}>
-                                    {typeMode === 'spese' ? 'Expense' : 'Income'} distribution
+                                    {L.distribution(typeMode)}
                                 </Text>
                                 <View style={styles.proportionBar}>
                                     {proportionData.map((item, idx) => (
@@ -342,7 +396,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                                     ))}
                                     {proportionData.length > 5 && (
                                         <Text style={[styles.proportionMore, { color: t.text3 }]}>
-                                            +{proportionData.length - 5} more
+                                            {L.moreCategories(proportionData.length - 5)}
                                         </Text>
                                     )}
                                 </View>
@@ -351,7 +405,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
 
                         {/* Category breakdown with progress bars */}
                         {statsData.length === 0 ? (
-                            <Text style={[styles.emptyText, { color: t.text3 }]}>No data available for this period.</Text>
+                            <Text style={[styles.emptyText, { color: t.text3 }]}>{L.noData}</Text>
                         ) : (
                             statsData.map((item, idx) => {
                                 const pct = item.budget > 0 ? Math.min(item.actual / item.budget, 1) : 0;
@@ -359,7 +413,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                                 const barColor = overBudget ? t.neg : t.pos;
                                 const absDiff = Math.abs(item.budget - item.actual);
                                 const pctText = item.budget > 0
-                                    ? `${Math.round((item.actual / item.budget) * 100)}%  ·  ${showBalance ? `${overBudget ? '+' : '-'}${currency}${absDiff.toFixed(0)}` : '****'} ${overBudget ? 'over' : 'remaining'}`
+                                    ? `${Math.round((item.actual / item.budget) * 100)}%  ·  ${showBalance ? `${overBudget ? '+' : '-'}${currency}${absDiff.toFixed(0)}` : '****'} ${overBudget ? L.over : L.remaining}`
                                     : formatCurrency(item.actual);
 
                                 return (
@@ -401,7 +455,7 @@ const StatsScreen: React.FC<{ route?: any; navigation?: any }> = ({ route, navig
                                             {pctText}{overBudget ? ' ⚠️' : ''}
                                         </Text>
                                         <Text style={[styles.catTapHint, { color: t.text3 }]}>
-                                            Tap to view transactions →
+                                            {L.tapToView}
                                         </Text>
                                     </TouchableOpacity>
                                 );

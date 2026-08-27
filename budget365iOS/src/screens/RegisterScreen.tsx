@@ -17,6 +17,59 @@ import { warmupBackend } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
+const STRINGS = {
+  it: {
+    errorTitle: 'Errore',
+    fillAllFields: 'Compila tutti i campi',
+    passwordsMismatch: 'Le password non coincidono',
+    passwordTooShort: 'La password deve contenere almeno 6 caratteri',
+    successTitle: 'Successo',
+    otpSent: 'Codice di verifica inviato alla tua email.',
+    otpSendFailed: 'Invio del codice di verifica non riuscito',
+    networkError: 'Errore di rete. Riprova più tardi.',
+    enterOtp: 'Inserisci il codice di verifica',
+    accountCreated: 'Account creato con successo! Ora puoi accedere.',
+    registrationError: 'Errore durante la registrazione',
+    createAccountTitle: 'Crea il tuo account',
+    verifyEmailTitle: 'Verifica Email',
+    usernamePlaceholder: 'Nome utente',
+    emailPlaceholder: 'Email',
+    passwordPlaceholder: 'Password',
+    confirmPasswordPlaceholder: 'Conferma password',
+    nextButton: 'Avanti',
+    otpSentTo: 'Abbiamo inviato un codice di verifica a:',
+    otpPlaceholder: 'Inserisci il codice di verifica',
+    registerButton: 'Registrati',
+    backButton: 'Indietro',
+    haveAccount: 'Hai già un account? Accedi',
+  },
+  en: {
+    errorTitle: 'Error',
+    fillAllFields: 'Please fill in all fields',
+    passwordsMismatch: 'Passwords do not match',
+    passwordTooShort: 'Password must be at least 6 characters long',
+    successTitle: 'Success',
+    otpSent: 'Verification code sent to your email.',
+    otpSendFailed: 'Failed to send verification code',
+    networkError: 'Network error. Please try again later.',
+    enterOtp: 'Please enter the verification code',
+    accountCreated: 'Account created successfully! You can now log in.',
+    registrationError: 'Error during registration',
+    createAccountTitle: 'Create your account',
+    verifyEmailTitle: 'Verify Email',
+    usernamePlaceholder: 'Username',
+    emailPlaceholder: 'Email',
+    passwordPlaceholder: 'Password',
+    confirmPasswordPlaceholder: 'Confirm Password',
+    nextButton: 'Next',
+    otpSentTo: 'We have sent a verification code to:',
+    otpPlaceholder: 'Enter Verification Code',
+    registerButton: 'Register',
+    backButton: 'Back',
+    haveAccount: 'Already have an account? Login',
+  },
+};
+
 interface RegisterScreenProps {
   navigation: any;
 }
@@ -28,7 +81,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState(1);
-  const { isDarkMode } = useSettings();
+  const { isDarkMode, language } = useSettings();
+  const t = STRINGS[language];
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -37,17 +91,17 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   const handleSendOtp = async () => {
     if (!username || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t.errorTitle, t.fillAllFields);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t.errorTitle, t.passwordsMismatch);
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert(t.errorTitle, t.passwordTooShort);
       return;
     }
 
@@ -65,13 +119,13 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
       if (response.ok) {
         setStep(2);
-        Alert.alert('Success', 'Verification code sent to your email.');
+        Alert.alert(t.successTitle, t.otpSent);
       } else {
-        Alert.alert('Error', data.message || 'Failed to send verification code');
+        Alert.alert(t.errorTitle, data.message || t.otpSendFailed);
       }
     } catch (error) {
       console.error('OTP error:', error);
-      Alert.alert('Error', 'Network error. Please try again later.');
+      Alert.alert(t.errorTitle, t.networkError);
     } finally {
       setIsLoading(false);
     }
@@ -79,7 +133,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   const handleRegister = async () => {
     if (!otp) {
-      Alert.alert('Error', 'Please enter the verification code');
+      Alert.alert(t.errorTitle, t.enterOtp);
       return;
     }
 
@@ -97,8 +151,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
       if (response.ok) {
         Alert.alert(
-          'Success',
-          'Account created successfully! You can now log in.',
+          t.successTitle,
+          t.accountCreated,
           [
             {
               text: 'OK',
@@ -107,11 +161,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           ]
         );
       } else {
-        Alert.alert('Error', data.message || 'Error during registration');
+        Alert.alert(t.errorTitle, data.message || t.registrationError);
       }
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Error', 'Network error. Please try again later.');
+      Alert.alert(t.errorTitle, t.networkError);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +180,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         <View style={styles.header}>
           <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Budget 365</Text>
           <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>
-            {step === 1 ? 'Create your account' : 'Verify Email'}
+            {step === 1 ? t.createAccountTitle : t.verifyEmailTitle}
           </Text>
         </View>
 
@@ -136,7 +190,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Username"
+                  placeholder={t.usernamePlaceholder}
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
@@ -148,7 +202,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Email"
+                  placeholder={t.emailPlaceholder}
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -161,7 +215,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Password"
+                  placeholder={t.passwordPlaceholder}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -174,7 +228,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Confirm Password"
+                  placeholder={t.confirmPasswordPlaceholder}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry
@@ -192,21 +246,21 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.registerButtonText}>Next</Text>
+                  <Text style={styles.registerButtonText}>{t.nextButton}</Text>
                 )}
               </TouchableOpacity>
             </>
           ) : (
             <>
               <Text style={{ textAlign: 'center', marginBottom: 20, color: isDarkMode ? '#D1D5DB' : '#4B5563' }}>
-                We have sent a verification code to:{'\n'}
+                {t.otpSentTo}{'\n'}
                 <Text style={{ fontWeight: 'bold' }}>{email}</Text>
               </Text>
 
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[styles.input, isDarkMode && { backgroundColor: '#1F2937', borderColor: '#374151', color: '#F9FAFB' }]}
-                  placeholder="Enter Verification Code"
+                  placeholder={t.otpPlaceholder}
                   value={otp}
                   onChangeText={setOtp}
                   keyboardType="number-pad"
@@ -223,7 +277,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.registerButtonText}>Register</Text>
+                  <Text style={styles.registerButtonText}>{t.registerButton}</Text>
                 )}
               </TouchableOpacity>
 
@@ -233,7 +287,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 disabled={isLoading}
               >
                 <Text style={[styles.loginLinkText, isDarkMode && { color: '#818CF8' }]}>
-                  Back
+                  {t.backButton}
                 </Text>
               </TouchableOpacity>
             </>
@@ -244,7 +298,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={[styles.loginLinkText, isDarkMode && { color: '#818CF8' }]}>
-              Already have an account? Login
+              {t.haveAccount}
             </Text>
           </TouchableOpacity>
         </View>

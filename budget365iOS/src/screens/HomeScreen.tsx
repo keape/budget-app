@@ -29,10 +29,68 @@ const CATEGORY_COLORS = [
     '#34d399', '#fbbf24', '#f87171', '#60a5fa', '#facc15',
 ];
 
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-];
+const STRINGS = {
+    it: {
+        months: ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+            'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'],
+        heroEyebrow: (m: string, y: number) => `Riepilogo · ${m} ${y}`,
+        income: 'ENTRATE',
+        expenses: 'USCITE',
+        addExpenseBtn: '+ Spesa',
+        addIncomeBtn: '+ Entrata',
+        navTransactions: 'Transazioni',
+        navBudget: 'Budget',
+        navSavings: 'Risparmi',
+        navStats: 'Statistiche',
+        monthlySavings: 'RISPARMI MENSILI',
+        allocatedPercent: (p: number) => `${p}% allocati`,
+        noSavingsData: 'Nessun dato sui risparmi per questo mese',
+        budgetVsActual: 'BUDGET VS EFFETTIVO',
+        edit: 'Modifica ›',
+        expensesLabel: 'Uscite',
+        incomeLabel: 'Entrate',
+        topExpenses: 'SPESE PRINCIPALI',
+        all: 'Tutte ›',
+        noExpensesMonth: 'Nessuna spesa questo mese',
+        addExpenseGhost: '+ Aggiungi spesa',
+        topIncome: 'ENTRATE PRINCIPALI',
+        noIncomeMonth: 'Nessuna entrata questo mese',
+        addIncomeGhost: '+ Aggiungi entrata',
+        recentActivity: 'ATTIVITÀ RECENTI',
+        noTransactionsYet: 'Nessuna transazione ancora',
+        budgetPrefix: 'Budget: ',
+    },
+    en: {
+        months: ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'],
+        heroEyebrow: (m: string, y: number) => `Overview · ${m} ${y}`,
+        income: 'INCOME',
+        expenses: 'EXPENSES',
+        addExpenseBtn: '+ Expense',
+        addIncomeBtn: '+ Income',
+        navTransactions: 'Transactions',
+        navBudget: 'Budget',
+        navSavings: 'Savings',
+        navStats: 'Stats',
+        monthlySavings: 'MONTHLY SAVINGS',
+        allocatedPercent: (p: number) => `${p}% allocated`,
+        noSavingsData: 'No savings data for this month',
+        budgetVsActual: 'BUDGET VS ACTUAL',
+        edit: 'Edit ›',
+        expensesLabel: 'Expenses',
+        incomeLabel: 'Income',
+        topExpenses: 'TOP EXPENSES',
+        all: 'All ›',
+        noExpensesMonth: 'No expenses this month',
+        addExpenseGhost: '+ Add expense',
+        topIncome: 'TOP INCOME',
+        noIncomeMonth: 'No income this month',
+        addIncomeGhost: '+ Add income',
+        recentActivity: 'RECENT ACTIVITY',
+        noTransactionsYet: 'No transactions yet',
+        budgetPrefix: 'Budget: ',
+    },
+} as const;
 
 function getCategoryColor(key: string): string {
     let hash = 0;
@@ -45,8 +103,10 @@ function getCategoryColor(key: string): string {
 
 const HomeScreen = ({ navigation }: { navigation: any }) => {
     const { userToken, logout } = useAuth();
-    const { currency, showBalance, isDarkMode } = useSettings();
+    const { currency, showBalance, isDarkMode, language } = useSettings();
     const t = useAppTheme();
+    const s = STRINGS[language];
+    const MONTHS = s.months;
 
     const NAV_PALETTE = {
         transactions: { solid: '#5E5CE6', rgb: '94,92,230' },
@@ -365,7 +425,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 {/* ── Hero — Monthly Summary ── */}
                 <View style={[styles.hero, { backgroundColor: t.surface, borderColor: t.line }]}>
                     <Text style={[styles.heroEyebrow, { color: t.text3 }]}>
-                        Overview · {MONTHS[selectedMonth]} {selectedYear}
+                        {s.heroEyebrow(MONTHS[selectedMonth], selectedYear)}
                     </Text>
                     <Text style={[styles.heroAmount, { color: t.text }]}>
                         {showBalance
@@ -376,7 +436,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         <View style={styles.flowCell}>
                             <View style={[styles.flowDot, { backgroundColor: t.pos }]} />
                             <View>
-                                <Text style={[styles.flowLabel, { color: t.text3 }]}>INCOME</Text>
+                                <Text style={[styles.flowLabel, { color: t.text3 }]}>{s.income}</Text>
                                 <Text style={[styles.flowVal, { color: t.pos }]}>
                                     {showBalance ? `+${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
                                 </Text>
@@ -386,7 +446,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         <View style={styles.flowCell}>
                             <View style={[styles.flowDot, { backgroundColor: t.neg }]} />
                             <View>
-                                <Text style={[styles.flowLabel, { color: t.text3 }]}>EXPENSES</Text>
+                                <Text style={[styles.flowLabel, { color: t.text3 }]}>{s.expenses}</Text>
                                 <Text style={[styles.flowVal, { color: t.neg }]}>
                                     {showBalance ? `−${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
                                 </Text>
@@ -401,13 +461,13 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         style={[styles.actionBtn, { backgroundColor: t.surface, borderColor: t.neg }]}
                         onPress={() => navigation.navigate('AddTransaction')}
                     >
-                        <Text style={[styles.actionBtnText, { color: t.neg }]}>+ Expense</Text>
+                        <Text style={[styles.actionBtnText, { color: t.neg }]}>{s.addExpenseBtn}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.actionBtn, { backgroundColor: t.surface, borderColor: t.pos }]}
                         onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
                     >
-                        <Text style={[styles.actionBtnText, { color: t.pos }]}>+ Income</Text>
+                        <Text style={[styles.actionBtnText, { color: t.pos }]}>{s.addIncomeBtn}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -418,7 +478,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             <View style={[styles.navTile, { backgroundColor: navTileBg('transactions') }]}>
                                 <IconTransactions size={26} color={NAV_PALETTE.transactions.solid} />
                             </View>
-                            <Text style={[styles.navLabel, { color: t.text2 }]}>Transactions</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>{s.navTransactions}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Budget', { month: selectedMonth, year: selectedYear })}>
                             <View style={[styles.navTile, { backgroundColor: navTileBg('budget') }]}>
@@ -430,13 +490,13 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             <View style={[styles.navTile, { backgroundColor: navTileBg('savings') }]}>
                                 <IconSavings size={26} color={NAV_PALETTE.savings.solid} />
                             </View>
-                            <Text style={[styles.navLabel, { color: t.text2 }]}>Savings</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>{s.navSavings}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.navBtn} onPress={() => navigation.navigate('Stats')}>
                             <View style={[styles.navTile, { backgroundColor: navTileBg('stats') }]}>
                                 <IconStats size={26} color={NAV_PALETTE.stats.solid} />
                             </View>
-                            <Text style={[styles.navLabel, { color: t.text2 }]}>Stats</Text>
+                            <Text style={[styles.navLabel, { color: t.text2 }]}>{s.navStats}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -448,7 +508,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                         onPress={() => navigation.navigate('Savings' as never)}
                     >
                         <View style={styles.rowBetween}>
-                            <Text style={[styles.microLabel, { color: t.text3 }]}>MONTHLY SAVINGS</Text>
+                            <Text style={[styles.microLabel, { color: t.text3 }]}>{s.monthlySavings}</Text>
                             <Text style={[styles.cardPct, { color: ACCENT }]}>{savingsData.allocatedPercent}%</Text>
                         </View>
                         <Text style={[styles.heroAmountSmall, { color: savingsData.savings >= 0 ? t.pos : t.neg, marginTop: 4 }]}>
@@ -460,29 +520,29 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             <View style={[styles.trackFill, { width: `${savingsData.allocatedPercent}%` as any, backgroundColor: ACCENT }]} />
                         </View>
                         <Text style={[styles.heroSubMeta, { color: t.text3, marginTop: 8 }]}>
-                            {savingsData.allocatedPercent}% allocated
+                            {s.allocatedPercent(savingsData.allocatedPercent)}
                         </Text>
                     </TouchableOpacity>
                 ) : !isFutureMonth ? (
                     <View style={[styles.allocCard, { backgroundColor: t.surface, borderColor: t.line, opacity: 0.5 }]}>
-                        <Text style={[styles.microLabel, { color: t.text3 }]}>MONTHLY SAVINGS</Text>
-                        <Text style={[styles.emptyText, { color: t.text3, marginTop: 8 }]}>No savings data for this month</Text>
+                        <Text style={[styles.microLabel, { color: t.text3 }]}>{s.monthlySavings}</Text>
+                        <Text style={[styles.emptyText, { color: t.text3, marginTop: 8 }]}>{s.noSavingsData}</Text>
                     </View>
                 ) : null}
 
                 {/* ── Budget vs Actual ── */}
                 <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
                     <View style={styles.sectionHead}>
-                        <Text style={[styles.sectionTitle, { color: t.text3 }]}>BUDGET VS ACTUAL</Text>
+                        <Text style={[styles.sectionTitle, { color: t.text3 }]}>{s.budgetVsActual}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Budget', { month: selectedMonth, year: selectedYear })}>
-                            <Text style={[styles.sectionMeta, { color: t.text3 }]}>Edit ›</Text>
+                            <Text style={[styles.sectionMeta, { color: t.text3 }]}>{s.edit}</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Expenses bar */}
                     <View style={{ marginTop: 12 }}>
                         <View style={styles.rowBetween}>
-                            <Text style={[styles.allocName, { color: t.text }]}>Expenses</Text>
+                            <Text style={[styles.allocName, { color: t.text }]}>{s.expensesLabel}</Text>
                             <Text style={[styles.allocAmt, { color: t.neg }]}>
                                 {showBalance ? `${currency}${riepilogoData.totaleSpeseMese.toFixed(2)}` : '****'}
                             </Text>
@@ -494,7 +554,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             }]} />
                         </View>
                         <Text style={[styles.allocMeta, { color: t.text3, marginTop: 3 }]}>
-                            Budget: {showBalance ? `${currency}${budgetData.budgetSpeseMese.toFixed(2)}` : '****'}
+                            {s.budgetPrefix}{showBalance ? `${currency}${budgetData.budgetSpeseMese.toFixed(2)}` : '****'}
                         </Text>
                     </View>
 
@@ -503,7 +563,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     {/* Income bar */}
                     <View>
                         <View style={styles.rowBetween}>
-                            <Text style={[styles.allocName, { color: t.text }]}>Income</Text>
+                            <Text style={[styles.allocName, { color: t.text }]}>{s.incomeLabel}</Text>
                             <Text style={[styles.allocAmt, { color: t.pos }]}>
                                 {showBalance ? `${currency}${riepilogoData.totaleEntrateMese.toFixed(2)}` : '****'}
                             </Text>
@@ -515,7 +575,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                             }]} />
                         </View>
                         <Text style={[styles.allocMeta, { color: t.text3, marginTop: 3 }]}>
-                            Budget: {showBalance ? `${currency}${budgetData.budgetEntrateMese.toFixed(2)}` : '****'}
+                            {s.budgetPrefix}{showBalance ? `${currency}${budgetData.budgetEntrateMese.toFixed(2)}` : '****'}
                         </Text>
                     </View>
                 </View>
@@ -524,14 +584,14 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 <View style={{ paddingHorizontal: 16, gap: 12, marginBottom: 16 }}>
                     <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
                         <View style={styles.sectionHead}>
-                            <Text style={[styles.sectionTitle, { color: t.text3 }]}>TOP EXPENSES</Text>
+                            <Text style={[styles.sectionTitle, { color: t.text3 }]}>{s.topExpenses}</Text>
                             <TouchableOpacity onPress={() => navigation.navigate('Transactions', monthDateRange())}>
-                                <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
+                                <Text style={[styles.sectionMeta, { color: t.text3 }]}>{s.all}</Text>
                             </TouchableOpacity>
                         </View>
                         {riepilogoData.dettagliCategorie.spese.length === 0 ? (
                             <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
-                                <Text style={[styles.emptyText, { color: t.text3 }]}>No expenses this month</Text>
+                                <Text style={[styles.emptyText, { color: t.text3 }]}>{s.noExpensesMonth}</Text>
                             </View>
                         ) : (
                             <>
@@ -555,7 +615,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                                     style={[styles.ghostBtn, { borderColor: t.line2, marginTop: 8 }]}
                                     onPress={() => navigation.navigate('AddTransaction')}
                                 >
-                                    <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add expense</Text>
+                                    <Text style={[styles.ghostBtnText, { color: t.text2 }]}>{s.addExpenseGhost}</Text>
                                 </TouchableOpacity>
                             </>
                         )}
@@ -564,14 +624,14 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                     {/* ── Top income ── */}
                     <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line }]}>
                         <View style={styles.sectionHead}>
-                            <Text style={[styles.sectionTitle, { color: t.text3 }]}>TOP INCOME</Text>
+                            <Text style={[styles.sectionTitle, { color: t.text3 }]}>{s.topIncome}</Text>
                             <TouchableOpacity onPress={() => navigation.navigate('Transactions', monthDateRange())}>
-                                <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
+                                <Text style={[styles.sectionMeta, { color: t.text3 }]}>{s.all}</Text>
                             </TouchableOpacity>
                         </View>
                         {riepilogoData.dettagliCategorie.entrate.length === 0 ? (
                             <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
-                                <Text style={[styles.emptyText, { color: t.text3 }]}>No income this month</Text>
+                                <Text style={[styles.emptyText, { color: t.text3 }]}>{s.noIncomeMonth}</Text>
                             </View>
                         ) : (
                             <>
@@ -595,7 +655,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                                     style={[styles.ghostBtn, { borderColor: t.line2, marginTop: 8 }]}
                                     onPress={() => navigation.navigate('AddTransaction', { type: 'entrata' })}
                                 >
-                                    <Text style={[styles.ghostBtnText, { color: t.text2 }]}>+ Add income</Text>
+                                    <Text style={[styles.ghostBtnText, { color: t.text2 }]}>{s.addIncomeGhost}</Text>
                                 </TouchableOpacity>
                             </>
                         )}
@@ -605,14 +665,14 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                 {/* ── Recent Activity ── */}
                 <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.line, marginHorizontal: 16, marginBottom: 16 }]}>
                     <View style={styles.sectionHead}>
-                        <Text style={[styles.sectionTitle, { color: t.text3 }]}>RECENT ACTIVITY</Text>
+                        <Text style={[styles.sectionTitle, { color: t.text3 }]}>{s.recentActivity}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Transactions', monthDateRange())}>
-                            <Text style={[styles.sectionMeta, { color: t.text3 }]}>All ›</Text>
+                            <Text style={[styles.sectionMeta, { color: t.text3 }]}>{s.all}</Text>
                         </TouchableOpacity>
                     </View>
                     {riepilogoData.ultime5Transazioni.length === 0 ? (
                         <View style={[styles.emptyCard, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
-                            <Text style={[styles.emptyText, { color: t.text3 }]}>No transactions yet</Text>
+                            <Text style={[styles.emptyText, { color: t.text3 }]}>{s.noTransactionsYet}</Text>
                         </View>
                     ) : (
                         <View style={{ gap: 0, marginTop: 8 }}>
@@ -630,7 +690,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                                             {tx.descrizione || tx.categoria}
                                         </Text>
                                         <Text style={[styles.transDate, { color: t.text3 }]}>
-                                            {new Date(tx.data).toLocaleDateString('it-IT')}
+                                            {new Date(tx.data).toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US')}
                                         </Text>
                                     </View>
                                     <Text style={[styles.transAmount, { color: tx.importo >= 0 ? t.pos : t.neg }]}>

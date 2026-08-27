@@ -17,6 +17,37 @@ import { warmupBackend } from '../utils/apiClient';
 
 const BASE_URL = API_URL;
 
+const STRINGS = {
+    it: {
+        errorTitle: 'Errore',
+        updateStatusError: 'Impossibile aggiornare lo stato',
+        networkError: 'Errore di rete',
+        confirmDeletionTitle: 'Conferma eliminazione',
+        confirmDeletionMessage: 'Sei sicuro di voler eliminare questa transazione ricorrente?',
+        cancel: 'Annulla',
+        delete: 'Elimina',
+        deleteError: 'Impossibile eliminare',
+        active: 'Attiva',
+        paused: 'In pausa',
+        starts: 'Inizio',
+        emptyText: 'Nessuna transazione ricorrente trovata.',
+    },
+    en: {
+        errorTitle: 'Error',
+        updateStatusError: 'Unable to update status',
+        networkError: 'Network error',
+        confirmDeletionTitle: 'Confirm Deletion',
+        confirmDeletionMessage: 'Are you sure you want to delete this recurring transaction?',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        deleteError: 'Unable to delete',
+        active: 'Active',
+        paused: 'Paused',
+        starts: 'Starts',
+        emptyText: 'No recurring transactions found.',
+    },
+};
+
 interface PeriodicTransaction {
     _id: string;
     importo: number;
@@ -30,8 +61,9 @@ interface PeriodicTransaction {
 
 const PeriodicTransactionsScreen: React.FC = () => {
     const { userToken } = useAuth();
-    const { currency, isDarkMode } = useSettings();
+    const { currency, isDarkMode, language } = useSettings();
     const navigation = useNavigation<any>();
+    const t = STRINGS[language];
 
     const [transactions, setTransactions] = useState<PeriodicTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -101,21 +133,21 @@ const PeriodicTransactionsScreen: React.FC = () => {
             if (response.ok) {
                 setTransactions(prev => prev.map(t => t._id === item._id ? { ...t, attiva: !t.attiva } : t));
             } else {
-                Alert.alert('Error', 'Unable to update status');
+                Alert.alert(t.errorTitle, t.updateStatusError);
             }
         } catch (error) {
-            Alert.alert('Error', 'Network error');
+            Alert.alert(t.errorTitle, t.networkError);
         }
     };
 
     const deletePeriodic = async (id: string) => {
         Alert.alert(
-            'Confirm Deletion',
-            'Are you sure you want to delete this recurring transaction?',
+            t.confirmDeletionTitle,
+            t.confirmDeletionMessage,
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t.cancel, style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: t.delete,
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -125,12 +157,12 @@ const PeriodicTransactionsScreen: React.FC = () => {
                             });
 
                             if (response.ok) {
-                                setTransactions(prev => prev.filter(t => t._id !== id));
+                                setTransactions(prev => prev.filter(tr => tr._id !== id));
                             } else {
-                                Alert.alert('Error', 'Unable to delete');
+                                Alert.alert(t.errorTitle, t.deleteError);
                             }
                         } catch (error) {
-                            Alert.alert('Error', 'Network error');
+                            Alert.alert(t.errorTitle, t.networkError);
                         }
                     }
                 }
@@ -146,7 +178,7 @@ const PeriodicTransactionsScreen: React.FC = () => {
                     <View style={styles.cardHeader}>
                         <Text style={[styles.catText, isDarkMode && { color: '#E5E7EB' }]}>{item.categoria}</Text>
                         <View style={[styles.badge, item.attiva ? styles.badgeActive : styles.badgeInactive]}>
-                            <Text style={styles.badgeText}>{item.attiva ? 'Active' : 'Paused'}</Text>
+                            <Text style={styles.badgeText}>{item.attiva ? t.active : t.paused}</Text>
                         </View>
                     </View>
 
@@ -159,7 +191,7 @@ const PeriodicTransactionsScreen: React.FC = () => {
                             🔄 {item.tipo_ripetizione.charAt(0).toUpperCase() + item.tipo_ripetizione.slice(1)}
                         </Text>
                         <Text style={[styles.infoText, isDarkMode && { color: '#9CA3AF' }]}>
-                            📅 Starts: {new Date(item.data_inizio).toLocaleDateString()}
+                            📅 {t.starts}: {new Date(item.data_inizio).toLocaleDateString()}
                         </Text>
                     </View>
 
@@ -193,7 +225,7 @@ const PeriodicTransactionsScreen: React.FC = () => {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
-                            <Text style={styles.emptyText}>No recurring transactions found.</Text>
+                            <Text style={styles.emptyText}>{t.emptyText}</Text>
                         </View>
                     }
                 />

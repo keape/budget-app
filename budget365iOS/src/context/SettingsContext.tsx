@@ -4,14 +4,17 @@ import { useColorScheme } from 'react-native';
 
 type Theme = 'light' | 'dark' | 'system';
 type Currency = '€' | '$' | '£';
+type Language = 'it' | 'en';
 
 interface SettingsContextType {
     theme: Theme;
     currency: Currency;
     showBalance: boolean;
+    language: Language;
     setTheme: (theme: Theme) => void;
     setCurrency: (currency: Currency) => void;
     setShowBalance: (show: boolean) => void;
+    setLanguage: (language: Language) => void;
     isDarkMode: boolean;
 }
 
@@ -22,6 +25,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [theme, setThemeState] = useState<Theme>('system');
     const [currency, setCurrencyState] = useState<Currency>('€');
     const [showBalance, setShowBalanceState] = useState<boolean>(true);
+    const [language, setLanguageState] = useState<Language>('it');
 
     useEffect(() => {
         loadSettings();
@@ -32,10 +36,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const savedTheme = await AsyncStorage.getItem('app_theme');
             const savedCurrency = await AsyncStorage.getItem('app_currency');
             const savedShowBalance = await AsyncStorage.getItem('app_show_balance');
+            const savedLanguage = await AsyncStorage.getItem('app_language');
 
             if (savedTheme) setThemeState(savedTheme as Theme);
             if (savedCurrency) setCurrencyState(savedCurrency as Currency);
             if (savedShowBalance) setShowBalanceState(savedShowBalance === 'true');
+            if (savedLanguage) setLanguageState(savedLanguage as Language);
         } catch (e) {
             console.error('Failed to load settings', e);
         }
@@ -56,6 +62,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await AsyncStorage.setItem('app_show_balance', String(show));
     };
 
+    const setLanguage = async (newLanguage: Language) => {
+        setLanguageState(newLanguage);
+        await AsyncStorage.setItem('app_language', newLanguage);
+    };
+
     const isDarkMode = theme === 'system' ? systemColorScheme === 'dark' : theme === 'dark';
 
     return (
@@ -63,9 +74,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             theme,
             currency,
             showBalance,
+            language,
             setTheme,
             setCurrency,
             setShowBalance,
+            setLanguage,
             isDarkMode
         }}>
             {children}
