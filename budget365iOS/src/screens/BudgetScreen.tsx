@@ -28,6 +28,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useAppTheme } from '../hooks/useAppTheme';
 import { API_URL } from '../config';
 import { warmupBackend } from '../utils/apiClient';
+import { CATEGORY_ICON_CHOICES, searchEmoji } from '../constants/categoryIcons';
 
 const BASE_URL = API_URL;
 const ACCENT = '#c4f23a';
@@ -88,6 +89,10 @@ const STRINGS = {
     archivedCategoriesTitle: 'Categorie archiviate',
     restoreBtn: 'Ripristina',
     modifyCategoryTitle: 'Modifica categoria',
+    chooseIconTitle: 'Scegli icona',
+    customIconPlaceholder: 'Cerca emoji (es. sole, cuore)...',
+    orChooseBelow: 'oppure scegli qui sotto',
+    emojiResultsCount: 'risultati',
     renameSubtitle: (catName: string) => `Rinomina "${catName}" in:`,
     newNamePlaceholder: 'Nuovo nome...',
     renameBtn: 'Rinomina',
@@ -153,6 +158,10 @@ const STRINGS = {
     archivedCategoriesTitle: 'Archived Categories',
     restoreBtn: 'Restore',
     modifyCategoryTitle: 'Modify Category',
+    chooseIconTitle: 'Choose icon',
+    customIconPlaceholder: 'Search emoji (e.g. sun, heart)...',
+    orChooseBelow: 'or pick below',
+    emojiResultsCount: 'results',
     renameSubtitle: (catName: string) => `Rename "${catName}" to:`,
     newNamePlaceholder: 'New name...',
     renameBtn: 'Rename',
@@ -198,6 +207,10 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
   const [budgetSettings, setBudgetSettings] = useState<Record<string, number>>({});
   const [actualSpending, setActualSpending] = useState<Record<string, number>>({});
   const [archivedCategories, setArchivedCategories] = useState<{ spese: string[]; entrate: string[] }>({ spese: [], entrate: [] });
+  const [categoryIcons, setCategoryIcons] = useState<Record<string, string>>({});
+  const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
+  const [categoryForIconPick, setCategoryForIconPick] = useState<string | null>(null);
+  const [customIconInput, setCustomIconInput] = useState('');
 
   // Yearly aggregated state
   const [yearlyBudget, setYearlyBudget] = useState<Record<string, number>>({});
@@ -297,6 +310,18 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
       const archivedSpese: string[] = archData.categorie?.spese || [];
       const archivedEntrate: string[] = archData.categorie?.entrate || [];
       setArchivedCategories({ spese: archivedSpese, entrate: archivedEntrate });
+
+      // 1c. Fetch Category Icons
+      const iconsTipo = activeTab === 'expenses' ? 'spese' : 'entrate';
+      try {
+        const iconsRes = await fetch(`${BASE_URL}/api/categorie/icons?tipo=${iconsTipo}`, {
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        const iconsData = iconsRes.ok ? await iconsRes.json() : { data: {} };
+        setCategoryIcons(iconsData.data || {});
+      } catch {
+        setCategoryIcons({});
+      }
 
       const archivedForTab = activeTab === 'expenses' ? archivedSpese : archivedEntrate;
       const targetCategories = (activeTab === 'expenses'
@@ -812,6 +837,27 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
     );
   };
 
+  const handleSetCategoryIcon = async (catName: string, icona: string) => {
+    const type = activeTab === 'expenses' ? 'spese' : 'entrate';
+
+    setCategoryIcons(prev => ({ ...prev, [catName]: icona }));
+    setIsIconPickerVisible(false);
+    setCategoryForIconPick(null);
+
+    try {
+      await fetch(`${BASE_URL}/api/categorie/icons`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tipo: type, categoria: catName, icona })
+      });
+    } catch (error) {
+      console.error("Set category icon failed", error);
+    }
+  };
+
   const handleArchiveCategory = async (catName: string) => {
     const type = activeTab === 'expenses' ? 'spese' : 'entrate';
 
@@ -983,6 +1029,9 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                 style={styles.collapsedRow}
                 onPress={() => toggleCategoryExpanded(cat)}
               >
+                {categoryIcons[cat] ? (
+                  <Text style={{ fontSize: 18, marginRight: 6 }}>{categoryIcons[cat]}</Text>
+                ) : null}
                 <Text style={[styles.catNameCollapsed, { color: t.text }]} numberOfLines={1}>{cat}</Text>
                 <View style={styles.collapsedValues}>
                   <Text style={[styles.collapsedValueText, { color: t.text2 }]}>
@@ -1029,6 +1078,27 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity
+                    activeOpacity={0.6}
+                    onPress={() => {
+                      setCategoryForIconPick(cat);
+                      setCustomIconInput('');
+                      setIsIconPickerVisible(true);
+                    }}
+                    style={{
+                      marginLeft: 8,
+                      backgroundColor: isDarkMode ? 'rgba(168,139,250,0.18)' : 'rgba(139,92,246,0.12)',
+                      width: 40,
+                      height: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: isDarkMode ? 'rgba(168,139,250,0.35)' : 'rgba(139,92,246,0.25)'
+                    }}
+                  >
+                    <Text style={{ fontSize: 15 }}>{categoryIcons[cat] || '🙂'}</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     activeOpacity={0.6}
                     onPress={() => {
@@ -1181,6 +1251,75 @@ const BudgetScreen: React.FC<BudgetScreenProps> = ({ navigation, route }) => {
                 onPress={handleRenameCategory}
               >
                 <Text style={styles.modalBtnTextSave}>{L.renameBtn}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Icon Picker Modal */}
+      <Modal
+        visible={isIconPickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => { setIsIconPickerVisible(false); setCustomIconInput(''); }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: t.surface }]}>
+            <Text style={[styles.modalTitle, { color: t.text }]}>{L.chooseIconTitle}</Text>
+            <Text style={[styles.modalSubtitle, { color: t.text2 }]}>{categoryForIconPick ?? ''}</Text>
+
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: t.surface2, color: t.text, marginTop: 12, marginBottom: 0 }]}
+              placeholder={L.customIconPlaceholder}
+              placeholderTextColor={t.text3}
+              value={customIconInput}
+              onChangeText={setCustomIconInput}
+            />
+
+            {(() => {
+              const searchResults = searchEmoji(customIconInput);
+              const showSearch = customIconInput.trim().length > 0;
+              const list = showSearch ? searchResults : CATEGORY_ICON_CHOICES;
+              return (
+                <>
+                  <Text style={[styles.modalSubtitle, { color: t.text3, marginTop: 12, marginBottom: 0 }]}>
+                    {showSearch ? `${searchResults.length} ${L.emojiResultsCount}` : L.orChooseBelow}
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
+                    {list.map((icon, idx) => (
+                      <TouchableOpacity
+                        key={`${icon}-${idx}`}
+                        activeOpacity={0.6}
+                        onPress={() => categoryForIconPick && handleSetCategoryIcon(categoryForIconPick, icon)}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 12,
+                          margin: 4,
+                          backgroundColor: categoryForIconPick && categoryIcons[categoryForIconPick] === icon
+                            ? (isDarkMode ? 'rgba(168,139,250,0.35)' : 'rgba(139,92,246,0.20)')
+                            : t.surface2,
+                          borderWidth: 1,
+                          borderColor: t.line
+                        }}
+                      >
+                        <Text style={{ fontSize: 22 }}>{icon}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              );
+            })()}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel, { backgroundColor: t.surface2 }]}
+                onPress={() => { setIsIconPickerVisible(false); setCustomIconInput(''); }}
+              >
+                <Text style={[styles.modalBtnTextCancel, { color: t.text }]}>{L.cancel}</Text>
               </TouchableOpacity>
             </View>
           </View>

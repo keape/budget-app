@@ -177,6 +177,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         allocatedPercent: number;
         monthId: string | null;
     } | null>(null);
+    const [categoryIcons, setCategoryIcons] = useState<Record<string, string>>({});
 
     // ── Header settings ─────────────────────────────────────
     useEffect(() => {
@@ -215,6 +216,17 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             const budgetSettings = budgetRes.ok ? await budgetRes.json() : { spese: {}, entrate: {} };
 
             if (signal?.aborted) return;
+
+            try {
+                const iconsRes = await fetchWithRetry(`${BASE_URL}/api/categorie/icons`, {
+                    headers: { 'Authorization': `Bearer ${userToken}` },
+                    signal,
+                });
+                const iconsData = iconsRes.ok ? await iconsRes.json() : { data: {} };
+                setCategoryIcons(iconsData.data || {});
+            } catch {
+                // Non-blocking
+            }
 
             const tutte_spese = speseData.spese || [];
             const tutte_entrate = entrateData.entrate || [];
@@ -373,23 +385,30 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             : '****';
 
     // ── Sub-components ──────────────────────────────────────
-    const CategoryChip = ({ label, size = 36 }: { label: string; size?: number }) => (
+    const CategoryChip = ({ label, size = 36 }: { label: string; size?: number }) => {
+        const icon = categoryIcons[label];
+        return (
         <View
             style={{
                 width: size,
                 height: size,
                 borderRadius: Math.round(size * 0.25),
-                backgroundColor: getCategoryColor(label),
+                backgroundColor: icon ? undefined : getCategoryColor(label),
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
             }}
         >
-            <Text style={{ color: '#0c0c0c', fontWeight: '800', fontSize: size <= 28 ? 9 : 10 }}>
-                {(label || '?').toUpperCase().slice(0, 3)}
-            </Text>
+            {icon ? (
+                <Text style={{ fontSize: Math.round(size * 0.55) }}>{icon}</Text>
+            ) : (
+                <Text style={{ color: '#0c0c0c', fontWeight: '800', fontSize: size <= 28 ? 9 : 10 }}>
+                    {(label || '?').toUpperCase().slice(0, 3)}
+                </Text>
+            )}
         </View>
-    );
+        );
+    };
 
     // ── Loading state ───────────────────────────────────────
     if (isLoading) {
