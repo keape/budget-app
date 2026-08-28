@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { authenticateToken } = require('./auth');
 const CategoriaArchiviata = require('../models/CategoriaArchiviata');
+const CategoryIcon = require('../models/CategoryIcon');
 const router = express.Router();
 
 // GET Categories - Extract from budget settings
@@ -132,6 +133,8 @@ router.post('/delete', authenticateToken, async (req, res) => {
 
     console.log(`✅ Robust Delete: Modified ${totalModified} documents.`);
 
+    await CategoryIcon.deleteOne({ userId: req.user.userId, tipo: type, categoria: name });
+
     res.json({
       message: "Categoria eliminata globalmente",
       documentsUpdated: totalModified,
@@ -208,6 +211,15 @@ router.post('/rename', authenticateToken, async (req, res) => {
 
     console.log(`✅ Global Rename: Modified ${totalModified} documents.`);
 
+    try {
+      await CategoryIcon.updateOne(
+        { userId: req.user.userId, tipo: type, categoria: oldName },
+        { $set: { categoria: newName } }
+      );
+    } catch (iconError) {
+      console.error('⚠️ CategoryIcon rename skipped (non-blocking):', iconError.message);
+    }
+
     res.json({
       message: "Categoria rinominata globalmente",
       documentsUpdated: totalModified,
@@ -274,6 +286,50 @@ router.post('/disarchivia', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('❌ Unarchive Category Error:', error);
     res.status(500).json({ message: "Errore durante la riattivazione" });
+  }
+});
+
+// GET Category Icons
+router.get('/icons', authenticateToken, async (req, res) => {
+  try {
+    const { tipo } = req.query;
+    const query = { userId: req.user.userId };
+    if (tipo && ['spese', 'entrate'].includes(tipo)) {
+      query.tipo = tipo;
+    }
+
+    const icons = await CategoryIcon.find(query);
+    const map = {};
+    icons.forEach(i => {
+      map[i.categoria] = i.icona;
+    });
+
+    res.json({ success: true, data: map });
+  } catch (error) {
+    console.error('❌ GET Category Icons Error:', error);
+    res.status(500).json({ success: false, message: "Errore nel recupero delle icone categoria" });
+  }
+});
+
+// PUT Set Category Icon
+router.put('/icons', authenticateToken, async (req, res) => {
+  try {
+    const { tipo, categoria, icona } = req.body;
+
+    if (!tipo || !categoria || !icona || !['spese', 'entrate'].includes(tipo)) {
+      return res.status(400).json({ success: false, message: "Tipo, categoria e icona richiesti" });
+    }
+
+    await CategoryIcon.updateOne(
+      { userId: req.user.userId, tipo, categoria },
+      { $set: { icona } },
+      { upsert: true }
+    );
+
+    res.json({ success: true, message: "Icona categoria salvata" });
+  } catch (error) {
+    console.error('❌ PUT Category Icon Error:', error);
+    res.status(500).json({ success: false, message: "Errore nel salvataggio dell'icona" });
   }
 });
 
