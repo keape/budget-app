@@ -64,6 +64,27 @@ const STRINGS = {
     signInWithApple: 'Sign in with Apple',
     registerLink: 'Don\'t have an account? Register',
   },
+  es: {
+    loginFailedTitle: 'Error al iniciar sesión',
+    socialLoginError: 'Error durante el inicio de sesión social',
+    errorTitle: 'Error',
+    networkSocialLoginError: 'Error de red durante el inicio de sesión social',
+    googlePlayServicesUnavailable: 'Google Play Services no disponible',
+    googleSignInFailed: 'Error al iniciar sesión con Google',
+    appleSignInFailed: 'Error al iniciar sesión con Apple',
+    enterCredentials: 'Introduce email/nombre de usuario y contraseña',
+    invalidCredentials: 'Credenciales no válidas',
+    networkErrorTitle: 'Error de red',
+    networkErrorMessage: 'No se pudo conectar con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo.',
+    subtitle: 'Accede a tu cuenta',
+    identifierPlaceholder: 'Email o nombre de usuario',
+    passwordPlaceholder: 'Contraseña',
+    loginButton: 'Acceder',
+    divider: 'O',
+    signInWithGoogle: 'Iniciar sesión con Google',
+    signInWithApple: 'Iniciar sesión con Apple',
+    registerLink: '¿No tienes una cuenta? Regístrate',
+  },
 };
 
 interface LoginScreenProps {
@@ -228,7 +249,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Budget 365</Text>
+          <Text style={[styles.title, isDarkMode && { color: '#4ADE80' }]}>Budget 365</Text>
           <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>{t.subtitle}</Text>
         </View>
 
@@ -296,7 +317,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             style={styles.registerLink}
             onPress={() => navigation.navigate('Register')}
           >
-            <Text style={[styles.registerLinkText, isDarkMode && { color: '#818CF8' }]}>
+            <Text style={[styles.registerLinkText, isDarkMode && { color: '#4ADE80' }]}>
               {t.registerLink}
             </Text>
           </TouchableOpacity>
@@ -323,7 +344,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#4F46E5',
+    color: '#163B2C',
     marginBottom: 8,
   },
   subtitle: {
@@ -347,7 +368,7 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   loginButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#163B2C',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -395,7 +416,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   registerLinkText: {
-    color: '#4F46E5',
+    color: '#163B2C',
     fontSize: 14,
     fontWeight: '500',
   },

@@ -7,13 +7,49 @@
       "size": "20x20"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-40.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "20x20"
+    },
+    {
       "filename": "app-60.png",
       "idiom": "iphone",
       "scale": "3x",
       "size": "20x20"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-60.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "20x20"
+    },
+    {
       "filename": "app-58.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "29x29"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-58.png",
       "idiom": "iphone",
       "scale": "2x",
       "size": "29x29"
@@ -25,7 +61,31 @@
       "size": "29x29"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-87.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "29x29"
+    },
+    {
       "filename": "app-80.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "40x40"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-80.png",
       "idiom": "iphone",
       "scale": "2x",
       "size": "40x40"
@@ -37,7 +97,31 @@
       "size": "40x40"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-120.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "40x40"
+    },
+    {
       "filename": "app-120.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "60x60"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-120.png",
       "idiom": "iphone",
       "scale": "2x",
       "size": "60x60"
@@ -49,13 +133,49 @@
       "size": "60x60"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-180.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "60x60"
+    },
+    {
       "filename": "app-20.png",
       "idiom": "ipad",
       "scale": "1x",
       "size": "20x20"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-20.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "20x20"
+    },
+    {
       "filename": "app-40.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "20x20"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-40.png",
       "idiom": "ipad",
       "scale": "2x",
       "size": "20x20"
@@ -67,7 +187,31 @@
       "size": "29x29"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-29.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "29x29"
+    },
+    {
       "filename": "app-58.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "29x29"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-58.png",
       "idiom": "ipad",
       "scale": "2x",
       "size": "29x29"
@@ -79,7 +223,31 @@
       "size": "40x40"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-40.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "40x40"
+    },
+    {
       "filename": "app-80.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "40x40"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-80.png",
       "idiom": "ipad",
       "scale": "2x",
       "size": "40x40"
@@ -91,7 +259,31 @@
       "size": "76x76"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-76.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "76x76"
+    },
+    {
       "filename": "app-152.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "76x76"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-152.png",
       "idiom": "ipad",
       "scale": "2x",
       "size": "76x76"
@@ -103,7 +295,31 @@
       "size": "83.5x83.5"
     },
     {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-167.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "83.5x83.5"
+    },
+    {
       "filename": "app-1024.png",
+      "idiom": "ios-marketing",
+      "scale": "1x",
+      "size": "1024x1024"
+    },
+    {
+      "appearances": [
+        {
+          "appearance": "luminosity",
+          "value": "dark"
+        }
+      ],
+      "filename": "app-dark-1024.png",
       "idiom": "ios-marketing",
       "scale": "1x",
       "size": "1024x1024"

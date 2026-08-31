@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontWeight: '600',
   },
-  textActive: { color: '#4F46E5', fontWeight: '700' },
+  textActive: { color: '#163B2C', fontWeight: '700' },
   textActiveDark: { color: '#c4f23a', fontWeight: '700' },
 
   yearStrip: {
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   yearChipActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#163B2C',
   },
   yearChipText: {
     fontSize: 13,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
 
   closeBtn: {
     marginTop: 16,
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#163B2C',
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',

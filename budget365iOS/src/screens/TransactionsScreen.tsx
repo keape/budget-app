@@ -91,6 +91,36 @@ const STRINGS = {
     resetFilters: 'Reset Filters',
     emptyState: 'No transactions found.',
   },
+  es: {
+    confirmDeleteTitle: 'Confirmar eliminación',
+    confirmDeleteMsg: '¿Estás seguro de que quieres eliminar esta transacción?',
+    cancel: 'Cancelar',
+    delete: 'Eliminar',
+    successTitle: 'Hecho',
+    successMsg: 'Transacción eliminada',
+    errorTitle: 'Error',
+    errorMsg: 'No se pudo eliminar la transacción',
+    income: 'Ingreso',
+    expense: 'Gasto',
+    incomes: 'Ingresos',
+    expenses: 'Gastos',
+    all: 'Todas',
+    eyebrowTransactions: 'TRANSACCIONES',
+    found: 'ENCONTRADAS',
+    filter: 'FILTRO',
+    addExpense: '+ Gasto',
+    addIncome: '+ Ingreso',
+    searchPlaceholder: '🔍 Buscar en las descripciones...',
+    hideFilters: 'Ocultar filtros',
+    showFilters: 'Mostrar filtros',
+    transactionType: 'TIPO DE TRANSACCIÓN',
+    category: 'CATEGORÍA',
+    dateRange: 'RANGO DE FECHAS (AAAA-MM-DD)',
+    fromPlaceholder: 'Desde (ej. 2024-01-01)',
+    toPlaceholder: 'Hasta (ej. 2024-12-31)',
+    resetFilters: 'Restablecer filtros',
+    emptyState: 'No se encontraron transacciones.',
+  },
 } as const;
 
 interface Transaction {
@@ -346,7 +376,7 @@ const TransactionsScreen: React.FC<{ route?: any }> = ({ route }) => {
             <Text style={[styles.descText, { color: t.text2 }]} numberOfLines={2}>{item.descrizione}</Text>
           ) : null}
 
-          <Text style={[styles.dateText, { color: t.text3 }]}>{new Date(item.data).toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US')}</Text>
+          <Text style={[styles.dateText, { color: t.text3 }]}>{new Date(item.data).toLocaleDateString(language === 'it' ? 'it-IT' : language === 'es' ? 'es-ES' : 'en-US')}</Text>
         </View>
 
         <View style={styles.actionButtons}>

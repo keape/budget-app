@@ -4,7 +4,7 @@ import { useColorScheme } from 'react-native';
 
 type Theme = 'light' | 'dark' | 'system';
 type Currency = '€' | '$' | '£';
-type Language = 'it' | 'en';
+type Language = 'it' | 'en' | 'es';
 
 interface SettingsContextType {
     theme: Theme;

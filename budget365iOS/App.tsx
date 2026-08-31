@@ -22,14 +22,14 @@ import { IconChevronLeft } from './src/components/NavIcons';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const HomeBackButton = ({ onPress }: { onPress: () => void }) => (
+const HomeBackButton = ({ onPress, color }: { onPress: () => void; color: string }) => (
   <TouchableOpacity
     onPress={onPress}
     style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8, paddingVertical: 6, paddingHorizontal: 4 }}
     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
   >
-    <IconChevronLeft size={26} color="#FFFFFF" />
-    <Text style={{ fontSize: 17, color: '#FFFFFF', marginLeft: 2 }}>Home</Text>
+    <IconChevronLeft size={26} color={color} />
+    <Text style={{ fontSize: 17, color, marginLeft: 2 }}>Home</Text>
   </TouchableOpacity>
 );
 
@@ -39,15 +39,15 @@ const MainTabs = () => {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#4F46E5',
+        tabBarActiveTintColor: '#163B2C',
         tabBarInactiveTintColor: isDarkMode ? '#9CA3AF' : '#6B7280',
         tabBarStyle: {
           display: 'none',
         },
         headerStyle: {
-          backgroundColor: isDarkMode ? '#111827' : '#4F46E5',
+          backgroundColor: isDarkMode ? '#0a0a0a' : '#f6f6f4',
         },
-        headerTintColor: '#FFFFFF',
+        headerTintColor: isDarkMode ? '#f4f4f5' : '#0c0c0c',
         headerTitleStyle: {
           fontWeight: 'bold',
         },
@@ -76,7 +76,7 @@ const MainTabs = () => {
         component={TransactionsScreen}
         options={({ navigation }) => ({
           title: 'Search & Filter',
-          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} />,
+          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>🔍</Text>
@@ -89,7 +89,7 @@ const MainTabs = () => {
         component={BudgetScreen}
         options={({ navigation }) => ({
           title: 'Budget',
-          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} />,
+          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>📈</Text>
@@ -102,7 +102,7 @@ const MainTabs = () => {
         component={StatsScreen}
         options={({ navigation }) => ({
           title: 'Stats',
-          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} />,
+          headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Home')} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
           tabBarIcon: ({ color, size }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18, color }}>📊</Text>
@@ -120,8 +120,8 @@ const AppNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <View style={[styles.loadingContainer, isDarkMode && { backgroundColor: '#0a0a0a' }]}>
+        <ActivityIndicator size="large" color="#163B2C" />
       </View>
     );
   }
@@ -183,10 +183,10 @@ const AppNavigator = () => {
               options={({ navigation }) => ({
                 headerShown: true,
                 title: 'New Transaction',
-                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff',
+                headerStyle: { backgroundColor: isDarkMode ? '#0a0a0a' : '#f6f6f4' },
+                headerTintColor: isDarkMode ? '#f4f4f5' : '#0c0c0c',
                 headerBackVisible: false,
-                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
               })}
             />
 
@@ -196,10 +196,10 @@ const AppNavigator = () => {
               options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Settings',
-                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff',
+                headerStyle: { backgroundColor: isDarkMode ? '#0a0a0a' : '#f6f6f4' },
+                headerTintColor: isDarkMode ? '#f4f4f5' : '#0c0c0c',
                 headerBackVisible: false,
-                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
               })}
             />
 
@@ -209,10 +209,10 @@ const AppNavigator = () => {
               options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Recurring Transactions',
-                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff',
+                headerStyle: { backgroundColor: isDarkMode ? '#0a0a0a' : '#f6f6f4' },
+                headerTintColor: isDarkMode ? '#f4f4f5' : '#0c0c0c',
                 headerBackVisible: false,
-                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
               })}
             />
 
@@ -222,11 +222,11 @@ const AppNavigator = () => {
               options={({ navigation }) => ({
                 headerShown: true,
                 title: 'Savings & Portfolio',
-                headerStyle: { backgroundColor: isDarkMode ? '#111827' : '#4F46E5' },
-                headerTintColor: '#fff',
+                headerStyle: { backgroundColor: isDarkMode ? '#0a0a0a' : '#f6f6f4' },
+                headerTintColor: isDarkMode ? '#f4f4f5' : '#0c0c0c',
                 headerTitleStyle: { fontWeight: 'bold' },
                 headerBackVisible: false,
-                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} />,
+                headerLeft: () => <HomeBackButton onPress={() => navigation.navigate('Main', { screen: 'Home' })} color={isDarkMode ? '#f4f4f5' : '#0c0c0c'} />,
               })}
             />
           </>
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#f6f6f4',
   },
 });
 
