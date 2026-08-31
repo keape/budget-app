@@ -137,6 +137,66 @@ const STRINGS = {
         bugPlaceholder: 'Describe the bug here...',
         sendReport: 'Send Report',
     },
+    es: {
+        errorTitle: 'Error',
+        fillAllFields: 'Completa todos los campos',
+        passwordMismatch: 'Las nuevas contraseñas no coinciden',
+        passwordTooShort: 'La nueva contraseña debe tener al menos 6 caracteres',
+        successTitle: 'Éxito',
+        passwordChanged: '¡Contraseña cambiada con éxito!',
+        passwordChangeError: 'Error al cambiar la contraseña',
+        connectionError: 'Error de conexión',
+        deleteWarningTitle: '⚠️ Atención',
+        deleteWarningMsg: '¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es IRREVERSIBLE y todos tus datos se eliminarán definitivamente.',
+        cancel: 'Cancelar',
+        deleteForever: 'Eliminar Definitivamente',
+        accountDeletedTitle: 'Cuenta Eliminada',
+        accountDeletedMsg: 'Tu cuenta y todos los datos han sido eliminados.',
+        deleteAccountError: 'No se pudo eliminar la cuenta',
+        menuChangePassword: '🔒 Cambiar Contraseña',
+        menuCustomization: '🎨 Personalización de la App',
+        menuAbout: 'ℹ️ Sobre Nosotros',
+        menuBug: '🐛 Reportar un Bug',
+        menuLogout: '🚪 Salir',
+        changePasswordTitle: 'Cambiar Contraseña',
+        currentPasswordLabel: 'Contraseña Actual',
+        currentPasswordPlaceholder: 'Introduce la contraseña actual',
+        newPasswordLabel: 'Nueva Contraseña',
+        newPasswordPlaceholder: 'Introduce la nueva contraseña',
+        confirmPasswordLabel: 'Confirma la Nueva Contraseña',
+        confirmPasswordPlaceholder: 'Confirma la nueva contraseña',
+        updatePassword: 'Actualizar Contraseña',
+        back: 'Atrás',
+        aboutTitle: 'Sobre Budget 365',
+        aboutDescription: 'Budget 365 es tu solución completa para la gestión de finanzas personales. Diseñada para ser simple pero potente, te ayuda a seguir tus ingresos y gastos de forma intuitiva.',
+        goalsHeader: '🎯 Nuestros Objetivos',
+        goal1: '✓ Gestión simple y accesible',
+        goal2: '✓ Herramientas potentes sin complejidad',
+        goal3: '✓ Seguridad y privacidad garantizadas',
+        privacyPolicyHeader: '🔒 Política de Privacidad',
+        contactHeader: '✉️ Contáctanos',
+        contactDescription: '¿Preguntas o sugerencias? Escríbenos a keape@me.com',
+        customizationTitle: 'Personalización de la App',
+        themeHeader: '🌓 Tema',
+        themeLight: 'Claro',
+        themeDark: 'Oscuro',
+        themeSystem: 'Sistema',
+        currencyHeader: '💰 Moneda',
+        languageHeader: '🌐 Idioma',
+        privacyHeader: '🛡️ Privacidad',
+        showBalanceLabel: 'Mostrar Saldo en el Panel',
+        dangerZoneHeader: '⚠️ Zona de Peligro',
+        dangerZoneDescription: 'La eliminación de la cuenta es permanente y elimina todos tus datos.',
+        deleteAccountBtn: '🗑️ Eliminar Cuenta',
+        describeBug: 'Describe el bug',
+        noEmailClientTitle: 'Sin Cliente de Correo',
+        noEmailClientMsg: 'No se encontró ningún cliente de correo disponible. Si estás en un simulador, esto es normal. Escribe directamente a keape@me.com.',
+        openEmailClientError: 'No se pudo abrir el cliente de correo. Escribe directamente a keape@me.com.',
+        bugReportTitle: 'Reportar un Bug',
+        bugReportDescription: '¿Encontraste un problema? ¡Avísanos para que podamos solucionarlo!',
+        bugPlaceholder: 'Describe aquí el bug...',
+        sendReport: 'Enviar Reporte',
+    },
 } as const;
 
 const SettingsScreen: React.FC = () => {
@@ -273,7 +333,7 @@ const SettingsScreen: React.FC = () => {
 
     const renderPasswordChange = () => (
         <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.changePasswordTitle}</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#4ADE80' }]}>{t.changePasswordTitle}</Text>
 
             <Text style={[styles.label, isDarkMode && { color: '#E5E7EB' }]}>{t.currentPasswordLabel}</Text>
             <TextInput
@@ -325,7 +385,7 @@ const SettingsScreen: React.FC = () => {
 
     const renderAbout = () => (
         <ScrollView style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.aboutTitle}</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#4ADE80' }]}>{t.aboutTitle}</Text>
             <Text style={[styles.description, isDarkMode && { color: '#D1D5DB' }]}>
                 {t.aboutDescription}
             </Text>
@@ -344,7 +404,7 @@ const SettingsScreen: React.FC = () => {
             >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.privacyPolicyHeader}</Text>
-                    <Text style={{ fontSize: 18, color: '#4F46E5', fontWeight: 'bold' }}>↗️</Text>
+                    <Text style={{ fontSize: 18, color: '#163B2C', fontWeight: 'bold' }}>↗️</Text>
                 </View>
             </TouchableOpacity>
 
@@ -363,7 +423,7 @@ const SettingsScreen: React.FC = () => {
 
     const renderCustomization = () => (
         <ScrollView style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.customizationTitle}</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#4ADE80' }]}>{t.customizationTitle}</Text>
 
             {/* Theme Section */}
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
@@ -403,7 +463,7 @@ const SettingsScreen: React.FC = () => {
             <View style={[styles.section, isDarkMode && { backgroundColor: '#1F2937' }]}>
                 <Text style={[styles.sectionHeader, isDarkMode && { color: '#F3F4F6' }]}>{t.languageHeader}</Text>
                 <View style={styles.optionsRow}>
-                    {([{ code: 'it' as const, label: '🇮🇹 Italiano' }, { code: 'en' as const, label: '🇬🇧 English' }]).map(({ code, label }) => (
+                    {([{ code: 'it' as const, label: '🇮🇹 Italiano' }, { code: 'en' as const, label: '🇬🇧 English' }, { code: 'es' as const, label: '🇪🇸 Español' }]).map(({ code, label }) => (
                         <TouchableOpacity
                             key={code}
                             style={[styles.optionBtn, isDarkMode && { backgroundColor: '#374151', borderColor: '#4B5563' }, language === code && styles.activeOptionBtn]}
@@ -491,7 +551,7 @@ const SettingsScreen: React.FC = () => {
 
     const renderBugReport = () => (
         <View style={[styles.contentContainer, isDarkMode && { backgroundColor: '#111827' }]}>
-            <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>{t.bugReportTitle}</Text>
+            <Text style={[styles.title, isDarkMode && { color: '#4ADE80' }]}>{t.bugReportTitle}</Text>
             <Text style={[styles.description, isDarkMode && { color: '#9CA3AF' }]}>
                 {t.bugReportDescription}
             </Text>
@@ -602,7 +662,7 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
     },
     primaryButton: {
-        backgroundColor: '#4F46E5',
+        backgroundColor: '#163B2C',
         padding: 16,
         borderRadius: 12,
         alignItems: 'center',
@@ -663,8 +723,8 @@ const styles = StyleSheet.create({
         borderColor: '#D1D5DB',
     },
     activeOptionBtn: {
-        backgroundColor: '#4F46E5',
-        borderColor: '#4F46E5',
+        backgroundColor: '#163B2C',
+        borderColor: '#163B2C',
     },
     optionBtnText: {
         color: '#374151',
@@ -681,7 +741,7 @@ const styles = StyleSheet.create({
         padding: 2,
     },
     activeToggleBtn: {
-        backgroundColor: '#4F46E5',
+        backgroundColor: '#163B2C',
     },
     toggleCircle: {
         width: 24,

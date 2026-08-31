@@ -68,6 +68,31 @@ const STRINGS = {
     backButton: 'Back',
     haveAccount: 'Already have an account? Login',
   },
+  es: {
+    errorTitle: 'Error',
+    fillAllFields: 'Completa todos los campos',
+    passwordsMismatch: 'Las contraseñas no coinciden',
+    passwordTooShort: 'La contraseña debe tener al menos 6 caracteres',
+    successTitle: 'Éxito',
+    otpSent: 'Código de verificación enviado a tu email.',
+    otpSendFailed: 'Error al enviar el código de verificación',
+    networkError: 'Error de red. Inténtalo de nuevo más tarde.',
+    enterOtp: 'Introduce el código de verificación',
+    accountCreated: 'Cuenta creada con éxito. Ahora puedes iniciar sesión.',
+    registrationError: 'Error durante el registro',
+    createAccountTitle: 'Crea tu cuenta',
+    verifyEmailTitle: 'Verificar Email',
+    usernamePlaceholder: 'Nombre de usuario',
+    emailPlaceholder: 'Email',
+    passwordPlaceholder: 'Contraseña',
+    confirmPasswordPlaceholder: 'Confirmar contraseña',
+    nextButton: 'Siguiente',
+    otpSentTo: 'Hemos enviado un código de verificación a:',
+    otpPlaceholder: 'Introduce el código de verificación',
+    registerButton: 'Registrarse',
+    backButton: 'Atrás',
+    haveAccount: '¿Ya tienes una cuenta? Inicia sesión',
+  },
 };
 
 interface RegisterScreenProps {
@@ -178,7 +203,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={[styles.title, isDarkMode && { color: '#818CF8' }]}>Budget 365</Text>
+          <Text style={[styles.title, isDarkMode && { color: '#4ADE80' }]}>Budget 365</Text>
           <Text style={[styles.subtitle, isDarkMode && { color: '#9CA3AF' }]}>
             {step === 1 ? t.createAccountTitle : t.verifyEmailTitle}
           </Text>
@@ -286,7 +311,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 onPress={() => setStep(1)}
                 disabled={isLoading}
               >
-                <Text style={[styles.loginLinkText, isDarkMode && { color: '#818CF8' }]}>
+                <Text style={[styles.loginLinkText, isDarkMode && { color: '#4ADE80' }]}>
                   {t.backButton}
                 </Text>
               </TouchableOpacity>
@@ -297,7 +322,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             style={styles.loginLink}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={[styles.loginLinkText, isDarkMode && { color: '#818CF8' }]}>
+            <Text style={[styles.loginLinkText, isDarkMode && { color: '#4ADE80' }]}>
               {t.haveAccount}
             </Text>
           </TouchableOpacity>
@@ -324,7 +349,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#4F46E5',
+    color: '#163B2C',
     marginBottom: 8,
   },
   subtitle: {
@@ -348,7 +373,7 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   registerButton: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#163B2C',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -368,7 +393,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   loginLinkText: {
-    color: '#4F46E5',
+    color: '#163B2C',
     fontSize: 14,
     fontWeight: '500',
   },

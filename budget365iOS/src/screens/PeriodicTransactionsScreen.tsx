@@ -46,6 +46,20 @@ const STRINGS = {
         starts: 'Starts',
         emptyText: 'No recurring transactions found.',
     },
+    es: {
+        errorTitle: 'Error',
+        updateStatusError: 'No se pudo actualizar el estado',
+        networkError: 'Error de red',
+        confirmDeletionTitle: 'Confirmar eliminación',
+        confirmDeletionMessage: '¿Estás seguro de que quieres eliminar esta transacción recurrente?',
+        cancel: 'Cancelar',
+        delete: 'Eliminar',
+        deleteError: 'No se pudo eliminar',
+        active: 'Activa',
+        paused: 'En pausa',
+        starts: 'Inicio',
+        emptyText: 'No se encontraron transacciones recurrentes.',
+    },
 };
 
 interface PeriodicTransaction {
@@ -215,7 +229,7 @@ const PeriodicTransactionsScreen: React.FC = () => {
     return (
         <View style={[styles.container, isDarkMode && { backgroundColor: '#111827' }]}>
             {isLoading ? (
-                <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 50 }} />
+                <ActivityIndicator size="large" color="#163B2C" style={{ marginTop: 50 }} />
             ) : (
                 <FlatList
                     data={transactions}
@@ -250,7 +264,7 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    catText: { fontSize: 14, fontWeight: '700', color: '#4F46E5' },
+    catText: { fontSize: 14, fontWeight: '700', color: '#163B2C' },
     badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
     badgeActive: { backgroundColor: '#D1FAE5' },
     badgeInactive: { backgroundColor: '#F3F4F6' },

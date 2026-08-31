@@ -90,6 +90,36 @@ const STRINGS = {
         noTransactionsYet: 'No transactions yet',
         budgetPrefix: 'Budget: ',
     },
+    es: {
+        months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        heroEyebrow: (m: string, y: number) => `Resumen · ${m} ${y}`,
+        income: 'INGRESOS',
+        expenses: 'GASTOS',
+        addExpenseBtn: '+ Gasto',
+        addIncomeBtn: '+ Ingreso',
+        navTransactions: 'Transacciones',
+        navBudget: 'Presupuesto',
+        navSavings: 'Ahorros',
+        navStats: 'Estadísticas',
+        monthlySavings: 'AHORROS MENSUALES',
+        allocatedPercent: (p: number) => `${p}% asignado`,
+        noSavingsData: 'No hay datos de ahorros para este mes',
+        budgetVsActual: 'PRESUPUESTO VS REAL',
+        edit: 'Editar ›',
+        expensesLabel: 'Gastos',
+        incomeLabel: 'Ingresos',
+        topExpenses: 'GASTOS PRINCIPALES',
+        all: 'Todas ›',
+        noExpensesMonth: 'Ningún gasto este mes',
+        addExpenseGhost: '+ Añadir gasto',
+        topIncome: 'INGRESOS PRINCIPALES',
+        noIncomeMonth: 'Ningún ingreso este mes',
+        addIncomeGhost: '+ Añadir ingreso',
+        recentActivity: 'ACTIVIDAD RECIENTE',
+        noTransactionsYet: 'Todavía no hay transacciones',
+        budgetPrefix: 'Presupuesto: ',
+    },
 } as const;
 
 function getCategoryColor(key: string): string {
@@ -709,7 +739,7 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
                                             {tx.descrizione || tx.categoria}
                                         </Text>
                                         <Text style={[styles.transDate, { color: t.text3 }]}>
-                                            {new Date(tx.data).toLocaleDateString(language === 'it' ? 'it-IT' : 'en-US')}
+                                            {new Date(tx.data).toLocaleDateString(language === 'it' ? 'it-IT' : language === 'es' ? 'es-ES' : 'en-US')}
                                         </Text>
                                     </View>
                                     <Text style={[styles.transAmount, { color: tx.importo >= 0 ? t.pos : t.neg }]}>

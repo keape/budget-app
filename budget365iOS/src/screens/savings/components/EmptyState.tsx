@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     color: '#555555',
   },
   actionBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#163B2C',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,

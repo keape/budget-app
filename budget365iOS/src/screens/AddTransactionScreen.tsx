@@ -97,6 +97,42 @@ const STRINGS = {
     submitButton: (isEditing: boolean, periodica: boolean) =>
       isEditing ? 'Update Transaction' : (periodica ? 'Create Recurring Transaction' : 'Add'),
   },
+  es: {
+    editTitle: 'Editar Transacción',
+    frequenzaMensile: 'Mensual',
+    frequenzaSettimanale: 'Semanal',
+    frequenzaAnnuale: 'Anual',
+    errore: 'Error',
+    campiObbligatori: 'Completa todos los campos obligatorios',
+    utenteNonAutenticato: 'Usuario no autenticado',
+    successo: 'Éxito',
+    transazioneEsito: (tipo: 'spesa' | 'entrata', isEditing: boolean) =>
+      `${tipo === 'spesa' ? 'Gasto' : 'Ingreso'} ${isEditing ? 'actualizado' : 'añadido'} con éxito!`,
+    ok: 'OK',
+    aggiungiUnAltra: 'Añadir otra',
+    impossibileInserire: 'No se pudo insertar la transacción',
+    ricorrenzaDescrizione: (categoria: string) => `Recurrencia ${categoria}`,
+    transazioneRicorrenteCreata: '¡Transacción recurrente creada con éxito!',
+    impossibileCreareRicorrente: 'No se pudo crear la transacción recurrente',
+    erroreRete: 'Error de red. Inténtalo de nuevo más tarde.',
+    modalitaSingola: '📅 Única',
+    modalitaRicorrente: '🔄 Recurrente',
+    vediElencoRicorrenti: '📑 Ver lista de recurrentes',
+    spesa: 'Gasto',
+    entrata: 'Ingreso',
+    importoPlaceholder: (currency: string) => `Importe (${currency} ej. 12,50)`,
+    fine: 'Listo',
+    categoria: 'Categoría',
+    descrizionePlaceholder: 'Descripción (opcional)',
+    data: 'Fecha',
+    opzioniRicorrenza: 'Opciones de Recurrencia',
+    frequenza: 'Frecuencia',
+    dataInizio: 'Fecha de Inicio',
+    ricorrenzaInfinita: 'Recurrencia Infinita',
+    dataFine: 'Fecha de Fin',
+    submitButton: (isEditing: boolean, periodica: boolean) =>
+      isEditing ? 'Actualizar Transacción' : (periodica ? 'Crear Transacción Recurrente' : 'Añadir'),
+  },
 };
 
 interface AddTransactionScreenProps {
@@ -574,7 +610,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
               <Switch
                 value={isInfinito}
                 onValueChange={setIsInfinito}
-                trackColor={{ false: "#767577", true: "#4F46E5" }}
+                trackColor={{ false: "#767577", true: "#163B2C" }}
                 thumbColor={isInfinito ? "#FFFFFF" : "#f4f3f4"}
               />
             </View>
@@ -635,7 +671,7 @@ const AddTransactionScreen: React.FC<AddTransactionScreenProps> = ({ navigation,
             <View style={[styles.modalContent, isDarkMode && { backgroundColor: '#1F2937' }]}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={[styles.modalDoneText, isDarkMode && { color: '#818CF8' }]}>{t.fine}</Text>
+                  <Text style={[styles.modalDoneText, isDarkMode && { color: '#4ADE80' }]}>{t.fine}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -674,7 +710,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   keyboardDoneText: {
-    color: '#4F46E5',
+    color: '#163B2C',
     fontWeight: '600',
     fontSize: 16,
   },
@@ -689,7 +725,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#4F46E5',
+    color: '#163B2C',
     textAlign: 'center',
   },
   modalitySelector: {
@@ -708,7 +744,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalityButtonActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#163B2C',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -790,8 +826,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
   categoriaButtonActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: '#163B2C',
+    borderColor: '#163B2C',
   },
   categoriaButtonText: {
     fontSize: 14,
@@ -864,8 +900,8 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
   },
   chipActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#4F46E5',
+    backgroundColor: '#163B2C',
+    borderColor: '#163B2C',
   },
   chipText: {
     color: '#374151',
@@ -898,7 +934,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   modalDoneText: {
-    color: '#4F46E5',
+    color: '#163B2C',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -913,7 +949,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewRecurringBtnText: {
-    color: '#4F46E5',
+    color: '#163B2C',
     fontWeight: '700',
     fontSize: 15,
   },
