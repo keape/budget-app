@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SerieChart from './components/SerieChart';
+import PatrimonioBreakdown from './components/PatrimonioBreakdown';
 import Sparkline from './components/Sparkline';
 import SelettorePeriodo from './components/SelettorePeriodo';
+import SelettoreVista from './components/SelettoreVista';
 import Modale from './components/Modale';
 import { fetchWithRetry } from './utils/fetchWithRetry';
 import {
-  COLORE_TIPO,
+  barreDelPatrimonio,
+  coloreDelTipo,
+  coloriPerTipo,
   conSegno,
   dataBreve,
   dataRelativa,
@@ -19,14 +23,16 @@ import {
   puntiDaFotografie,
   puntiDaSerie,
   raggruppaPerTipo,
+  tagliaAsse,
   tipiAttivita,
   tipiDebito,
   variazione
 } from './utils/patrimonioFormat';
 
 // Il Patrimonio: ogni riga è un conto — un'Attività o un Debito, le due specie dell'ADR-0005
-// — raggruppata per Tipo. In alto il totale e la sua curva; a destra la sintesi per Tipo e
-// gli ultimi trasferimenti. Cliccando un conto si apre la sua scheda.
+// — raggruppata per Tipo. In alto il totale e la sua curva, che si può guardare anche come
+// ripartizione per Tipo; a destra la sintesi per Tipo e gli ultimi trasferimenti. Cliccando
+// un conto si apre la sua scheda.
 
 // La forma vuota del modulo «Nuovo conto». I campi del piano servono solo ai Debiti: di un
 // Debito bastano il residuo, la rata e la scadenza, e il tasso, se non lo si conosce, lo
@@ -90,7 +96,13 @@ function Patrimonio() {
 
   const [dati, setDati] = useState(null);
   const [trasferimenti, setTrasferimenti] = useState([]);
-  const [periodo, setPeriodo] = useState('1a');
+  const [periodo, setPeriodo] = useState('anno');
+  const [vista, setVista] = useState('curva');
+  // Le serie lunghe (la storia intera di ogni conto) non arrivano con la pagina: si chiedono
+  // la prima volta che si guarda la ripartizione, e si buttano a ogni ricarica dei dati.
+  const [serie, setSerie] = useState(null);
+  const [erroreSerie, setErroreSerie] = useState(null);
+  const [tentativoSerie, setTentativoSerie] = useState(0);
   const [gruppiChiusi, setGruppiChiusi] = useState({});
   const [pannello, setPannello] = useState(null);
 
@@ -119,6 +131,8 @@ function Patrimonio() {
         fetchWithRetry('/api/trasferimenti', { headers: intestazioni, params: { limit: 50 } })
       ]);
       setDati(patrimonioRes.data.data);
+      // I dati sono cambiati: le serie lunghe della ripartizione vanno richieste di nuovo.
+      setSerie(null);
       setTrasferimenti(trasferimentiRes.data.data || []);
       setErrore(null);
     } catch (err) {
@@ -136,6 +150,26 @@ function Patrimonio() {
     }
     carica();
   }, [navigate, carica, token]);
+
+  // Le serie della ripartizione: una richiesta sola, alla prima apertura della vista. Il
+  // token si legge dentro l'effetto (e non dalle intestazioni ricostruite a ogni render),
+  // altrimenti un errore di rete rimetterebbe in coda la stessa richiesta all'infinito.
+  useEffect(() => {
+    if (vista !== 'ripartizione' || serie || !token) return;
+    let annullato = false;
+    setErroreSerie(null);
+    fetchWithRetry('/api/patrimonio/serie', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (!annullato) setSerie(res.data?.data || { asse: [], voci: [] });
+      })
+      .catch((err) => {
+        console.error('Errore nel caricamento delle serie del patrimonio:', err);
+        if (!annullato) setErroreSerie('Impossibile caricare la ripartizione. Riprova.');
+      });
+    return () => {
+      annullato = true;
+    };
+  }, [vista, serie, token, tentativoSerie]);
 
   const chiama = async (metodo, percorso, corpo) => {
     setAvviso(null);
@@ -162,6 +196,19 @@ function Patrimonio() {
 
   const puntiVisibili = useMemo(() => filtraPeriodo(puntiTotali, periodo), [puntiTotali, periodo]);
   const deltaP = variazione(puntiVisibili);
+
+  // Un colore solo per Tipo: la pallina della sintesi e il blocco nel grafico a barre sono la
+  // stessa cosa, e il colore non cambia quando un totale supera un altro.
+  const coloriTipi = useMemo(() => coloriPerTipo(dati?.tipi || []), [dati]);
+
+  // La ripartizione per Tipo: gli stessi mesi della curva, tagliati con lo stesso periodo.
+  const ripartizione = useMemo(() => {
+    if (!serie) return null;
+    return barreDelPatrimonio(serie.asse, serie.voci, {
+      colori: coloriTipi,
+      mesi: tagliaAsse(serie.asse, periodo)
+    });
+  }, [serie, periodo, coloriTipi]);
 
   const gruppi = useMemo(() => raggruppaPerTipo(dati?.voci || []), [dati]);
 
@@ -674,11 +721,39 @@ function Patrimonio() {
                     </p>
                   )}
                 </div>
-                <SelettorePeriodo valore={periodo} onChange={setPeriodo} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <SelettoreVista valore={vista} onChange={setVista} />
+                  <SelettorePeriodo valore={periodo} onChange={setPeriodo} />
+                </div>
               </div>
 
               <div className="mt-4">
-                {puntiVisibili.length >= 2 ? (
+                {vista === 'ripartizione' ? (
+                  erroreSerie ? (
+                    <div className="py-8 text-center">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{erroreSerie}</p>
+                      <button
+                        type="button"
+                        className={`${bottoneSecondario} mt-3`}
+                        onClick={() => {
+                          setSerie(null);
+                          setErroreSerie(null);
+                          setTentativoSerie((n) => n + 1);
+                        }}
+                      >
+                        Riprova
+                      </button>
+                    </div>
+                  ) : ripartizione ? (
+                    <PatrimonioBreakdown
+                      barre={ripartizione.barre}
+                      tipi={ripartizione.tipi}
+                      perAnno={ripartizione.perAnno}
+                    />
+                  ) : (
+                    <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Carico la ripartizione…</p>
+                  )
+                ) : puntiVisibili.length >= 2 ? (
                   <SerieChart punti={puntiVisibili} colore={dati.patrimonio < 0 ? '#e11d48' : '#6366f1'} />
                 ) : (
                   <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
@@ -689,7 +764,7 @@ function Patrimonio() {
                 )}
               </div>
 
-              {!curvaMisurata && puntiVisibili.length >= 2 && (
+              {vista === 'curva' && !curvaMisurata && puntiVisibili.length >= 2 && (
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Curva ricostruita dai movimenti dei conti che esistono oggi: da questo mese la Fotografia
                   mensile la sostituisce con il valore misurato.
@@ -801,8 +876,8 @@ function Patrimonio() {
           </div>
 
           <aside className="space-y-5">
-            {[{ titolo: 'Attività', totale: dati.attivita, voci: sintesi.attivita, base: '#6366f1' },
-              { titolo: 'Debiti', totale: dati.debiti, voci: sintesi.debiti, base: '#e11d48' }].map((sezione, indiceSezione) => (
+            {[{ titolo: 'Attività', totale: dati.attivita, voci: sintesi.attivita },
+              { titolo: 'Debiti', totale: dati.debiti, voci: sintesi.debiti }].map((sezione) => (
               <section key={sezione.titolo} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
                 <div className="flex items-baseline justify-between">
                   <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">{sezione.titolo}</h2>
@@ -812,22 +887,22 @@ function Patrimonio() {
                 {sezione.voci.length > 0 ? (
                   <>
                     <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800" role="presentation">
-                      {sezione.voci.map((tipo, i) => (
+                      {sezione.voci.map((tipo) => (
                         <span
                           key={tipo.nome}
                           style={{
                             width: `${Math.max(percentuale(tipo.totale, sezione.totale), 2)}%`,
-                            background: COLORE_TIPO[(i + indiceSezione * 3) % COLORE_TIPO.length]
+                            background: coloreDelTipo(coloriTipi, tipo.nome)
                           }}
                         />
                       ))}
                     </div>
                     <ul className="mt-3 space-y-1.5">
-                      {sezione.voci.map((tipo, i) => (
+                      {sezione.voci.map((tipo) => (
                         <li key={tipo.nome} className="flex items-center gap-2 text-sm">
                           <span
                             className="h-2 w-2 shrink-0 rounded-full"
-                            style={{ background: COLORE_TIPO[(i + indiceSezione * 3) % COLORE_TIPO.length] }}
+                            style={{ background: coloreDelTipo(coloriTipi, tipo.nome) }}
                             aria-hidden="true"
                           />
                           <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{tipo.nome}</span>

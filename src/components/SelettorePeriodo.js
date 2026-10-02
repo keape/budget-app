@@ -14,7 +14,7 @@ function SelettorePeriodo({ valore, onChange, periodi = PERIODI }) {
             type="button"
             onClick={() => onChange(p.id)}
             aria-pressed={attivo}
-            className={`px-2.5 py-1 text-xs font-medium rounded-[6px] transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+            className={`px-2.5 py-1 text-xs font-medium whitespace-nowrap rounded-[6px] transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
               attivo
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'

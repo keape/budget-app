@@ -76,7 +76,7 @@ function ContoDettaglio() {
   const [caricamento, setCaricamento] = useState(true);
   const [errore, setErrore] = useState(null);
   const [avviso, setAvviso] = useState(null);
-  const [periodo, setPeriodo] = useState('1a');
+  const [periodo, setPeriodo] = useState('anno');
   const [pannello, setPannello] = useState(null);
   const [rettifica, setRettifica] = useState({ importo: '', descrizione: '' });
   // Il Movimento in corso di modifica: { id, tipo, importo, categoria, descrizione, data }.

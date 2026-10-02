@@ -64,6 +64,36 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/patrimonio/serie — la storia mensile di ogni conto aperto, dalla prima
+// registrazione a oggi, più l'asse dei mesi. È il dato del grafico a blocchi (le Attività
+// sopra lo zero, i Debiti sotto): la pagina del Patrimonio porta solo gli ultimi 12 mesi di
+// ogni conto (la sparkline), e chiedere la storia intera qui evita di gonfiare la risposta
+// che la Home e la pagina caricano a ogni apertura. Non scrive nulla (a differenza di GET /).
+router.get('/serie', authenticateToken, async (req, res) => {
+  try {
+    const dati = await patrimonio.calcolaPatrimonio(req.user.userId, { conSerieCompleta: true });
+
+    return res.json({
+      success: true,
+      data: {
+        asse: dati.asse,
+        voci: dati.voci.map((v) => ({
+          id: v.id,
+          nome: v.nome,
+          specie: v.specie,
+          gruppo: v.gruppo,
+          tipo: v.tipo ? { id: v.tipo.id, nome: v.tipo.nome, ordine: v.tipo.ordine } : null,
+          valore: v.valore,
+          serie: v.serie || []
+        }))
+      }
+    });
+  } catch (err) {
+    logError('❌ Errore nel calcolo delle serie del patrimonio:', err);
+    return res.status(500).json({ success: false, error: 'Errore nel calcolo delle serie del patrimonio' });
+  }
+});
+
 // GET /api/patrimonio/fotografie — solo lo storico, senza scrivere nulla.
 router.get('/fotografie', authenticateToken, async (req, res) => {
   try {

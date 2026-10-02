@@ -15,7 +15,7 @@ import {
 // Il blocco del patrimonio nella Home: il totale, la sua curva e i tre gruppi (Denaro,
 // Beni, Debiti). Le righe sono conti: cliccandone uno si apre la sua scheda.
 function PatrimonioRiepilogo({ dati, onApri }) {
-  const [periodo, setPeriodo] = useState('1a');
+  const [periodo, setPeriodo] = useState('anno');
 
   const curvaMisurata = (dati?.fotografie || []).length >= 2;
   const punti = useMemo(() => {

@@ -99,6 +99,10 @@ Un valore dichiarato con la sua data. L'insieme delle Valutazioni di una Compone
 **Fotografia mensile**:
 Il valore del Patrimonio registrato alla chiusura di un mese. Quella del mese in corso è **provvisoria**: viene riscritta a ogni ricalcolo e diventa definitiva quando il mese successivo la sostituisce. Lo storico comincia dal mese in cui la Fotografia ha iniziato a essere scritta.
 
+**Ripartizione**:
+La vista del Patrimonio che mostra di che cosa è fatto, mese per mese: un blocco per Tipo sopra lo zero (le Attività) e uno sotto (i Debiti). È la stessa storia della **Curva** guardata dall'altro lato — la Curva dice quanto vale il Patrimonio, la Ripartizione dice di che cosa è composto — e le due viste condividono il **periodo** (ultimo mese, 90 giorni, da inizio anno, sempre). Quando i mesi sono troppi per disegnarli tutti, le barre diventano annuali e ognuna porta il valore dell'**ultimo mese dell'anno**, non la somma dell'anno: un saldo si legge, non si somma.
+_Avoid_: breakdown, composizione, torta
+
 ### Debiti
 
 **Rata**:

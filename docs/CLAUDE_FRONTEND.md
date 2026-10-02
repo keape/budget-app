@@ -11,12 +11,12 @@
 - `Transazioni.js` — Transaction list
 - `Budget.js` — Budget view with charts
 - `BudgetSettings.js` — Budget configuration
-- `Filtri.js` — Filters and reporting
+- `Filtri.js` — pagina **Transazioni**: elenco dei movimenti raggruppato per giorno con i filtri raccolti in tre comandi in testa (Cerca nella nota, Data, Filtri) e il riquadro Riepilogo a destra. L'indirizzo resta `/filtri`. I grafici sono usciti da qui: andranno nella pagina Statistiche
 - `Login.js`, `Register.js` — Authentication
 - `ForgotPassword.js`, `ResetPassword.js`, `ChangePassword.js` — Password management
 - `AboutUs.js` — About page
 - `Savings.js` — modulo risparmio (sospeso: il piano di allocazione è una sessione a sé)
-- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme e sintesi. "Nuovo conto" apre una modale con la creazione e la gestione dei Tipi di voce (rinomina, denaro/bene, archivia, elimina); scegliendo un Tipo della sezione **DEBITI** la modale chiede il piano del debito (residuo di oggi, rata, scadenza, tasso facoltativo, categoria della rata)
+- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme (Curva o Ripartizione, stesso periodo) e sintesi. "Nuovo conto" apre una modale con la creazione e la gestione dei Tipi di voce (rinomina, denaro/bene, archivia, elimina); scegliendo un Tipo della sezione **DEBITI** la modale chiede il piano del debito (residuo di oggi, rata, scadenza, tasso facoltativo, categoria della rata). Le serie lunghe della Ripartizione si chiedono a parte (`GET /api/patrimonio/serie`) la prima volta che si apre quella vista, e si buttano a ogni ricarica dei dati
 - `ContoDettaglio.js` — scheda di un conto: andamento e suoi Movimenti, con modifica ed eliminazione per ciascun movimento (rotta `/patrimonio/:voceId`). Per un **Debito** la stessa scheda mostra il residuo, il piano (rata, rate che restano, prossima rata, interessi che restano), le rate registrate con l'annullamento, "Registra la rata" (le due quote sono modificabili) e "Aggiorna il residuo" (si dichiara il residuo vero, non una differenza)
 - `Home_backup.js`, `Home_new.js` — Legacy backups (NOT used by App.js)
 
@@ -26,7 +26,7 @@
 /transazioni         Transaction list (protected)
 /budget              Budget view (protected)
 /budget/settings     Budget settings (protected)
-/filtri              Filters/reports (protected)
+/filtri              Transazioni: elenco dei movimenti (protected)
 /patrimonio          Elenco dei conti con grafico e sintesi (protected)
 /patrimonio/:voceId  Scheda di un conto: andamento e movimenti (protected)
 /savings             Risparmio (protected)
@@ -48,8 +48,10 @@
 - `MonthlySummaryChart.js` — Monthly summary chart
 - `PatrimonioRiepilogo.js` — blocco centrale della Home: patrimonio, gruppi Denaro/Beni/Debiti, grafico
 - `SerieChart.js` — grafico a area di una serie mensile (patrimonio complessivo o singolo conto)
+- `PatrimonioBreakdown.js` — grafico a blocchi della Ripartizione: un blocco per Tipo, Attività sopra lo zero e Debiti sotto (valori negativi, `stackOffset="sign"`); i colori arrivano da `coloriPerTipo`, gli stessi della sintesi accanto
 - `Sparkline.js` — traccia compatta accanto a un conto nell'elenco (SVG disegnato a mano)
-- `SelettorePeriodo.js` — periodo del grafico (1 mese / 6 mesi / 1 anno / tutto)
+- `SelettorePeriodo.js` — periodo del grafico (ultimo mese / 90 giorni / da inizio anno / sempre), uguale in tutte le viste del Patrimonio
+- `SelettoreVista.js` — come si guarda il grafico d'insieme: Curva o Ripartizione (stessa scelta di periodo per entrambe)
 - `Modale.js` — finestra sopra la pagina (Esc, click fuori, fuoco che entra ed esce): usata da "Nuovo conto" e dalla modifica di un movimento
 - `NotificationBar.js` — In-app notifications
 - `GoogleSignInButton.js` — pulsante ufficiale "Accedi con Google" (Google Identity Services); renderizzato solo se `REACT_APP_GOOGLE_CLIENT_ID` è impostata
@@ -65,7 +67,7 @@
 - `useBudgetCalculations.js` — budget vs actual, chart data, sorting
 
 ## Utilità (`/src/utils/`)
-- `patrimonioFormat.js` — importi, etichette dei mesi, date relative, punti delle serie, colori dei Tipi
+- `patrimonioFormat.js` — importi, etichette dei mesi, date relative, punti delle serie, periodo del grafico (`PERIODI`, `tagliaAsse`, `filtraPeriodo`), barre della Ripartizione (`barreDelPatrimonio`) e colori dei Tipi (`coloriPerTipo`: un Tipo ha un colore solo in tutta la pagina)
 
 ## Key Files
 - `ThemeContext.js` — dark/light mode; persists to localStorage; `useTheme()` → `{ darkMode, toggleDarkMode }`
