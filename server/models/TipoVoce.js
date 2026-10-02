@@ -5,18 +5,25 @@ const mongoose = require('mongoose');
 // denaro o bene materiale: da quella scelta dipendono il gruppo della Home (Denaro, Beni,
 // Debiti) e i Movimenti ammessi (una Spesa non ha senso su un bene materiale).
 // Il catalogo è dell'utente: si crea, rinomina, archivia. Aggiungere «barca» è un dato.
+//
+// `ordine` è l'ordine con cui i Tipi si mostrano nel menù e nell'elenco: prima le Attività
+// (contanti, conto corrente, investimenti, immobili, veicoli, beni di valore, crediti,
+// altri asset) e poi i Debiti (mutui, finanziamenti, carte di credito, altre liability).
+// È un numero perché l'ordine è una preferenza, non una regola: si cambia senza toccare il codice.
 
 const CATALOGO_INIZIALE = [
-  { nome: 'Contanti', specie: 'attivita', denaro: true },
-  { nome: 'Conti correnti', specie: 'attivita', denaro: true },
-  { nome: 'Investimenti', specie: 'attivita', denaro: true },
-  { nome: 'Crediti', specie: 'attivita', denaro: true },
-  { nome: 'Immobili', specie: 'attivita', denaro: false },
-  { nome: 'Veicoli', specie: 'attivita', denaro: false },
-  { nome: 'Beni di valore', specie: 'attivita', denaro: false },
-  { nome: 'Carte di credito', specie: 'debito', pianoAmmortamento: false },
-  { nome: 'Mutui', specie: 'debito', pianoAmmortamento: true },
-  { nome: 'Finanziamenti', specie: 'debito', pianoAmmortamento: true }
+  { nome: 'Contanti', specie: 'attivita', denaro: true, ordine: 10 },
+  { nome: 'Conti correnti', specie: 'attivita', denaro: true, ordine: 20 },
+  { nome: 'Investimenti', specie: 'attivita', denaro: true, ordine: 30 },
+  { nome: 'Immobili', specie: 'attivita', denaro: false, ordine: 40 },
+  { nome: 'Veicoli', specie: 'attivita', denaro: false, ordine: 50 },
+  { nome: 'Beni di valore', specie: 'attivita', denaro: false, ordine: 60 },
+  { nome: 'Crediti', specie: 'attivita', denaro: true, ordine: 70 },
+  { nome: 'Altri asset', specie: 'attivita', denaro: false, ordine: 80 },
+  { nome: 'Mutui', specie: 'debito', pianoAmmortamento: true, ordine: 110 },
+  { nome: 'Finanziamenti', specie: 'debito', pianoAmmortamento: true, ordine: 120 },
+  { nome: 'Carte di credito', specie: 'debito', pianoAmmortamento: false, ordine: 130 },
+  { nome: 'Altre liability', specie: 'debito', pianoAmmortamento: false, ordine: 140 }
 ];
 
 const tipoVoceSchema = new mongoose.Schema(
@@ -52,6 +59,12 @@ const tipoVoceSchema = new mongoose.Schema(
     sistema: {
       type: Boolean,
       default: false
+    },
+    // Ordine di visualizzazione: prima le Attività, poi i Debiti. I Tipi creati dall'utente
+    // nascono in fondo alla loro sezione.
+    ordine: {
+      type: Number,
+      default: 1000
     },
     archiviato: {
       type: Boolean,

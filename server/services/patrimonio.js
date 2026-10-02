@@ -42,13 +42,24 @@ class ErroreVoce extends Error {
 // ---------------------------------------------------------------------------
 
 // Il catalogo iniziale è un elenco di dati, non di codice: l'utente può creare «barca»
-// o «cripto» senza che nessuno tocchi una riga di sorgente.
+// o «cripto» senza che nessuno tocchi una riga di sorgente. La funzione crea i Tipi che
+// mancano e riallinea l'ordine di quelli del catalogo, così una versione successiva del
+// catalogo arriva anche agli utenti che c'erano già.
 async function assicuraCatalogoTipi(userId) {
   const esistenti = await TipoVoce.find({ userId });
-  const perNome = new Set(esistenti.map((t) => t.nome.trim().toLowerCase()));
+  const perNome = new Map(esistenti.map((t) => [t.nome.trim().toLowerCase(), t]));
+
   const mancanti = TipoVoce.CATALOGO_INIZIALE
     .filter((t) => !perNome.has(t.nome.toLowerCase()))
     .map((t) => ({ ...t, userId, sistema: true }));
+
+  // L'ordine è una preferenza dell'utente: si corregge solo sui Tipi del catalogo che non
+  // l'hanno mai ricevuto o che sono rimasti a un catalogo precedente, e solo se diverso.
+  const daRiordinare = esistenti.filter((t) => {
+    if (!t.sistema) return false;
+    const previsto = TipoVoce.CATALOGO_INIZIALE.find((c) => c.nome.toLowerCase() === t.nome.trim().toLowerCase());
+    return previsto && previsto.ordine !== t.ordine;
+  });
 
   if (mancanti.length > 0) {
     try {
@@ -62,7 +73,16 @@ async function assicuraCatalogoTipi(userId) {
     }
   }
 
-  return TipoVoce.find({ userId }).sort({ specie: 1, nome: 1 });
+  if (daRiordinare.length > 0) {
+    await TipoVoce.bulkWrite(
+      daRiordinare.map((t) => {
+        const previsto = TipoVoce.CATALOGO_INIZIALE.find((c) => c.nome.toLowerCase() === t.nome.trim().toLowerCase());
+        return { updateOne: { filter: { _id: t._id }, update: { $set: { ordine: previsto.ordine } } } };
+      })
+    );
+  }
+
+  return TipoVoce.find({ userId }).sort({ specie: 1, ordine: 1, nome: 1 });
 }
 
 // Ogni utente ha un Conto principale: l'Attività che riceve i Movimenti già registrati e
@@ -354,7 +374,7 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
       id: voceEntita._id,
       nome: voceEntita.nome,
       specie,
-      tipo: tipo ? { id: tipo._id, nome: tipo.nome, specie: tipo.specie, denaro: tipo.denaro } : null,
+      tipo: tipo ? { id: tipo._id, nome: tipo.nome, specie: tipo.specie, denaro: tipo.denaro, ordine: tipo.ordine } : null,
       gruppo: specie === 'debito' ? 'debiti' : GRUPPO_DA_TIPO(tipo),
       valore: arrotonda(dettaglio.reduce((somma, c) => somma + c.valore, 0)),
       componenti: dettaglio,

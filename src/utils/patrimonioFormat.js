@@ -100,8 +100,43 @@ export const variazione = (punti) => {
   return punti[punti.length - 1].valore - punti[punti.length - 2].valore;
 };
 
-// I Tipi si mostrano raggruppati: prima il denaro, poi i beni materiali, infine i Debiti.
+// I Tipi si mostrano in due sezioni — quello che possiedi e quello che devi — e dentro ogni
+// sezione nell'ordine che il catalogo dichiara (`ordine`), non in ordine alfabetico: prima i
+// contanti, poi il conto corrente, e così via. La sezione è la specie della Voce.
 const ORDINE_SPECIE = { denaro: 0, bene: 1, debito: 2 };
+
+export const perOrdine = (a, b) => {
+  const oa = a.ordine === undefined || a.ordine === null ? 1000 : Number(a.ordine);
+  const ob = b.ordine === undefined || b.ordine === null ? 1000 : Number(b.ordine);
+  return oa - ob || String(a.nome).localeCompare(String(b.nome));
+};
+
+export const tipiAttivita = (tipi = []) =>
+  tipi.filter((t) => t.specie === 'attivita' && !t.archiviato).sort(perOrdine);
+
+export const tipiDebito = (tipi = []) =>
+  tipi.filter((t) => t.specie === 'debito' && !t.archiviato).sort(perOrdine);
+
+// Come si legge la scelta: che cosa sto creando e che effetto ha sul patrimonio. È la frase
+// che toglie l'ambiguità fra un'attività e un debito.
+export const naturaTipo = (tipo) => {
+  if (!tipo) return null;
+  if (tipo.specie === 'debito') {
+    return {
+      titolo: 'Debito',
+      testo: 'Quello che devi: riduce il patrimonio. I Debiti arrivano con la fetta successiva.'
+    };
+  }
+  return tipo.denaro
+    ? {
+        titolo: 'Attività · denaro',
+        testo: 'Il saldo di questo conto entra nel patrimonio e può ricevere spese ed entrate.'
+      }
+    : {
+        titolo: 'Attività · bene materiale',
+        testo: 'Entra nel patrimonio al valore che dichiari; riceve trasferimenti e rettifiche, non spese.'
+      };
+};
 
 export const COLORE_TIPO = [
   '#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
@@ -119,6 +154,7 @@ export const raggruppaPerTipo = (voci = []) => {
       gruppi.set(nome, {
         nome,
         ordine,
+        ordineTipo: voce.tipo && voce.tipo.ordine !== undefined && voce.tipo.ordine !== null ? Number(voce.tipo.ordine) : 1000,
         debito,
         emoji: EMOJI_TIPO[nome] || (debito ? '📉' : '📦'),
         voci: [],
@@ -134,7 +170,7 @@ export const raggruppaPerTipo = (voci = []) => {
 
   return [...gruppi.values()]
     .map((g) => ({ ...g, totale: Math.round(g.totale * 100) / 100, delta: Math.round(g.delta * 100) / 100 }))
-    .sort((a, b) => (a.ordine - b.ordine) || a.nome.localeCompare(b.nome));
+    .sort((a, b) => (a.ordine - b.ordine) || (a.ordineTipo - b.ordineTipo) || a.nome.localeCompare(b.nome));
 };
 
 // L'emoji è un'etichetta del Tipo (come le icone di categoria nel resto dell'app), non un
@@ -147,7 +183,9 @@ export const EMOJI_TIPO = {
   Immobili: '🏠',
   Veicoli: '🚗',
   'Beni di valore': '💎',
+  'Altri asset': '📦',
   'Carte di credito': '💳',
   Mutui: '🏚️',
-  Finanziamenti: '📉'
+  Finanziamenti: '📉',
+  'Altre liability': '📉'
 };

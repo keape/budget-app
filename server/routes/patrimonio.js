@@ -41,6 +41,7 @@ router.get('/', authenticateToken, async (req, res) => {
           specie: t.specie,
           denaro: t.denaro,
           pianoAmmortamento: t.pianoAmmortamento,
+          ordine: t.ordine,
           sistema: t.sistema,
           archiviato: t.archiviato
         })),

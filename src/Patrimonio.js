@@ -12,10 +12,13 @@ import {
   etichettaVariazione,
   euro,
   filtraPeriodo,
+  naturaTipo,
   percentuale,
   puntiDaFotografie,
   puntiDaSerie,
   raggruppaPerTipo,
+  tipiAttivita,
+  tipiDebito,
   variazione
 } from './utils/patrimonioFormat';
 
@@ -159,7 +162,10 @@ function Patrimonio() {
     };
   }, [dati]);
 
-  const tipiAttivi = (dati?.tipi || []).filter((t) => !t.archiviato && t.specie === 'attivita');
+  const tipiAttivi = tipiAttivita(dati?.tipi);
+  const tipiPassivi = tipiDebito(dati?.tipi);
+  const tipoScelto = (dati?.tipi || []).find((t) => String(t.id) === String(nuovaVoce.tipoId));
+  const naturaScelta = naturaTipo(tipoScelto);
 
   const creaVoce = async (e) => {
     e.preventDefault();
@@ -232,7 +238,11 @@ function Patrimonio() {
 
       {pannello === 'conto' && (
         <form onSubmit={creaVoce} className="mb-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Nuovo conto</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Nuovo conto</h2>
+          <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+            Il tipo dice che cosa stai creando: un'<strong className="font-semibold text-gray-700 dark:text-gray-200">Attività</strong>, che
+            entra nel patrimonio, oppure un <strong className="font-semibold text-gray-700 dark:text-gray-200">Debito</strong>, che lo riduce.
+          </p>
           <div className="grid gap-3 sm:grid-cols-3">
             <input
               className={campi}
@@ -249,14 +259,46 @@ function Patrimonio() {
               required
             >
               <option value="">Tipo di voce</option>
-              {tipiAttivi.map((t) => (
-                <option key={String(t.id)} value={t.id}>
-                  {t.nome} {t.denaro ? '· denaro' : '· bene materiale'}
-                </option>
-              ))}
+              <optgroup label="ATTIVITÀ — quello che possiedi">
+                {tipiAttivi.map((t) => (
+                  <option key={String(t.id)} value={String(t.id)}>
+                    {t.nome} — {t.denaro ? 'denaro' : 'bene materiale'}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="DEBITI — quello che devi (in arrivo)">
+                {tipiPassivi.map((t) => (
+                  <option key={String(t.id)} value={String(t.id)} disabled>
+                    {t.nome} — debito
+                  </option>
+                ))}
+              </optgroup>
             </select>
-            <button type="submit" className={bottonePrimario}>Crea conto</button>
+            <button type="submit" className={bottonePrimario} disabled={!!tipoScelto && tipoScelto.specie === 'debito'}>
+              Crea conto
+            </button>
           </div>
+
+          <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">
+            {naturaScelta ? (
+              <>
+                <span
+                  className={`mr-2 rounded-full px-2 py-0.5 font-medium ${
+                    tipoScelto.specie === 'debito'
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                      : tipoScelto.denaro
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                  }`}
+                >
+                  {naturaScelta.titolo}
+                </span>
+                {naturaScelta.testo}
+              </>
+            ) : (
+              "Nessun tipo scelto: finché non lo scegli non è chiaro se stai creando un'attività o un debito."
+            )}
+          </p>
         </form>
       )}
 
@@ -486,24 +528,37 @@ function Patrimonio() {
         <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Tipi di voce</h2>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Il tipo dice se una voce è denaro o un bene materiale e in quale gruppo compare. Aggiungerne
-          uno è un dato, non una modifica al programma.
+          uno è un dato, non una modifica al programma. L'ordine è quello del catalogo.
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(dati?.tipi || []).map((t) => (
-            <span
-              key={String(t.id)}
-              className={`rounded-full px-2.5 py-1 text-xs ${
-                t.specie === 'debito'
-                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                  : t.denaro
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                    : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
-              }`}
-            >
-              {t.nome}
-            </span>
-          ))}
-        </div>
+
+        {[
+          { titolo: 'Attività — quello che possiedi', elenco: tipiAttivi },
+          { titolo: 'Debiti — quello che devi', elenco: tipiPassivi }
+        ].map((sezione) => (
+          <div key={sezione.titolo} className="mt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{sezione.titolo}</h3>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {sezione.elenco.length === 0 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">Nessun tipo in questa sezione.</span>
+              )}
+              {sezione.elenco.map((t) => (
+                <span
+                  key={String(t.id)}
+                  className={`rounded-full px-2.5 py-1 text-xs ${
+                    t.specie === 'debito'
+                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                      : t.denaro
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+                  }`}
+                >
+                  {t.nome}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+
         <form onSubmit={creaTipo} className="mt-4 grid gap-3 sm:grid-cols-4">
           <input className={campi} type="text" placeholder="Nome del tipo (es. Cripto, Barca)" value={nuovoTipo.nome} onChange={(e) => setNuovoTipo({ ...nuovoTipo, nome: e.target.value })} required />
           <select className={campi} value={nuovoTipo.denaro ? 'denaro' : 'bene'} onChange={(e) => setNuovoTipo({ ...nuovoTipo, denaro: e.target.value === 'denaro' })}>

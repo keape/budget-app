@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Il catalogo dei Tipi di voce è dell'utente: aggiungere «barca» o «cripto» è un dato,
 // non codice. Il Tipo decide la specie della Voce (Attività o Debito) e, dentro le
-// Attività, se è denaro o bene materiale.
+// Attività, se è denaro o bene materiale. `ordine` decide dove compare nel menù.
 
 // GET /api/tipi-voce
 router.get('/', authenticateToken, async (req, res) => {
@@ -21,10 +21,10 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/tipi-voce — { nome, specie: 'attivita'|'debito', denaro?: bool, pianoAmmortamento?: bool }
+// POST /api/tipi-voce — { nome, specie: 'attivita'|'debito', denaro?, pianoAmmortamento?, ordine? }
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { nome, specie, denaro, pianoAmmortamento } = req.body;
+    const { nome, specie, denaro, pianoAmmortamento, ordine } = req.body;
     if (!nome || !String(nome).trim()) {
       return res.status(400).json({ success: false, error: 'Il nome del tipo è obbligatorio' });
     }
@@ -38,6 +38,7 @@ router.post('/', authenticateToken, async (req, res) => {
       specie,
       denaro: specie === 'attivita' ? Boolean(denaro) : false,
       pianoAmmortamento: specie === 'debito' ? Boolean(pianoAmmortamento) : false,
+      ordine: ordine === undefined ? undefined : Number(ordine),
       sistema: false
     });
 
@@ -51,11 +52,11 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH /api/tipi-voce/:id — rinomina, archivia, cambia denaro/piano di ammortamento.
+// PATCH /api/tipi-voce/:id — rinomina, archivia, cambia denaro/piano di ammortamento/ordine.
 // La specie non si cambia: un Debito non diventa un'Attività per sbaglio.
 router.patch('/:id', authenticateToken, async (req, res) => {
   try {
-    const { nome, denaro, pianoAmmortamento, archiviato } = req.body;
+    const { nome, denaro, pianoAmmortamento, archiviato, ordine } = req.body;
     const tipo = await TipoVoce.findOne({ _id: req.params.id, userId: req.user.userId });
     if (!tipo) {
       return res.status(404).json({ success: false, error: 'Tipo di voce non trovato' });
@@ -70,6 +71,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
     if (denaro !== undefined && tipo.specie === 'attivita') tipo.denaro = Boolean(denaro);
     if (pianoAmmortamento !== undefined && tipo.specie === 'debito') tipo.pianoAmmortamento = Boolean(pianoAmmortamento);
     if (archiviato !== undefined) tipo.archiviato = Boolean(archiviato);
+    if (ordine !== undefined && !Number.isNaN(Number(ordine))) tipo.ordine = Number(ordine);
 
     await tipo.save();
     return res.json({ success: true, data: tipo });
