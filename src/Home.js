@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications } from './contexts/NotificationContext';
 import NotificationBar from './components/NotificationBar';
 import MonthlySummaryChart from './components/MonthlySummaryChart';
+import PatrimonioRiepilogo from './components/PatrimonioRiepilogo';
 import { fetchWithRetry } from './utils/fetchWithRetry';
 
 function Home() {
@@ -29,6 +30,9 @@ function Home() {
 
   const [savingsInfo, setSavingsInfo] = useState({ savings: 0, allocatedPercent: 0 });
 
+  // Il patrimonio complessivo e le Fotografie mensili da cui nasce il grafico.
+  const [patrimonio, setPatrimonio] = useState(null);
+
   const { addMultipleNotifications } = useNotifications();
 
   useEffect(() => {
@@ -51,14 +55,20 @@ function Home() {
       const meseCorrente = oggi.getMonth();
       const annoCorrente = oggi.getFullYear();
       
-      const [speseRes, entrateRes, budgetRes] = await Promise.allSettled([
+      const [speseRes, entrateRes, budgetRes, patrimonioRes] = await Promise.allSettled([
         fetchWithRetry('/api/spese', { params: { limit: 1000 }, headers: { 'Authorization': `Bearer ${token}` } }),
         fetchWithRetry('/api/entrate', { params: { limit: 1000 }, headers: { 'Authorization': `Bearer ${token}` } }),
         fetchWithRetry('/api/budget-settings', {
           params: { anno: annoCorrente, mese: meseCorrente },
           headers: { 'Authorization': `Bearer ${token}` }
         }),
+        fetchWithRetry('/api/patrimonio', { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
+
+      // Il patrimonio è la prima cosa che la Home mostra: se non risponde, il resto vale lo stesso.
+      if (patrimonioRes.status === 'fulfilled') {
+        setPatrimonio(patrimonioRes.value.data?.data || null);
+      }
 
       const tutte_spese = speseRes.status === 'fulfilled' ? speseRes.value.data?.spese || [] : [];
       const tutte_entrate = entrateRes.status === 'fulfilled' ? entrateRes.value.data?.entrate || [] : [];
@@ -197,6 +207,16 @@ function Home() {
             </button>
           </div>
 
+
+          {/* Patrimonio: il blocco centrale della vista generale */}
+          {patrimonio && (
+            <PatrimonioRiepilogo
+              patrimonio={patrimonio.patrimonio}
+              gruppi={patrimonio.gruppi}
+              fotografie={patrimonio.fotografie}
+              onApri={() => navigate('/patrimonio')}
+            />
+          )}
 
           {/* Riepilogo Mese */}
           <div className="mb-8">

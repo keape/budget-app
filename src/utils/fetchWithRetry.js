@@ -6,11 +6,11 @@ import BASE_URL from '../config';
  * Non ritenta su errori HTTP (4xx/5xx) — quelle vanno gestite dal chiamante.
  *
  * @param {string} path  - percorso API (es. '/api/spese')
- * @param {object} opts  - { method='GET', params, headers, retries=3, delay=2000 }
+ * @param {object} opts  - { method='GET', params, headers, data, retries=3, delay=2000 }
  * @returns {Promise<object>} response di axios
  */
 export const fetchWithRetry = async (path, opts = {}) => {
-  const { method = 'GET', params, headers, retries = 3, delay = 2000 } = opts;
+  const { method = 'GET', params, headers, data, retries = 3, delay = 2000 } = opts;
   let lastError;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -20,6 +20,7 @@ export const fetchWithRetry = async (path, opts = {}) => {
         url: `${BASE_URL}${path}`,
         params,
         headers,
+        data,
         timeout: 15000,        // 15s per request — abbastanza per cold start
       });
       return response;

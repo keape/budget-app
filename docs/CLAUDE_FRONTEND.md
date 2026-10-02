@@ -96,6 +96,7 @@ Emergency admin UI in `BudgetSettings.js` is hidden unless `REACT_APP_ENABLE_ADM
 - Loading state: `LoadingSpinner` component; `isLoading` boolean in hooks
 - API response: `{ success: true/false, data?, error?, message? }`
 - **BudgetSettings `mese`**: 0-indexed (0 = January, 11 = December) — JS Date convention
+- **Il conto su ogni movimento**: `Transazioni.js` carica `/api/voci` e precompila il conto (ultimo usato in `localStorage['b365.ultimaVoce']`, altrimenti il Conto principale). Le risposte di `/api/voci` e `/api/patrimonio` usano il lessico del glossario: Voce, Attività, Componente, Trasferimento, Rettifica, Fotografia. `fetchWithRetry(path, { method, headers, params, data })` accetta il corpo della richiesta.
 
 ## Testing
 ```bash

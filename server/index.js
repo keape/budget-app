@@ -13,6 +13,12 @@ const transazioniPeriodicheRoutes = require('./routes/transazioniPeriodiche');
 const savingsRoutes = require('./routes/savings');
 const instrumentsRoutes = require('./routes/instruments');
 const widgetRoutes = require('./routes/widget');
+const vociRoutes = require('./routes/voci');
+const componentiRoutes = require('./routes/componenti');
+const tipiVoceRoutes = require('./routes/tipiVoce');
+const patrimonioRoutes = require('./routes/patrimonio');
+const trasferimentiRoutes = require('./routes/trasferimenti');
+const rettificheRoutes = require('./routes/rettifiche');
 
 const app = express();
 
@@ -126,6 +132,13 @@ app.use('/api/transazioni-periodiche', transazioniPeriodicheRoutes);
 app.use('/api/savings', savingsRoutes);
 app.use('/api/instruments', instrumentsRoutes);
 app.use('/api/widget', widgetRoutes);
+// Patrimonio: Voci e Componenti, catalogo dei Tipi, Trasferimenti, Rettifiche, Fotografie
+app.use('/api/voci', vociRoutes);
+app.use('/api/componenti', componentiRoutes);
+app.use('/api/tipi-voce', tipiVoceRoutes);
+app.use('/api/patrimonio', patrimonioRoutes);
+app.use('/api/trasferimenti', trasferimentiRoutes);
+app.use('/api/rettifiche', rettificheRoutes);
 
 // Root test route
 app.get('/', (req, res) => {

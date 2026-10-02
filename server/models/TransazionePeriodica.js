@@ -27,7 +27,13 @@ const transazionePeriodicaSchema = new mongoose.Schema({
     required: true,
     enum: ['giornaliera', 'settimanale', 'quindicinale', 'mensile', 'bimestrale', 'trimestrale', 'semestrale', 'annuale', 'personalizzata']
   },
-  
+
+  // La Voce patrimoniale (il conto) su cui ricadono le transazioni generate. Ereditata
+  // dalla ricorrenza quando è indicata, altrimenti risolta sul Conto principale.
+  voceId: {
+    type: mongoose.Schema.Types.ObjectId
+  },
+
   configurazione: {
     // Per mensile/bimestrale/trimestrale/semestrale
     giorno: { type: Number, min: 1, max: 31 },

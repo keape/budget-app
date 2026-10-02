@@ -14,7 +14,9 @@ const instrumentSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['azioni', 'obbligazioni', 'etf_fondi', 'conto_corrente', 'altro'],
+    // `conto_corrente` è stato rimosso: era il finto conto corrente strumentale del modulo
+    // risparmi, smontato perché il suo saldo non era denaro ma un accumulo contabile.
+    enum: ['azioni', 'obbligazioni', 'etf_fondi', 'altro'],
     default: 'altro',
     required: true
   },

@@ -88,6 +88,9 @@ npm start        # Terminal 2 — frontend port 3000
 
 **Social login**: `/api/auth/social-login`. Google verifica l'idToken con `tokeninfo`; Apple lo verifica con le chiavi pubbliche di Apple (`server/utils/appleTokens.js`): firma, `iss`, `exp` e — se `APPLE_CLIENT_IDS` è configurata — `aud`. Dettagli in `docs/CLAUDE_BACKEND.md`.
 
+## Patrimonio (dominio)
+Il modello del patrimonio è descritto da `GLOSSARY.md` (lessico) e da `docs/adr/0002`–`0009`; il codice lo implementa in `server/models/{TipoVoce,Attivita,Componente,Trasferimento,Rettifica,Fotografia}.js`, `server/services/patrimonio.js` e `server/routes/{voci,componenti,tipiVoce,patrimonio,trasferimenti,rettifiche}.js`. Regole da non violare: il valore di una Voce è la somma delle sue Componenti; Attività e Debito sono due collezioni distinte; Spesa/Entrata/Trasferimento/Rettifica stanno in collezioni separate e solo le prime due entrano nel budget; il patrimonio si calcola in un unico posto (`services/patrimonio.js`). Il **piano di allocazione resta sospeso** e iOS/Expo sono fuori perimetro fino al collaudo web.
+
 ## Cross-Platform Conventions
 - **JWT storage**: `localStorage` (web) / `AsyncStorage` (mobile)
 - **API response**: `{ success: boolean, data?, error?, message? }`
@@ -113,10 +116,4 @@ Trigger: quando l'utente vuole pubblicare su App Store o TestFlight.
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+Knowledge graph in `graphify-out/`. Per domande sul codice: `graphify query "<domanda>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concetto>"` (sottografo mirato, più piccolo di GRAPH_REPORT.md). `graphify-out/wiki/index.md` per la navigazione ampia; GRAPH_REPORT.md solo per la revisione d'insieme. Dopo una modifica: `graphify update .` (solo AST, nessun costo API).

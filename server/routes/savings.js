@@ -101,28 +101,12 @@ router.post('/auto-close', authenticateToken, async (req, res) => {
 
     const alreadyClosed = !!existing;
 
-    // If savings < 0, find conto_corrente instrument in user's plan and record allocation
-    if (savings < 0) {
-      try {
-        const plan = await AllocationPlan.findOne({ userId }).populate('allocations.instrumentId');
-        if (plan) {
-          const contoEntry = plan.allocations.find(
-            a => a.instrumentId && a.instrumentId.type === 'conto_corrente'
-          );
-          if (contoEntry) {
-            await InstrumentAllocation.create({
-              userId,
-              savingsMonthId: savedMonth._id,
-              instrumentId: contoEntry.instrumentId._id,
-              amount: savings // negative
-            });
-          }
-        }
-      } catch (planErr) {
-        // Skip silently if no plan or no conto_corrente instrument
-        console.warn('Could not auto-allocate negative savings to conto_corrente:', planErr.message);
-      }
-    }
+    // Il finto conto corrente (uno Strumento di tipo `conto_corrente` su cui il modulo
+    // accumulava il risparmio transitato in negativo) è stato smontato: il risparmio
+    // negativo non genera più un'Allocazione. Le Allocazioni registrano denaro davvero
+    // assegnato a una Voce, e l'assegnazione registra anche il Trasferimento (ADR-0003).
+    // Verificato sul database di produzione il 2026-10-02: nessuno strumento di tipo
+    // conto_corrente, nessuna allocazione negativa.
 
     return res.json({ success: true, data: savedMonth, alreadyClosed });
   } catch (err) {

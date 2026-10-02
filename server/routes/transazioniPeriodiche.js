@@ -4,6 +4,8 @@ const { authenticateToken } = require('./auth');
 const TransazionePeriodica = require('../models/TransazionePeriodica');
 const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
+const Attivita = require('../models/Attivita');
+const patrimonio = require('../services/patrimonio');
 const router = express.Router();
 
 // Funzione helper per calcolare la prossima data
@@ -133,6 +135,14 @@ router.get('/', authenticateToken, async (req, res) => {
 // POST - Crea una nuova transazione periodica
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    // La ricorrenza può portare la Voce (il conto) su cui ricadranno le transazioni generate.
+    if (req.body.voceId) {
+      const voce = await Attivita.findOne({ _id: req.body.voceId, userId: req.user.userId });
+      if (!voce) {
+        return res.status(400).json({ message: 'Voce patrimoniale non trovata' });
+      }
+    }
+
     const transazionePeriodica = new TransazionePeriodica({
       ...req.body,
       userId: req.user.userId
@@ -243,7 +253,14 @@ router.post('/genera', authenticateToken, async (req, res) => {
     
     for (const abbonamento of abbonamentiAttivi) {
       const dateDaGenerare = calcolaDateMancanti(abbonamento);
-      
+
+      // La Voce della ricorrenza, o il Conto principale: ogni Movimento generato porta il conto.
+      let destinazione = null;
+      if (dateDaGenerare.length > 0) {
+        const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, abbonamento.voceId);
+        destinazione = { voceSpecie: specie, voceId: voce._id, componenteId: componente._id };
+      }
+
       for (const data of dateDaGenerare) {
         // Crea la transazione normale
         const datiTransazione = {
@@ -251,7 +268,8 @@ router.post('/genera', authenticateToken, async (req, res) => {
           importo: abbonamento.importo,
           categoria: abbonamento.categoria,
           descrizione: `${abbonamento.descrizione} (Auto)`,
-          data: data
+          data: data,
+          ...destinazione
         };
         
         let nuovaTransazione;

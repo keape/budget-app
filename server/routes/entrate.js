@@ -2,6 +2,7 @@ const express = require('express');
 const Entrata = require('../models/Entrata');
 const { authenticateToken } = require('./auth');
 const { debugLog, logError } = require('../utils/logger');
+const patrimonio = require('../services/patrimonio');
 const router = express.Router();
 
 // GET /api/entrate (Paginated)
@@ -61,22 +62,32 @@ router.get('/totale-mese', authenticateToken, async (req, res) => {
 
 // POST /api/entrate
 router.post('/', authenticateToken, async (req, res) => {
-  const { descrizione, importo, categoria, data } = req.body;
+  const { descrizione, importo, categoria, data, voceId, voceSpecie } = req.body;
   if (!importo) return res.status(400).json({ error: "Importo mancante", message: "Inserisci un importo valido" });
   if (!categoria) return res.status(400).json({ error: "Categoria mancante", message: "Seleziona una categoria" });
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) return res.status(400).json({ error: "Importo non valido", message: "L'importo deve essere un numero valido" });
   try {
+    // Il conto è obbligatorio su ogni movimento, ma se il client non lo manda si usa
+    // il Conto principale.
+    const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, voceId, voceSpecie);
+
     const nuovaEntrata = new Entrata({ 
       userId: req.user.userId,
       descrizione: descrizione || '', 
       importo: Math.abs(importoNumerico), 
       categoria, 
-      data: data ? new Date(data) : new Date() 
+      data: data ? new Date(data) : new Date(),
+      voceSpecie: specie,
+      voceId: voce._id,
+      componenteId: componente._id
     });
     const entrataSalvata = await nuovaEntrata.save();
     res.status(201).json({ success: true, message: `Entrata di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`, data: entrataSalvata });
   } catch (err) {
+    if (err instanceof patrimonio.ErroreVoce) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
     logError("❌ Errore nel salvataggio dell'entrata:", err);
     res.status(500).json({ error: "Errore nel salvataggio", message: "Non è stato possibile salvare l'entrata. Riprova." });
   }
@@ -86,18 +97,32 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { importo, descrizione, categoria, data } = req.body;
+    const { importo, descrizione, categoria, data, voceId, voceSpecie } = req.body;
     if (!importo || !categoria) return res.status(400).json({ error: "Importo e categoria sono richiesti" });
     const importoNumerico = Number(importo);
     if (isNaN(importoNumerico)) return res.status(400).json({ error: "L'importo deve essere un numero valido" });
+
+    const aggiornamento = { descrizione: descrizione || '', importo: Math.abs(importoNumerico), categoria, data: data ? new Date(data) : undefined };
+
+    // Il conto si può correggere: se il client lo indica, il movimento cambia Voce.
+    if (voceId) {
+      const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, voceId, voceSpecie);
+      aggiornamento.voceSpecie = specie;
+      aggiornamento.voceId = voce._id;
+      aggiornamento.componenteId = componente._id;
+    }
+
     const entrata = await Entrata.findOneAndUpdate(
       { _id: id, userId: req.user.userId },
-      { descrizione: descrizione || '', importo: Math.abs(importoNumerico), categoria, data: data ? new Date(data) : undefined },
+      aggiornamento,
       { new: true }
     );
     if (!entrata) return res.status(404).json({ error: "Entrata non trovata" });
     res.json(entrata);
   } catch (err) {
+    if (err instanceof patrimonio.ErroreVoce) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
     logError("❌ Errore nella modifica dell'entrata:", err);
     res.status(500).json({ error: "Errore nella modifica dell'entrata" });
   }

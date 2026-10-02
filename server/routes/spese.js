@@ -2,6 +2,7 @@ const express = require('express');
 const Spesa = require('../models/Spesa');
 const { authenticateToken } = require('./auth');
 const { debugLog, logError } = require('../utils/logger');
+const patrimonio = require('../services/patrimonio');
 const router = express.Router();
 
 // GET /api/spese (Paginated)
@@ -66,22 +67,32 @@ router.post('/', authenticateToken, async (req, res) => {
   debugLog('👉 Ricevuto nel body:', req.body);
   debugLog('🔍 DEBUG - req.user:', req.user);
   debugLog('🔍 DEBUG - userId da token:', req.user.userId);
-  const { descrizione, importo, categoria, data } = req.body;
+  const { descrizione, importo, categoria, data, voceId, voceSpecie } = req.body;
   if (!importo) return res.status(400).json({ error: "Importo mancante", message: "Inserisci un importo valido" });
   if (!categoria) return res.status(400).json({ error: "Categoria mancante", message: "Seleziona una categoria" });
   const importoNumerico = Number(importo);
   if (isNaN(importoNumerico)) return res.status(400).json({ error: "Importo non valido", message: "L'importo deve essere un numero valido" });
   try {
+    // Il conto è obbligatorio su ogni movimento, ma se il client non lo manda si usa
+    // quello dell'ultimo movimento: nella pratica il Conto principale.
+    const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, voceId, voceSpecie);
+
     const nuovaSpesa = new Spesa({ 
       userId: req.user.userId,
       descrizione: descrizione || '', 
       importo: -Math.abs(importoNumerico), 
       categoria, 
-      data: data ? new Date(data) : new Date() 
+      data: data ? new Date(data) : new Date(),
+      voceSpecie: specie,
+      voceId: voce._id,
+      componenteId: componente._id
     });
     const spesaSalvata = await nuovaSpesa.save();
     res.status(201).json({ success: true, message: `Spesa di ${Math.abs(importoNumerico).toFixed(2)}€ aggiunta con successo`, data: spesaSalvata });
   } catch (err) {
+    if (err instanceof patrimonio.ErroreVoce) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
     logError('❌ Errore nel salvataggio della spesa:', err);
     res.status(500).json({ error: "Errore nel salvataggio", message: "Non è stato possibile salvare la spesa. Riprova." });
   }
@@ -107,7 +118,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // PUT /api/spese/:id
 router.put('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { descrizione, importo, categoria, data } = req.body;
+  const { descrizione, importo, categoria, data, voceId, voceSpecie } = req.body;
   if (importo === undefined || importo === null || importo === '' || !categoria) {
     return res.status(400).json({ error: "Dati mancanti" });
   }
@@ -116,14 +127,32 @@ router.put('/:id', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: "Importo non valido", message: "L'importo deve essere un numero valido" });
   }
   try {
+    const aggiornamento = {
+      descrizione,
+      importo: -Math.abs(importoNumerico),
+      categoria,
+      data: data ? new Date(data) : undefined
+    };
+
+    // Il conto si può correggere: se il client lo indica, il movimento cambia Voce.
+    if (voceId) {
+      const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, voceId, voceSpecie);
+      aggiornamento.voceSpecie = specie;
+      aggiornamento.voceId = voce._id;
+      aggiornamento.componenteId = componente._id;
+    }
+
     const spesa = await Spesa.findOneAndUpdate(
       { _id: id, userId: req.user.userId },
-      { descrizione, importo: -Math.abs(importoNumerico), categoria, data: data ? new Date(data) : undefined },
+      aggiornamento,
       { new: true }
     );
     if (!spesa) return res.status(404).json({ error: "Spesa non trovata" });
     res.json(spesa);
   } catch (err) {
+    if (err instanceof patrimonio.ErroreVoce) {
+      return res.status(err.status || 400).json({ error: err.message });
+    }
     logError('❌ Errore nella modifica della spesa:', err);
     res.status(500).json({ error: "Errore nella modifica della spesa" });
   }

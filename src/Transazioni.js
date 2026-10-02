@@ -14,6 +14,10 @@ function Transazioni() {
   const [data, setData] = useState('');
   const [categorieSpese, setCategorieSpese] = useState([]);
   const [categorieEntrate, setCategorieEntrate] = useState([]);
+  // Le Voci patrimoniali (i conti) tra cui scegliere dove registrare il movimento.
+  // È obbligatoria, ma sempre precompilata: l'ultima usata, altrimenti il Conto principale.
+  const [voci, setVoci] = useState([]);
+  const [voceId, setVoceId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -73,6 +77,34 @@ function Transazioni() {
     caricaAbbonamentiAttivi();
     generaTransazioniPeriodiche();
   }, [navigate, tipo]);
+
+  // Carica le voci patrimoniali una volta sola e precompila il conto: ultimo usato,
+  // altrimenti il Conto principale.
+  useEffect(() => {
+    const caricaVoci = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const response = await axios.get(`${BASE_URL}/api/voci`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const elenco = response.data?.data?.voci || [];
+        setVoci(elenco);
+
+        const ultimaUsata = localStorage.getItem('b365.ultimaVoce');
+        if (ultimaUsata && elenco.some((v) => String(v.id) === ultimaUsata)) {
+          setVoceId(ultimaUsata);
+        } else {
+          const principale = elenco.find((v) => v.nome === 'Conto principale') || elenco[0];
+          setVoceId(principale ? String(principale.id) : '');
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento delle voci patrimoniali:', error);
+      }
+    };
+
+    caricaVoci();
+  }, []);
   
   // Carica abbonamenti attivi
   const caricaAbbonamentiAttivi = async () => {
@@ -207,11 +239,13 @@ function Transazioni() {
           descrizione,
           importo: tipo === 'spesa' ? -Math.abs(Number(importo)) : Math.abs(Number(importo)),
           categoria,
-          data: dataTransazione
+          data: dataTransazione,
+          voceId: voceId || undefined
         }, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
+        if (voceId) localStorage.setItem('b365.ultimaVoce', voceId);
         alert(`${tipo === 'spesa' ? 'Spesa' : 'Entrata'} inserita con successo!`);
         
         // Reset form
@@ -248,8 +282,12 @@ function Transazioni() {
           configurazione: configurazioneCompleta,
           data_inizio: dataInizio,
           data_fine: infinito ? null : dataFine,
-          attiva: true
+          attiva: true,
+          // La ricorrenza eredita il conto: le transazioni generate vi finiscono.
+          voceId: voceId || undefined
         };
+
+        if (voceId) localStorage.setItem('b365.ultimaVoce', voceId);
         
         if (transazioneInModifica) {
           // Modifica transazione esistente
@@ -626,6 +664,25 @@ function Transazioni() {
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+          </div>
+
+          {/* Il conto su cui si registra il movimento: obbligatorio, ma già precompilato */}
+          <div className="w-full max-w-md">
+            <select
+              className="w-full px-6 py-4 text-lg bg-white dark:bg-gray-700 border-2 border-blue-300 dark:border-blue-600 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-blue-400 text-gray-800 dark:text-white"
+              value={voceId}
+              onChange={e => setVoceId(e.target.value)}
+            >
+              {voci.length === 0 && <option value="">Conto principale</option>}
+              {voci.map(v => (
+                <option key={String(v.id)} value={String(v.id)}>
+                  {v.nome}{v.tipo ? ` · ${v.tipo.nome}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Da quale conto esce o entra il denaro. L'ultimo usato resta selezionato.
+            </p>
           </div>
 
           <div className="w-full max-w-md">

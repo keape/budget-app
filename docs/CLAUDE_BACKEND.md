@@ -33,7 +33,18 @@ DEL  /api/savings/months/:id/allocations/:allId  Delete allocation
 GET  /api/savings/plan                    User target allocation plan
 PUT  /api/savings/plan                    Update plan
 GET  /api/savings/portfolio               Cumulative portfolio across all months
+GET  /api/patrimonio                     Patrimonio di adesso + gruppi + Fotografie (la GET scrive la Fotografia del mese)
+GET  /api/patrimonio/fotografie          Storico delle Fotografie, senza scrivere
+POST /api/patrimonio/fotografie          Scrive la Fotografia di un mese { anno, mese? }
+*    /api/voci                           Voci patrimoniali (conti, beni): CRUD + POST /:id/componenti
+*    /api/componenti                     Componenti di una Voce: PATCH (nome, costo, nuova Valutazione, chiusura), DELETE
+*    /api/tipi-voce                      Catalogo dei Tipi dell'utente: CRUD (la specie non si modifica)
+*    /api/trasferimenti                  Movimenti tra due Voci: GET, POST, DELETE — fuori dal budget
+*    /api/rettifiche                     Variazioni di una sola Voce (delta con segno): GET, POST, DELETE — fuori dal budget
 ```
+
+### Patrimonio (`/server/services/patrimonio.js`)
+Unico posto dove si calcola il patrimonio: il valore di una Voce è la somma delle sue Componenti, e la valorizzazione della Componente decide come si ottiene (`movimenti`: Spese + Entrate − Trasferimenti uscenti + entranti + Rettifiche; `dichiarata`/`mercato`: ultima Valutazione, altrimenti costo di acquisto). Il servizio garantisce anche le precondizioni — catalogo Tipi iniziale, Conto principale, Componente predefinita — e ripara i Movimenti orfani assegnandoli al Conto principale. **Spese ed Entrate hanno sempre `voceId` + `componenteId`**: le rotte li risolvono da sé quando il client non li manda.
 
 ## Authentication Middleware
 ```js
@@ -43,18 +54,7 @@ const { authenticateToken } = require('./routes/auth');
 ```
 
 ## Admin/Maintenance Endpoints
-These routes are guarded by `ENABLE_ADMIN_ROUTES=true` and return 404 by default. Enable only in local/dev, run the needed maintenance action, then disable again. Do not enable in Render/production except during a short, intentional maintenance window.
-
-- `GET /api/debug-env` — confirms env vars set (no values exposed)
-- `POST/GET /api/migrate-budget-data` — migrates budget data between collections
-- `ALL /api/debug-budget-data` — views budget collection content
-- `ALL /api/emergency-remove-index` — drops BudgetSettings unique index
-- `POST /api/fix-transactions` — normalizes importo signs (also requires auth)
-- `POST /api/test-auth` — verifies auth middleware (also requires auth)
-- `POST /api/budget-settings/emergency-fix` — removes duplicate budget docs (also requires auth)
-- `POST /api/budget-settings/remove-unique-index` — removes legacy budget unique index (also requires auth)
-
-Frontend emergency buttons are gated by `REACT_APP_ENABLE_ADMIN_ROUTES` (see `AGENTS.md`).
+These routes are guarded by `ENABLE_ADMIN_ROUTES=true` and return 404 by default; the current list is in `AGENTS.md`. Enable only in local/dev, run the needed maintenance action, then disable again. Never in Render/production except during a short, intentional window.
 
 ### Social login (`/api/auth/social-login`)
 - **Google**: verifies the idToken via `oauth2.googleapis.com/tokeninfo` and rejects a non-verified email. Optional `GOOGLE_CLIENT_IDS` (comma-separated, web + iOS client ids) enables the audience check; without it any audience is accepted.
@@ -79,16 +79,23 @@ If `CORS_ORIGINS` is absent, `server/index.js` falls back to its `defaultCorsOri
 | `Spesa` | userId, descrizione, importo (**negative**), categoria, data; index `{userId, data}` |
 | `Entrata` | userId, descrizione, importo (**positive**), categoria, data; index `{userId, data}` |
 | `BudgetSettings` | userId, anno, mese (0–11 JS), spese (Map), entrate (Map) |
-| `TransazionePeriodica` | userId, importo, categoria, descrizione, tipo_ripetizione (8 types), configurazione, data_inizio, data_fine, attiva, transazioni_generate |
+| `TransazionePeriodica` | userId, importo, categoria, descrizione, tipo_ripetizione (8 types), configurazione, data_inizio, data_fine, attiva, transazioni_generate, **voceId** |
+| `TipoVoce` | userId, nome, specie (`attivita`\|`debito`), denaro, pianoAmmortamento, sistema, archiviato; unico `{userId, nome}` |
+| `Attivita` | Voce patrimoniale che somma: userId, nome, tipoId, note, archiviata |
+| `Componente` | userId, voceSpecie + voceId, nome, valorizzazione (`movimenti`\|`mercato`\|`dichiarata`), predefinita, costoAcquisto, valutazione + storico `valutazioni`, chiusa, realizzo |
+| `Trasferimento` | userId, da/a (`voceSpecie`+`voceId`+`componenteId`), importo (positivo), data, descrizione, origine |
+| `Rettifica` | userId, voceSpecie + voceId + componenteId, importo (delta con segno), data, descrizione, origine |
+| `Fotografia` | userId, anno, mese (0-indexed), patrimonio, attivita, debiti, voci[], chiusa; unico `{userId, anno, mese}` |
 | `SavingsMonth` | userId, anno, mese (0-indexed), income, expenses, savings, status ('closed'), closedAt |
 | `InstrumentAllocation` | userId, savingsMonthId, instrumentId, amount, quantity?, priceAtAllocation? |
 | `AllocationPlan` | userId, allocations [{instrumentId, targetPercentage}] |
 | `Otp` | OTP code storage |
 
-**importo convention**: `Spesa.importo` always **negative**; `Entrata.importo` always **positive**.
+**importo convention**: `Spesa.importo` always **negative**; `Entrata.importo` always **positive**. `Trasferimento.importo` è sempre positivo (la direzione la dà la coppia da → a); `Rettifica.importo` è un delta con segno.
 
 ## Services (`/server/services/`)
 - `emailService.js` — Singleton. nodemailer. Falls back to console mock if `EMAIL_USER`/`EMAIL_PASS` absent.
+- `patrimonio.js` — unico motore del Patrimonio (valore delle Componenti, gruppi, Fotografie, precondizioni). Vedi la sezione Patrimonio più sopra.
 
 ## Conventions
 - **Routes**: one file per resource in `/server/routes/`, exports router
@@ -102,25 +109,19 @@ If `CORS_ORIGINS` is absent, `server/index.js` falls back to its `defaultCorsOri
 
 ## Known Notes
 - `BudgetSettings` has **no unique index** (intentionally removed — was causing 409 errors)
-- MongoDB URI stripped of surrounding quotes at startup (handles Render env var quoting quirk)
-- Backend starts without MongoDB (graceful degradation; auth + health still work)
+- MongoDB URI stripped of surrounding quotes at startup; backend starts without MongoDB (graceful degradation)
 - Admin/debug endpoints are operational utilities but must stay behind `ENABLE_ADMIN_ROUTES`
-- `render.yaml` must keep secret env vars as `sync: false`; real values belong in Render, not Git
 
 ## Testing
 ```bash
 cd server
-node test-server.js      # Manual endpoint testing
-node test-email.js       # Email service test
-node test-production.js  # Production smoke test
+node test-server.js                             # Manual endpoint testing
+node scripts/migrate-fetta1-voci.js             # Migrazione voci: prova, non scrive
+node scripts/migrate-fetta1-voci.js --conferma  # Migrazione voci: esegue (produce file di rollback)
 ```
 
 ## Deployment
-- **Platform**: Render, rootDir `./server`. One production backend only.
-- **Backend (keep)**: web service `budget-app-ios-backend` → `https://budget-app-ios-backend.onrender.com`. Used by the iOS app, the Expo app and the web app.
-- **Web app (keep)**: static site `budget_app` → `https://budget-app-cd5o.onrender.com`.
-- **Retired**: the Node service `budget-app` (old `budget-app-ao5r.onrender.com`) is a duplicate backend with no consumers; and `budget-app-backend.onrender.com` does not exist any more (Render answers `no-server`), so that host must not reappear in code, docs or bundle defaults.
-- **Start**: `node index.js`; **health check**: `/api/health`
-- **Never delete or rename `budget-app-ios-backend`**: the published iOS app pins its host in `budget365iOS/src/config.ts`.
-- **Alt**: `vercel.json` routes `/api/*` to `server/index.js` (legacy; Vercel currently serves the API only, not the React UI)
+- **Platform**: Render, rootDir `./server`. One production backend only: `budget-app-ios-backend` → `https://budget-app-ios-backend.onrender.com` (iOS + Expo + web). **Never delete or rename it**: the published iOS app pins its host in `budget365iOS/src/config.ts`. **Web app**: static site `budget_app` → `https://budget-app-cd5o.onrender.com`.
+- **Start**: `node index.js`; **health check**: `/api/health`. `render.yaml` keeps secrets as `sync: false`; real values belong in Render, not Git.
+- **Retired**: the Node service `budget-app` (`budget-app-ao5r.onrender.com`) is a duplicate with no consumers; `budget-app-backend.onrender.com` no longer exists, so that host must not reappear in code, docs or bundle defaults.
 - **Required non-secret Render env**: `CORS_ORIGINS`, `ENABLE_ADMIN_ROUTES=false`
