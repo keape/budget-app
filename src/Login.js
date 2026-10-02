@@ -3,6 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import BASE_URL from './config';
 import GoogleSignInButton from './components/GoogleSignInButton';
+import { isGoogleSignInConfigured } from './utils/googleSignIn';
+
+// Valore inciso al build: se il client id web non e' configurato, il divisore "oppure"
+// e il pulsante Google non devono comparire (nemmeno da soli).
+const GOOGLE_ENABLED = isGoogleSignInConfigured();
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -190,25 +195,29 @@ function Login() {
             </button>
           </div>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">oppure</span>
-            </div>
-          </div>
+          {GOOGLE_ENABLED && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">oppure</span>
+                </div>
+              </div>
 
-          <GoogleSignInButton
-            onCredential={handleGoogleCredential}
-            onError={handleSocialError}
-            disabled={socialLoading}
-          />
+              <GoogleSignInButton
+                onCredential={handleGoogleCredential}
+                onError={handleSocialError}
+                disabled={socialLoading}
+              />
 
-          {socialLoading && (
-            <p className="text-sm text-center text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
-              Accesso in corso…
-            </p>
+              {socialLoading && (
+                <p className="text-sm text-center text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
+                  Accesso in corso…
+                </p>
+              )}
+            </>
           )}
 
           <div className="text-sm text-center space-y-2">
