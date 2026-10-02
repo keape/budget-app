@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Sostituisci con il tuo URL Render effettivo
-const BASE_URL = 'https://budget-app-backend.onrender.com';
+const BASE_URL = 'https://budget-app-ios-backend.onrender.com';
 
 async function testEndpoints() {
   console.log('🧪 Testing Budget App Backend on Render...\n');

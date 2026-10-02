@@ -15,7 +15,7 @@ This file provides a clear overview of the **Budget365** project context for AI 
   - JWT Authentication (Bearer token in AsyncStorage)
   - Google Sign-In (`@react-native-google-signin/google-signin`)
   - Apple Authentication (`@invertase/react-native-apple-authentication`)
-- **Backend API**: `https://budget-app-cd5o.onrender.com`
+- **Backend API**: `https://budget-app-ios-backend.onrender.com` (da `src/config.ts`). `budget-app-cd5o.onrender.com` è la webapp statica, non il backend.
 - **Native**: 
   - iOS: Swift based `AppDelegate`, uses CocoaPods.
   - Android: Kotlin based.

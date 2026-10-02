@@ -21,7 +21,7 @@ Multi-platform personal budget app:
 ├── package.json            # Frontend deps + npm scripts
 ├── tailwind.config.js
 ├── vercel.json             # Routes /api/* to server/index.js
-├── render.yaml             # Render backend config (contains credentials — handle carefully)
+├── render.yaml             # Render blueprint (secrets as sync: false, no credentials inside)
 └── .env                    # Local env vars
 ```
 
@@ -63,10 +63,11 @@ npm start        # Terminal 2 — frontend port 3000
 
 ## Environment Variables
 **Root `.env`**:
-- `WEBHOOK_TOKEN` — Google Sheets webhook auth
-- `GOOGLE_SHEET_ID`, `GOOGLE_SHEET_NAME`
+- `MONGODB_URI`, `JWT_SECRET` — stessi valori usati dal backend avviato dalla root
 - `REACT_APP_API_URL` — web frontend backend API URL override
 - `REACT_APP_ENABLE_ADMIN_ROUTES` — shows web emergency maintenance buttons only when `true`
+
+**Deploy**: un solo backend di produzione, `budget-app-ios-backend` (iOS + web + Expo); webapp su sito statico Render. Dettagli in `docs/CLAUDE_BACKEND.md` → Deployment.
 
 **Backend `server/.env` / Render env**:
 - `MONGODB_URI` — MongoDB Atlas connection string
@@ -74,7 +75,7 @@ npm start        # Terminal 2 — frontend port 3000
 - `PORT` — server port (default 5001)
 - `EMAIL_SERVICE`, `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`
 - `FRONTEND_URL` — frontend URL used for password reset links
-- `CORS_ORIGINS` — comma-separated allowed origins, e.g. `https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app`
+- `CORS_ORIGINS` — comma-separated allowed origins, e.g. `https://budget-app-cd5o.onrender.com,https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app`
 - `ENABLE_ADMIN_ROUTES` — must be absent/`false` in production
 
 **Admin/maintenance route guard**:

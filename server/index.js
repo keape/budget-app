@@ -31,12 +31,11 @@ const requireAdminRoutesEnabled = (req, res, next) => {
 const defaultCorsOrigins = [
   'http://localhost:3000',
   'http://192.168.68.177:3000',
-  'https://budget-app-ao5r.onrender.com',
+  // Webapp React servita dal sito statico Render `budget_app`
   'https://budget-app-cd5o.onrender.com',
+  // Deployment web storici su Vercel
   'https://budget-app-keape.vercel.app',
-  'https://budget-app-three-gules.vercel.app',
-  'https://budget-app-backend.onrender.com',
-  'https://9000-idx-budget-app-1745625859888.cluster-jbb3mjctu5cbgsi6hwq6u4bt.cloudworkstations.dev'
+  'https://budget-app-three-gules.vercel.app'
 ];
 
 const corsOrigins = (process.env.CORS_ORIGINS || '')

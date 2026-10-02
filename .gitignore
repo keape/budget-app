@@ -16,6 +16,7 @@ server/.env
 server/scripts/.env
 server/credentials.json
 social-agent/.env
+render-ios.env
 
 # Build outputs
 build/
@@ -74,3 +75,6 @@ social-agent/node_modules/
 "budget365iOS/ios/Podfile 3.lock"
 budget365iOS/ios/Podfile\ 3.lock
 *.xcarchive/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

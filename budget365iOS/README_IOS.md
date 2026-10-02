@@ -52,7 +52,7 @@ L'app è composta da 5 schermate principali:
 ## Backend Integration
 
 Tutte le schermate si collegano al backend esistente:
-- **Base URL**: `https://budget-app-cd5o.onrender.com`
+- **Base URL**: `https://budget-app-ios-backend.onrender.com` (da `src/config.ts`)
 - **Autenticazione**: Bearer token tramite AsyncStorage
 - **API Endpoints**: 
   - `/api/auth/login` - Login utente

@@ -1,3 +1,7 @@
+# Blueprint Render — non collegato ai servizi live: descrive lo stato obiettivo.
+# Backend di produzione: unico servizio `budget-app-ios-backend` (iOS + web + Expo).
+# Frontend web: sito statico Render `budget_app` (URL https://budget-app-cd5o.onrender.com),
+# creato dalla dashboard e non da questo blueprint.
 services:
   - type: worker
     name: budget365-social-agent
@@ -26,7 +30,7 @@ services:
         value: https://budget-app-ios-backend.onrender.com
 
   - type: web
-    name: budget-app-backend
+    name: budget-app-ios-backend
     env: node
     buildCommand: npm ci
     startCommand: npm start
@@ -47,7 +51,7 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: CORS_ORIGINS
-        value: https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app
+        value: https://budget-app-cd5o.onrender.com,https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app
       - key: ENABLE_ADMIN_ROUTES
         value: "false"
     healthCheckPath: /api/health

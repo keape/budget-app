@@ -9,7 +9,7 @@ This repository contains a multi-platform personal budget app:
 Read `CLAUDE.md` first for the project map. For backend/API work, also read `docs/CLAUDE_BACKEND.md`.
 
 ## Security Rules
-- Do not commit environment files or credentials. `.env`, `.env.production`, `server/.env`, `server/scripts/.env`, `server/credentials.json`, and `social-agent/.env` must stay untracked.
+- Do not commit environment files or credentials. `.env`, `.env.production`, `server/.env`, `server/scripts/.env`, `server/credentials.json`, `social-agent/.env`, and `render-ios.env` must stay untracked.
 - If secrets were previously tracked, rotate the affected secrets instead of assuming `.gitignore` is enough.
 - Do not expose debug, migration, or emergency repair endpoints in production.
 - Do not add raw `console.log` debug output in backend routes. Use `debugLog` from `server/utils/logger.js`; it is silent in production.
@@ -22,10 +22,11 @@ Read `CLAUDE.md` first for the project map. For backend/API work, also read `doc
 
 ## Deploy Configuration
 - Do not hardcode deployment URLs in application code when an environment variable can carry them.
-- Web frontend API URL is controlled by `REACT_APP_API_URL`. If absent, `src/config.js` falls back to `http://localhost:5001` in development and `https://budget-app-backend.onrender.com` in production.
-- Backend CORS is controlled by comma-separated `CORS_ORIGINS`. If absent, `server/index.js` uses the legacy default allowlist.
+- Single production backend for iOS, web and Expo: `https://budget-app-ios-backend.onrender.com` (Render service `budget-app-ios-backend`, rootDir `./server`). Do not reintroduce per-platform backends.
+- Web app: React build served as the Render static site `budget_app` → `https://budget-app-cd5o.onrender.com`. API URL is controlled by `REACT_APP_API_URL`; if absent, `src/config.js` falls back to `http://localhost:5001` in development and to the single backend above in production. React inlines this value at build time, so changing it requires a rebuild.
+- Backend CORS is controlled by comma-separated `CORS_ORIGINS`. If absent, `server/index.js` uses its `defaultCorsOrigins` allowlist, which must keep the web app origin.
 - Render backend env should include `CORS_ORIGINS`, `FRONTEND_URL`, `MONGODB_URI`, `JWT_SECRET`, email vars, and `ENABLE_ADMIN_ROUTES=false`.
-- Vercel frontend env should include `REACT_APP_API_URL=https://budget-app-backend.onrender.com` and `REACT_APP_ENABLE_ADMIN_ROUTES=false`.
+- iOS and Expo apps hardcode the backend URL (`budget365iOS/src/config.ts`, `BudgetAppExpo/App.tsx`). The published iOS app pins that host, so the Render service behind it must never be deleted or renamed without shipping a new app build first.
 
 ## Admin/Maintenance Routes
 Backend maintenance routes are disabled by default and return 404 unless:

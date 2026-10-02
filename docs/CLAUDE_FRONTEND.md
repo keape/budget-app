@@ -62,11 +62,11 @@
 ```js
 const BASE_URL = process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === 'production'
-    ? 'https://budget-app-backend.onrender.com'
+    ? 'https://budget-app-ios-backend.onrender.com'
     : 'http://localhost:5001');
 ```
 Import: `import BASE_URL from '../config';`
-Vercel should set `REACT_APP_API_URL=https://budget-app-backend.onrender.com`.
+The web app is served by the Render static site `budget_app` (`https://budget-app-cd5o.onrender.com`): set `REACT_APP_API_URL=https://budget-app-ios-backend.onrender.com` in that service's environment, or rely on the code default. Both require a rebuild, because React inlines the value at build time.
 Emergency admin UI in `BudgetSettings.js` is hidden unless `REACT_APP_ENABLE_ADMIN_ROUTES=true`.
 
 ## Conventions
@@ -93,8 +93,9 @@ npm test    # React Testing Library via react-scripts
 ```
 
 ## Deployment
-- **Platform**: Vercel (auto-deploy from Git)
+- **Platform**: Render static site `budget_app` (URL `https://budget-app-cd5o.onrender.com`)
 - **Build**: `npm run build` → `/build/`
-- **SPA routing**: `_redirects` → `index.html` for all routes
-- **Required Vercel env**: `REACT_APP_API_URL`
+- **SPA routing**: `_redirects` → `index.html` for all routes (that file exists for Render static sites)
+- **API URL**: `REACT_APP_API_URL=https://budget-app-ios-backend.onrender.com`, read at build time only — change it and rebuild
+- **Not the web app**: `budget-app-keape.vercel.app` (deployment gone) and `budget-app-three-gules.vercel.app` (serves the Express API, not the React UI)
 - **Admin UI**: keep `REACT_APP_ENABLE_ADMIN_ROUTES=false` or absent in production

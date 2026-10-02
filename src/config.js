@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const DEFAULT_LOCAL_API_URL = 'http://localhost:5001';
-const DEFAULT_PRODUCTION_API_URL = 'https://budget-app-backend.onrender.com';
+// Backend unico di produzione (iOS + web + Expo): servizio Render `budget-app-ios-backend`.
+const DEFAULT_PRODUCTION_API_URL = 'https://budget-app-ios-backend.onrender.com';
 
 const BASE_URL = process.env.REACT_APP_API_URL ||
   (process.env.NODE_ENV === 'production'

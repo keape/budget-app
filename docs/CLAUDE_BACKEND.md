@@ -59,10 +59,12 @@ Frontend emergency buttons in `src/BudgetSettings.js` are hidden unless `REACT_A
 Set allowed origins with comma-separated `CORS_ORIGINS` in `server/.env` or Render:
 
 ```env
-CORS_ORIGINS=https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app,http://localhost:3000
+CORS_ORIGINS=https://budget-app-cd5o.onrender.com,https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app,http://localhost:3000
 ```
 
-If `CORS_ORIGINS` is absent, `server/index.js` falls back to the legacy allowlist: `localhost:3000`, `budget-app-keape.vercel.app`, `budget-app-three-gules.vercel.app`, Render backend URLs, and the IDX workstation URL.
+`https://budget-app-cd5o.onrender.com` is the web app (Render static site `budget_app`) and must always stay in the list.
+
+If `CORS_ORIGINS` is absent, `server/index.js` falls back to its `defaultCorsOrigins` allowlist: `localhost:3000`, the web app origin above, and the two historical Vercel domains.
 
 ## Database Models (`/server/models/`)
 | Model | Key Fields |
@@ -108,8 +110,11 @@ node test-production.js  # Production smoke test
 ```
 
 ## Deployment
-- **Platform**: Render (`render.yaml`, rootDir: `./server`)
-- **Start**: `node index.js`
-- **Health check**: `/api/health`
-- **Alt**: `vercel.json` routes `/api/*` to `server/index.js`
+- **Platform**: Render, rootDir `./server`. One production backend only.
+- **Backend (keep)**: web service `budget-app-ios-backend` → `https://budget-app-ios-backend.onrender.com`. Used by the iOS app, the Expo app and the web app.
+- **Web app (keep)**: static site `budget_app` → `https://budget-app-cd5o.onrender.com`.
+- **Retired**: the Node service `budget-app` (old `budget-app-ao5r.onrender.com`) is a duplicate backend with no consumers; and `budget-app-backend.onrender.com` does not exist any more (Render answers `no-server`), so that host must not reappear in code, docs or bundle defaults.
+- **Start**: `node index.js`; **health check**: `/api/health`
+- **Never delete or rename `budget-app-ios-backend`**: the published iOS app pins its host in `budget365iOS/src/config.ts`.
+- **Alt**: `vercel.json` routes `/api/*` to `server/index.js` (legacy; Vercel currently serves the API only, not the React UI)
 - **Required non-secret Render env**: `CORS_ORIGINS`, `ENABLE_ADMIN_ROUTES=false`
