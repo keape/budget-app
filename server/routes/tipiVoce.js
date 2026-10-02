@@ -92,6 +92,16 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Tipo di voce non trovato' });
     }
 
+    // I Tipi del catalogo si rinominano o si archiviano, non si cancellano: se sparissero
+    // tornerebbero alla prima lettura del catalogo, e l'utente crederebbe di averli tolti.
+    if (tipo.sistema) {
+      return res.status(409).json({
+        success: false,
+        error: 'Tipo del catalogo',
+        message: 'I tipi del catalogo si possono rinominare o archiviare, non eliminare.'
+      });
+    }
+
     const voci = await Attivita.countDocuments({ userId: req.user.userId, tipoId: tipo._id });
     if (voci > 0) {
       return res.status(409).json({

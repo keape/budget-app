@@ -39,9 +39,9 @@ POST /api/patrimonio/fotografie          Scrive la Fotografia di un mese { anno,
 GET  /api/voci/:id                        Scheda di un conto: valore, serie mese per mese, suoi Movimenti e `conteggi` per tipo
 *    /api/voci                           Voci patrimoniali (conti, beni): CRUD + POST /:id/componenti. DELETE con `?conMovimenti=true` cancella anche i suoi Movimenti (vedi ADR-0010)
 *    /api/componenti                     Componenti di una Voce: PATCH (nome, costo, nuova Valutazione, chiusura), DELETE
-*    /api/tipi-voce                      Catalogo dei Tipi dell'utente: CRUD (la specie non si modifica)
-*    /api/trasferimenti                  Movimenti tra due Voci: GET, POST, DELETE — fuori dal budget
-*    /api/rettifiche                     Variazioni di una sola Voce (delta con segno): GET, POST, DELETE — fuori dal budget
+*    /api/tipi-voce                      Catalogo dei Tipi dell'utente: CRUD (la specie non si modifica; i Tipi `sistema` si rinominano/archiviano, il DELETE risponde 409)
+*    /api/trasferimenti                  Movimenti tra due Voci: GET, POST, PUT, DELETE — fuori dal budget
+*    /api/rettifiche                     Variazioni di una sola Voce (delta con segno): GET, POST, PATCH, DELETE — fuori dal budget
 ```
 
 ### Patrimonio (`/server/services/patrimonio.js`)

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import SerieChart from './components/SerieChart';
 import Sparkline from './components/Sparkline';
 import SelettorePeriodo from './components/SelettorePeriodo';
+import Modale from './components/Modale';
 import { fetchWithRetry } from './utils/fetchWithRetry';
 import {
   COLORE_TIPO,
@@ -13,6 +14,7 @@ import {
   euro,
   filtraPeriodo,
   naturaTipo,
+  perOrdine,
   percentuale,
   puntiDaFotografie,
   puntiDaSerie,
@@ -88,6 +90,8 @@ function Patrimonio() {
     descrizione: ''
   });
   const [nuovoTipo, setNuovoTipo] = useState({ nome: '', denaro: true });
+  // Il tipo in corso di rinomina: { id, nome, denaro }. Fuori da qui si mostra il badge.
+  const [tipoInModifica, setTipoInModifica] = useState(null);
 
   const token = localStorage.getItem('token');
   const intestazioni = { Authorization: `Bearer ${token}` };
@@ -162,6 +166,7 @@ function Patrimonio() {
     };
   }, [dati]);
 
+  const tuttiTipi = dati?.tipi || [];
   const tipiAttivi = tipiAttivita(dati?.tipi);
   const tipiPassivi = tipiDebito(dati?.tipi);
   const tipoScelto = (dati?.tipi || []).find((t) => String(t.id) === String(nuovaVoce.tipoId));
@@ -197,6 +202,34 @@ function Patrimonio() {
     }
   };
 
+  // Rinominare un Tipo non tocca i conti che lo usano: cambia solo l'etichetta.
+  const salvaTipo = async (e) => {
+    e.preventDefault();
+    if (!tipoInModifica) return;
+    const originale = tuttiTipi.find((t) => String(t.id) === String(tipoInModifica.id));
+    const corpo = { nome: tipoInModifica.nome };
+    if (originale && originale.specie === 'attivita') corpo.denaro = Boolean(tipoInModifica.denaro);
+    if (await chiama('PATCH', `/api/tipi-voce/${tipoInModifica.id}`, corpo)) {
+      setTipoInModifica(null);
+      setAvviso('Tipo aggiornato.');
+    }
+  };
+
+  const archiviaTipo = async (tipo) => {
+    if (await chiama('PATCH', `/api/tipi-voce/${tipo.id}`, { archiviato: !tipo.archiviato })) {
+      setAvviso(tipo.archiviato ? 'Tipo ripristinato.' : 'Tipo archiviato: non compare più nel menù dei nuovi conti.');
+    }
+  };
+
+  // Eliminare un Tipo è irreversibile, ma non tocca i conti: se qualcuno lo usa il backend
+  // rifiuta con 409 e il messaggio dice di cambiargli tipo o di archiviarlo.
+  const eliminaTipo = async (tipo) => {
+    if (!window.confirm(`Eliminare il tipo "${tipo.nome}"?`)) return;
+    if (await chiama('DELETE', `/api/tipi-voce/${tipo.id}`)) {
+      setAvviso('Tipo eliminato.');
+    }
+  };
+
   const riapriConto = async (id, nome) => {
     if (await chiama('PATCH', `/api/voci/${id}`, { archiviata: false })) {
       setAvviso(`Conto "${nome}" riaperto: torna nel patrimonio con la sua storia.`);
@@ -206,6 +239,17 @@ function Patrimonio() {
   const campi = 'w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
   const bottoneSecondario = 'px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
   const bottonePrimario = 'px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const campiInline = 'px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const bottoneLink = 'rounded text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const bottoneLinkRosso = 'rounded text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const classeBadge = (t) =>
+    `rounded-full px-2.5 py-1 text-xs ${
+      t.specie === 'debito'
+        ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+        : t.denaro
+          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+          : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+    }`;
 
   if (caricamento) {
     return (
@@ -242,14 +286,27 @@ function Patrimonio() {
         </div>
       )}
 
-      {pannello === 'conto' && (
-        <form onSubmit={creaVoce} className="mb-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Nuovo conto</h2>
-          <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-            Il tipo dice che cosa stai creando: un'<strong className="font-semibold text-gray-700 dark:text-gray-200">Attività</strong>, che
-            entra nel patrimonio, oppure un <strong className="font-semibold text-gray-700 dark:text-gray-200">Debito</strong>, che lo riduce.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-3">
+      <Modale
+        aperta={pannello === 'conto'}
+        titolo="Nuovo conto"
+        sottotitolo="Un conto è una voce patrimoniale: il conto in banca, la carta, i contanti in casa."
+        onChiudi={() => setPannello(null)}
+      >
+        {/* Gli avvisi della pagina stanno dietro l'overlay: qui si vedono mentre la finestra è aperta. */}
+        {(errore || avviso) && (
+          <div
+            className={`mb-4 rounded-lg border px-3 py-2 text-xs ${
+              errore
+                ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200'
+                : 'border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
+            }`}
+          >
+            {errore || avviso}
+          </div>
+        )}
+
+        <form onSubmit={creaVoce}>
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
             <input
               className={campi}
               type="text"
@@ -288,17 +345,7 @@ function Patrimonio() {
           <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">
             {naturaScelta ? (
               <>
-                <span
-                  className={`mr-2 rounded-full px-2 py-0.5 font-medium ${
-                    tipoScelto.specie === 'debito'
-                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                      : tipoScelto.denaro
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                        : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
-                  }`}
-                >
-                  {naturaScelta.titolo}
-                </span>
+                <span className={`mr-2 font-medium ${classeBadge(tipoScelto)}`}>{naturaScelta.titolo}</span>
                 {naturaScelta.testo}
               </>
             ) : (
@@ -306,7 +353,102 @@ function Patrimonio() {
             )}
           </p>
         </form>
-      )}
+
+        {/* I Tipi di voce vivono qui: si crea un conto scegliendone uno e, se non c'è quello
+            giusto, lo si aggiunge, rinomina o archivia senza uscire dalla finestra. */}
+        <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Tipi di voce</h3>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Il tipo dice se una voce è denaro o un bene materiale e in quale gruppo compare.
+            I tipi del catalogo si rinominano o si archiviano; quelli creati da te si possono
+            anche eliminare, purché nessun conto li usi.
+          </p>
+
+          {[
+            { titolo: 'Attività — quello che possiedi', specie: 'attivita' },
+            { titolo: 'Debiti — quello che devi', specie: 'debito' }
+          ].map((sezione) => {
+            const elenco = tuttiTipi.filter((t) => t.specie === sezione.specie).sort(perOrdine);
+            return (
+              <div key={sezione.specie} className="mt-4">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{sezione.titolo}</h4>
+                {elenco.length === 0 ? (
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Nessun tipo in questa sezione.</p>
+                ) : (
+                  <ul className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+                    {elenco.map((t) => {
+                      const inModifica = tipoInModifica && String(tipoInModifica.id) === String(t.id);
+                      return (
+                        <li key={String(t.id)} className="py-2">
+                          {inModifica ? (
+                            <form onSubmit={salvaTipo} className="flex flex-wrap items-center gap-2">
+                              <input
+                                className={campiInline}
+                                type="text"
+                                value={tipoInModifica.nome}
+                                onChange={(e) => setTipoInModifica({ ...tipoInModifica, nome: e.target.value })}
+                                required
+                              />
+                              {t.specie === 'attivita' && (
+                                <select
+                                  className={campiInline}
+                                  value={tipoInModifica.denaro ? 'denaro' : 'bene'}
+                                  onChange={(e) => setTipoInModifica({ ...tipoInModifica, denaro: e.target.value === 'denaro' })}
+                                >
+                                  <option value="denaro">È denaro</option>
+                                  <option value="bene">È un bene materiale</option>
+                                </select>
+                              )}
+                              <button type="submit" className={bottonePrimario}>Salva</button>
+                              <button type="button" className={bottoneSecondario} onClick={() => setTipoInModifica(null)}>Annulla</button>
+                            </form>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={classeBadge(t)}>{t.nome}</span>
+                              {t.specie === 'attivita' && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{t.denaro ? 'denaro' : 'bene materiale'}</span>
+                              )}
+                              {t.archiviato && (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">archiviato</span>
+                              )}
+                              <span className="ml-auto flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  className={bottoneLink}
+                                  onClick={() => setTipoInModifica({ id: t.id, nome: t.nome, denaro: t.denaro })}
+                                >
+                                  rinomina
+                                </button>
+                                <button type="button" className={bottoneLink} onClick={() => archiviaTipo(t)}>
+                                  {t.archiviato ? 'ripristina' : 'archivia'}
+                                </button>
+                                {!t.sistema && (
+                                  <button type="button" className={bottoneLinkRosso} onClick={() => eliminaTipo(t)}>
+                                    elimina
+                                  </button>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+
+          <form onSubmit={creaTipo} className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+            <input className={campi} type="text" placeholder="Nome del tipo (es. Cripto, Barca)" value={nuovoTipo.nome} onChange={(e) => setNuovoTipo({ ...nuovoTipo, nome: e.target.value })} required />
+            <select className={campi} value={nuovoTipo.denaro ? 'denaro' : 'bene'} onChange={(e) => setNuovoTipo({ ...nuovoTipo, denaro: e.target.value === 'denaro' })}>
+              <option value="denaro">È denaro</option>
+              <option value="bene">È un bene materiale</option>
+            </select>
+            <button type="submit" className={bottoneSecondario}>Aggiungi tipo</button>
+          </form>
+        </div>
+      </Modale>
 
       {pannello === 'trasferimento' && (
         <div className="mb-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
@@ -569,51 +711,6 @@ function Patrimonio() {
           </aside>
         </div>
       )}
-
-      <section className="mt-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Tipi di voce</h2>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Il tipo dice se una voce è denaro o un bene materiale e in quale gruppo compare. Aggiungerne
-          uno è un dato, non una modifica al programma. L'ordine è quello del catalogo.
-        </p>
-
-        {[
-          { titolo: 'Attività — quello che possiedi', elenco: tipiAttivi },
-          { titolo: 'Debiti — quello che devi', elenco: tipiPassivi }
-        ].map((sezione) => (
-          <div key={sezione.titolo} className="mt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{sezione.titolo}</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {sezione.elenco.length === 0 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">Nessun tipo in questa sezione.</span>
-              )}
-              {sezione.elenco.map((t) => (
-                <span
-                  key={String(t.id)}
-                  className={`rounded-full px-2.5 py-1 text-xs ${
-                    t.specie === 'debito'
-                      ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                      : t.denaro
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                        : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
-                  }`}
-                >
-                  {t.nome}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        <form onSubmit={creaTipo} className="mt-4 grid gap-3 sm:grid-cols-4">
-          <input className={campi} type="text" placeholder="Nome del tipo (es. Cripto, Barca)" value={nuovoTipo.nome} onChange={(e) => setNuovoTipo({ ...nuovoTipo, nome: e.target.value })} required />
-          <select className={campi} value={nuovoTipo.denaro ? 'denaro' : 'bene'} onChange={(e) => setNuovoTipo({ ...nuovoTipo, denaro: e.target.value === 'denaro' })}>
-            <option value="denaro">È denaro</option>
-            <option value="bene">È un bene materiale</option>
-          </select>
-          <button type="submit" className={bottoneSecondario}>Aggiungi tipo</button>
-        </form>
-      </section>
     </div>
   );
 }

@@ -16,8 +16,8 @@
 - `ForgotPassword.js`, `ResetPassword.js`, `ChangePassword.js` — Password management
 - `AboutUs.js` — About page
 - `Savings.js` — modulo risparmio (sospeso: il piano di allocazione è una sessione a sé)
-- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme e sintesi
-- `ContoDettaglio.js` — scheda di un conto: andamento e suoi Movimenti (rotta `/patrimonio/:voceId`)
+- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme e sintesi. "Nuovo conto" apre una modale con la creazione e la gestione dei Tipi di voce (rinomina, denaro/bene, archivia, elimina)
+- `ContoDettaglio.js` — scheda di un conto: andamento e suoi Movimenti, con modifica ed eliminazione per ciascun movimento (rotta `/patrimonio/:voceId`)
 - `Home_backup.js`, `Home_new.js` — Legacy backups (NOT used by App.js)
 
 ## Route Map
@@ -50,6 +50,7 @@
 - `SerieChart.js` — grafico a area di una serie mensile (patrimonio complessivo o singolo conto)
 - `Sparkline.js` — traccia compatta accanto a un conto nell'elenco (SVG disegnato a mano)
 - `SelettorePeriodo.js` — periodo del grafico (1 mese / 6 mesi / 1 anno / tutto)
+- `Modale.js` — finestra sopra la pagina (Esc, click fuori, fuoco che entra ed esce): usata da "Nuovo conto" e dalla modifica di un movimento
 - `NotificationBar.js` — In-app notifications
 - `GoogleSignInButton.js` — pulsante ufficiale "Accedi con Google" (Google Identity Services); renderizzato solo se `REACT_APP_GOOGLE_CLIENT_ID` è impostata
 - `OTPVerification.js` — OTP input

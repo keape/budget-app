@@ -72,6 +72,50 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// PATCH /api/rettifiche/:id — corregge importo, data o descrizione. Non cambia il conto:
+// una Rettifica appartiene alla Voce su cui è stata registrata, e il conto si corregge
+// dalla scheda del conto, non da qui.
+router.patch('/:id', authenticateToken, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(String(req.params.id))) {
+      return res.status(400).json({ success: false, error: 'Rettifica non valida' });
+    }
+
+    const { importo, data, descrizione } = req.body;
+    const aggiornamento = {};
+
+    if (importo !== undefined) {
+      const importoNumerico = Number(importo);
+      if (importo === null || importo === '' || Number.isNaN(importoNumerico)) {
+        return res.status(400).json({ success: false, error: 'L\'importo deve essere un numero' });
+      }
+      if (importoNumerico === 0) {
+        return res.status(400).json({ success: false, error: 'Una rettifica di zero non cambia nulla' });
+      }
+      aggiornamento.importo = importoNumerico;
+    }
+    if (data !== undefined) aggiornamento.data = data ? new Date(data) : new Date();
+    if (descrizione !== undefined) aggiornamento.descrizione = String(descrizione);
+
+    if (!Object.keys(aggiornamento).length) {
+      return res.status(400).json({ success: false, error: 'Nessuna modifica indicata' });
+    }
+
+    const rettifica = await Rettifica.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.userId },
+      aggiornamento,
+      { new: true }
+    );
+    if (!rettifica) {
+      return res.status(404).json({ success: false, error: 'Rettifica non trovata' });
+    }
+    return res.json({ success: true, data: rettifica });
+  } catch (err) {
+    logError('❌ Errore nella modifica della rettifica:', err);
+    return res.status(500).json({ success: false, error: 'Errore nella modifica della rettifica' });
+  }
+});
+
 // DELETE /api/rettifiche/:id
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {

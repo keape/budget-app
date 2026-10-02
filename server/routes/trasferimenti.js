@@ -96,6 +96,57 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// PUT /api/trasferimenti/:id — corregge importo, data, descrizione e, se indicati, i due
+// estremi. L'importo resta positivo: la direzione la dà la coppia da → a.
+router.put('/:id', authenticateToken, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(String(req.params.id))) {
+      return res.status(400).json({ success: false, error: 'Trasferimento non valido' });
+    }
+
+    const trasferimento = await Trasferimento.findOne({ _id: req.params.id, userId: req.user.userId });
+    if (!trasferimento) {
+      return res.status(404).json({ success: false, error: 'Trasferimento non trovato' });
+    }
+
+    const { daVoceId, aVoceId, daVoceSpecie, aVoceSpecie, importo, data, descrizione } = req.body;
+    const aggiornamento = {};
+
+    if (importo !== undefined) {
+      const importoNumerico = Number(importo);
+      if (importo === null || importo === '' || Number.isNaN(importoNumerico) || importoNumerico <= 0) {
+        return res.status(400).json({ success: false, error: 'L\'importo deve essere un numero maggiore di zero' });
+      }
+      aggiornamento.importo = Math.abs(importoNumerico);
+    }
+    if (data !== undefined) aggiornamento.data = data ? new Date(data) : new Date();
+    if (descrizione !== undefined) aggiornamento.descrizione = String(descrizione);
+
+    // Gli estremi si cambiano solo se il client li indica: senza, il Trasferimento resta
+    // fra i due conti su cui era stato registrato.
+    const da = daVoceId ? await risolviEstremo(req.user.userId, { voceId: daVoceId, voceSpecie: daVoceSpecie }) : trasferimento.da;
+    const a = aVoceId ? await risolviEstremo(req.user.userId, { voceId: aVoceId, voceSpecie: aVoceSpecie }) : trasferimento.a;
+    if (String(da.voceId) === String(a.voceId)) {
+      return res.status(400).json({ success: false, error: 'Origine e destinazione devono essere due voci diverse' });
+    }
+    aggiornamento.da = da;
+    aggiornamento.a = a;
+
+    const salvato = await Trasferimento.findOneAndUpdate(
+      { _id: trasferimento._id, userId: req.user.userId },
+      aggiornamento,
+      { new: true }
+    );
+    return res.json({ success: true, data: salvato });
+  } catch (err) {
+    if (err instanceof patrimonio.ErroreVoce) {
+      return res.status(err.status || 400).json({ success: false, error: err.message });
+    }
+    logError('❌ Errore nella modifica del trasferimento:', err);
+    return res.status(500).json({ success: false, error: 'Errore nella modifica del trasferimento' });
+  }
+});
+
 // DELETE /api/trasferimenti/:id
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {

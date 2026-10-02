@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import SerieChart from './components/SerieChart';
 import SelettorePeriodo from './components/SelettorePeriodo';
+import Modale from './components/Modale';
 import { fetchWithRetry } from './utils/fetchWithRetry';
 import {
   chiaveMese,
@@ -33,6 +34,14 @@ const COLORE_ETICHETTA = {
   rettifica: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
 };
 
+// Dove vive ciascun Movimento nel backend: modifica ed eliminazione usano la sua rotta.
+const ROTTE_MOVIMENTO = {
+  spesa: 'spese',
+  entrata: 'entrate',
+  trasferimento: 'trasferimenti',
+  rettifica: 'rettifiche'
+};
+
 const titoloMovimento = (m) => {
   if (m.descrizione) return m.descrizione;
   if (m.tipo === 'trasferimento') return m.uscente ? `Verso ${m.controparte}` : `Da ${m.controparte}`;
@@ -60,6 +69,10 @@ function ContoDettaglio() {
   const [periodo, setPeriodo] = useState('1a');
   const [pannello, setPannello] = useState(null);
   const [rettifica, setRettifica] = useState({ importo: '', descrizione: '' });
+  // Il Movimento in corso di modifica: { id, tipo, importo, categoria, descrizione, data }.
+  const [movimentoInModifica, setMovimentoInModifica] = useState(null);
+  // Le categorie sono solo un suggerimento per il campo: se non arrivano si scrive a mano.
+  const [categorie, setCategorie] = useState({ spese: [], entrate: [] });
   // Le impostazioni del conto: nome, tipo, chiusura, eliminazione.
   const [impostazioni, setImpostazioni] = useState({ nome: '', tipoId: '' });
   const [confermaNome, setConfermaNome] = useState('');
@@ -97,12 +110,31 @@ function ContoDettaglio() {
     carica();
   }, [voceId]);
 
+  // Le categorie si caricano una volta sola: sono un suggerimento, non una dipendenza.
+  useEffect(() => {
+    if (!token) return;
+    fetchWithRetry('/api/categorie', { headers: intestazioni })
+      .then((res) => setCategorie(res.data.categorie || { spese: [], entrate: [] }))
+      .catch(() => {});
+  }, [token]);
+
   const puntiTotali = useMemo(
     () => (dati ? puntiDaSerie(dati.asse, dati.voce.serie) : []),
     [dati]
   );
   const puntiVisibili = useMemo(() => filtraPeriodo(puntiTotali, periodo), [puntiTotali, periodo]);
   const deltaP = variazione(puntiVisibili);
+
+  // Il Tipo scelto non deve sparire dal menù se qualcuno lo archivia: resterebbe un menù
+  // che mostra un altro Tipo mentre il conto ne ha ancora uno suo.
+  const tipiPerImpostazioni = useMemo(() => {
+    const elenco = tipiAttivita(dati?.tipi || []);
+    const corrente = (dati?.tipi || []).find((t) => String(t.id) === String(impostazioni.tipoId));
+    if (corrente && !elenco.some((t) => String(t.id) === String(corrente.id))) {
+      return [...elenco, corrente];
+    }
+    return elenco;
+  }, [dati, impostazioni.tipoId]);
 
   const mesi = useMemo(() => {
     const gruppi = [];
@@ -195,9 +227,81 @@ function ContoDettaglio() {
     navigate('/transazioni');
   };
 
+  const apriModifica = (m) => {
+    setErrore(null);
+    setAvviso(null);
+    setMovimentoInModifica({
+      id: m.id,
+      tipo: m.tipo,
+      // Una Rettifica è un delta con segno; Spese, Entrate e Trasferimenti si correggono
+      // sempre in positivo: il verso lo decide il tipo di Movimento.
+      importo: m.tipo === 'rettifica' ? String(m.importo) : String(Math.abs(m.importo)),
+      categoria: m.categoria || '',
+      descrizione: m.descrizione || '',
+      data: m.data ? new Date(m.data).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const salvaModifica = async (e) => {
+    e.preventDefault();
+    if (!movimentoInModifica) return;
+    const { id, tipo, importo, categoria, descrizione, data } = movimentoInModifica;
+    const numerico = Number(importo);
+    if (importo === '' || Number.isNaN(numerico) || numerico === 0) {
+      setErrore('Inserisci un importo valido e diverso da zero.');
+      return;
+    }
+    if ((tipo === 'spesa' || tipo === 'entrata') && !String(categoria).trim()) {
+      setErrore('Indica la categoria.');
+      return;
+    }
+
+    setErrore(null);
+    setAvviso(null);
+    try {
+      if (tipo === 'spesa') {
+        await fetchWithRetry(`/api/spese/${id}`, { method: 'PUT', headers: intestazioni, data: { importo: Math.abs(numerico), categoria, descrizione, data } });
+      } else if (tipo === 'entrata') {
+        await fetchWithRetry(`/api/entrate/${id}`, { method: 'PUT', headers: intestazioni, data: { importo: Math.abs(numerico), categoria, descrizione, data } });
+      } else if (tipo === 'trasferimento') {
+        await fetchWithRetry(`/api/trasferimenti/${id}`, { method: 'PUT', headers: intestazioni, data: { importo: Math.abs(numerico), descrizione, data } });
+      } else {
+        await fetchWithRetry(`/api/rettifiche/${id}`, { method: 'PATCH', headers: intestazioni, data: { importo: numerico, descrizione, data } });
+      }
+      setMovimentoInModifica(null);
+      setAvviso('Movimento aggiornato.');
+      await carica();
+    } catch (err) {
+      setErrore(err?.response?.data?.error || err?.response?.data?.message || 'Modifica non riuscita');
+    }
+  };
+
+  // L'eliminazione è l'unica operazione che non si annulla: la conferma dice che cosa
+  // sparisce davvero, cioè anche la controparte di un Trasferimento.
+  const eliminaMovimento = async (m) => {
+    const nome = titoloMovimento(m);
+    let domanda = `Eliminare "${nome}"?`;
+    if (m.tipo === 'trasferimento') domanda = `Eliminare il trasferimento "${nome}"? Sparisce anche dall'altro conto.`;
+    if (m.tipo === 'rettifica') domanda = `Eliminare la rettifica "${nome}"? Il valore del conto cambia.`;
+    if (m.origine === 'sistema') domanda += ' È stato generato dal sistema.';
+    if (!window.confirm(domanda)) return;
+
+    setErrore(null);
+    setAvviso(null);
+    try {
+      await fetchWithRetry(`/api/${ROTTE_MOVIMENTO[m.tipo]}/${m.id}`, { method: 'DELETE', headers: intestazioni });
+      setAvviso('Movimento eliminato.');
+      await carica();
+    } catch (err) {
+      setErrore(err?.response?.data?.error || 'Eliminazione non riuscita');
+    }
+  };
+
   const campi = 'w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
   const bottoneSecondario = 'px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
   const bottonePrimario = 'px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const azione = 'rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const azioneRossa = 'rounded-lg p-1.5 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500';
 
   if (caricamento) {
     return (
@@ -293,9 +397,9 @@ function ContoDettaglio() {
               value={impostazioni.tipoId}
               onChange={(e) => setImpostazioni({ ...impostazioni, tipoId: e.target.value })}
             >
-              {tipiAttivita(dati.tipi).map((t) => (
+              {tipiPerImpostazioni.map((t) => (
                 <option key={String(t.id)} value={String(t.id)}>
-                  {t.nome} — {t.denaro ? 'denaro' : 'bene materiale'}
+                  {t.nome} — {t.denaro ? 'denaro' : 'bene materiale'}{t.archiviato ? ' (archiviato)' : ''}
                 </option>
               ))}
             </select>
@@ -448,6 +552,34 @@ function ContoDettaglio() {
                     <span className={`shrink-0 text-sm font-semibold tabular-nums ${m.importo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {m.importo >= 0 ? '+' : ''}{euro(m.importo)}
                     </span>
+                    <span className="flex shrink-0 items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => apriModifica(m)}
+                        className={azione}
+                        title="Modifica"
+                        aria-label={`Modifica ${titoloMovimento(m)}`}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => eliminaMovimento(m)}
+                        className={azioneRossa}
+                        title="Elimina"
+                        aria-label={`Elimina ${titoloMovimento(m)}`}
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -458,6 +590,79 @@ function ContoDettaglio() {
           <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">Sono mostrati i 300 movimenti più recenti.</p>
         )}
       </section>
+
+      <Modale
+        aperta={!!movimentoInModifica}
+        titolo={movimentoInModifica ? `Modifica ${(ETICHETTA_TIPO[movimentoInModifica.tipo] || 'movimento').toLowerCase()}` : ''}
+        sottotitolo={movimentoInModifica ? voce.nome : ''}
+        onChiudi={() => setMovimentoInModifica(null)}
+        larghezza="max-w-lg"
+      >
+        {movimentoInModifica && (
+          <form onSubmit={salvaModifica} className="space-y-3">
+            {errore && (
+              <div className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-800 dark:text-red-200">
+                {errore}
+              </div>
+            )}
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
+              Importo{movimentoInModifica.tipo === 'rettifica' ? ' (differenza: + alza il valore, − lo abbassa)' : ''}
+              <input
+                className={`${campi} mt-1`}
+                type="number"
+                step="0.01"
+                value={movimentoInModifica.importo}
+                onChange={(e) => setMovimentoInModifica({ ...movimentoInModifica, importo: e.target.value })}
+                required
+              />
+            </label>
+
+            {(movimentoInModifica.tipo === 'spesa' || movimentoInModifica.tipo === 'entrata') && (
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
+                Categoria
+                <input
+                  className={`${campi} mt-1`}
+                  type="text"
+                  list={`categorie-${movimentoInModifica.tipo}`}
+                  value={movimentoInModifica.categoria}
+                  onChange={(e) => setMovimentoInModifica({ ...movimentoInModifica, categoria: e.target.value })}
+                  required
+                />
+                <datalist id={`categorie-${movimentoInModifica.tipo}`}>
+                  {(movimentoInModifica.tipo === 'spesa' ? categorie.spese : categorie.entrate).map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </label>
+            )}
+
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
+              Descrizione
+              <input
+                className={`${campi} mt-1`}
+                type="text"
+                value={movimentoInModifica.descrizione}
+                onChange={(e) => setMovimentoInModifica({ ...movimentoInModifica, descrizione: e.target.value })}
+              />
+            </label>
+
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">
+              Data
+              <input
+                className={`${campi} mt-1`}
+                type="date"
+                value={movimentoInModifica.data}
+                onChange={(e) => setMovimentoInModifica({ ...movimentoInModifica, data: e.target.value })}
+              />
+            </label>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" className={bottoneSecondario} onClick={() => setMovimentoInModifica(null)}>Annulla</button>
+              <button type="submit" className={bottonePrimario}>Salva</button>
+            </div>
+          </form>
+        )}
+      </Modale>
     </div>
   );
 }
