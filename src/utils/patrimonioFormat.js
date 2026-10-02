@@ -186,6 +186,6 @@ export const EMOJI_TIPO = {
   'Altri asset': '📦',
   'Carte di credito': '💳',
   Mutui: '🏚️',
-  Finanziamenti: '📉',
+  Debiti: '📉',
   'Altre liability': '📉'
 };

@@ -15,7 +15,7 @@ yarn-error.log*
 server/.env
 server/scripts/.env
 # File di rollback prodotti dalle migrazioni: locali, contengono identificativi di produzione
-server/scripts/rollback-*.json
+server/scripts/rollback-*
 server/credentials.json
 social-agent/.env
 render-ios.env

@@ -89,8 +89,12 @@ async function importaSpese(filePath) {
         return null;
       }
 
-      // Converti l'importo in positivo se è una spesa (negativo nel file)
-      const importoFinale = importo < 0 ? Math.abs(importo) : importo;
+      // La Spesa si conserva sempre negativa, come fanno le rotte (routes/spese.js,
+      // `-Math.abs(importo)`): il Patrimonio somma gli importi così come sono in archivio,
+      // quindi una Spesa positiva gonfia il saldo del conto invece di abbassarlo.
+      // Attenzione: questo script crea solo Spese. Le righe di entrata vanno importate
+      // a parte, altrimenti finiscono qui come uscite.
+      const importoFinale = -Math.abs(importo);
       
       return {
         descrizione: row.Descrizione || '',

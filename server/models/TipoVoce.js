@@ -21,7 +21,7 @@ const CATALOGO_INIZIALE = [
   { nome: 'Crediti', specie: 'attivita', denaro: true, ordine: 70 },
   { nome: 'Altri asset', specie: 'attivita', denaro: false, ordine: 80 },
   { nome: 'Mutui', specie: 'debito', pianoAmmortamento: true, ordine: 110 },
-  { nome: 'Finanziamenti', specie: 'debito', pianoAmmortamento: true, ordine: 120 },
+  { nome: 'Debiti', specie: 'debito', pianoAmmortamento: true, ordine: 120 },
   { nome: 'Carte di credito', specie: 'debito', pianoAmmortamento: false, ordine: 130 },
   { nome: 'Altre liability', specie: 'debito', pianoAmmortamento: false, ordine: 140 }
 ];

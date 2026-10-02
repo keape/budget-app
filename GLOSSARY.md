@@ -24,7 +24,7 @@ _Avoid_: pezzo, sotto-voce
 Il prezzo pagato per acquisire una Componente, con la sua data. Resta distinto dalla Valutazione: il primo dice quanto è costata, la seconda quanto vale.
 
 **Tipo**:
-L'etichetta che raggruppa le Voci. Il catalogo iniziale è, nell'ordine in cui si mostra: **Attività** — Contanti, Conti correnti, Investimenti, Immobili, Veicoli, Beni di valore, Crediti, Altri asset; **Debiti** — Mutui, Finanziamenti, Carte di credito, Altre liability. L'utente può crearne, rinominarne, riordinarne e cancellarne. Il tipo dice se un'Attività è denaro o bene materiale e, per i Debiti, se hanno un piano di ammortamento. Non determina come si valuta una Voce: lo decide la Componente. La **specie** di un Tipo (Attività o Debito) si dichiara alla creazione e non si cambia: è la barriera che impedisce a un debito di diventare un'attività per sbaglio. L'ordine in cui i Tipi compaiono è un dato del Tipo (`ordine`), non una regola del programma.
+L'etichetta che raggruppa le Voci. Il catalogo iniziale è, nell'ordine in cui si mostra: **Attività** — Contanti, Conti correnti, Investimenti, Immobili, Veicoli, Beni di valore, Crediti, Altri asset; **Debiti** — Mutui, Debiti (i finanziamenti), Carte di credito, Altre liability. L'utente può crearne, rinominarne, riordinarne e cancellarne. Il tipo dice se un'Attività è denaro o bene materiale e, per i Debiti, se hanno un piano di ammortamento. Non determina come si valuta una Voce: lo decide la Componente. La **specie** di un Tipo (Attività o Debito) si dichiara alla creazione e non si cambia: è la barriera che impedisce a un debito di diventare un'attività per sbaglio. L'ordine in cui i Tipi compaiono è un dato del Tipo (`ordine`), non una regola del programma.
 _Avoid_: categoria, classe
 
 **Gruppo**:
