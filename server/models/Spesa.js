@@ -49,7 +49,13 @@ const spesaSchema = new mongoose.Schema({
   rataDebitoId: {
     type: mongoose.Schema.Types.ObjectId
   }
-});
+},
+// I timbri mancavano solo a Spesa ed Entrata: Trasferimento, Rettifica, Attività, Debito e
+// Componente li hanno già. Senza, una modifica a un Movimento non lascia traccia di quando
+// è avvenuta, e non si può ricostruire che cosa è cambiato dopo. Non coprono le scritture
+// fatte con il driver grezzo (scripts) né le cancellazioni, che non lasciano traccia.
+{ timestamps: true }
+);
 
 // Index per performance nelle query per utente
 spesaSchema.index({ userId: 1, data: -1 });
