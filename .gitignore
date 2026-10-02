@@ -66,6 +66,14 @@ budget365iOS/ios/build_output/
 .claude/commands/
 .claude/worktrees/
 .superpowers/
+*.graphify-bak
+
+# Stato locale degli strumenti (per-macchina, non condiviso)
+.pi/
+.omp/
+.serena/
+.mcp.json
+.ignore
 
 # Social agent generated drafts
 social-agent/reddit-drafts/*.md
