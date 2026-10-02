@@ -86,7 +86,7 @@ npm start        # Terminal 2 — frontend port 3000
 - Never enable these in Render/production unless performing a short, intentional maintenance window; leave absent or `false` after use.
 - Guarded routes include `/api/debug-env`, `/api/migrate-budget-data`, `/api/debug-budget-data`, `/api/emergency-remove-index`, `/api/test-auth`, `/api/fix-transactions`, `/api/budget-settings/emergency-fix`, `/api/budget-settings/remove-unique-index`.
 
-**Social login**: `/api/auth/social-login`. Google verifica davvero l'idToken (tokeninfo); Apple lo decodifica **senza verificare la firma** — bypass di autenticazione noto, in attesa di fix. Dettagli in `docs/CLAUDE_BACKEND.md`.
+**Social login**: `/api/auth/social-login`. Google verifica l'idToken con `tokeninfo`; Apple lo verifica con le chiavi pubbliche di Apple (`server/utils/appleTokens.js`): firma, `iss`, `exp` e — se `APPLE_CLIENT_IDS` è configurata — `aud`. Dettagli in `docs/CLAUDE_BACKEND.md`.
 
 ## Cross-Platform Conventions
 - **JWT storage**: `localStorage` (web) / `AsyncStorage` (mobile)

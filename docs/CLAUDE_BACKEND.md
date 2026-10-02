@@ -15,7 +15,7 @@ POST /api/auth/send-otp                   Send OTP email
 POST /api/auth/verify-otp                 Verify OTP code
 POST /api/auth/forgot-password            Trigger password reset email
 POST /api/auth/change-password            Change password (auth required)
-POST /api/auth/social-login               Social login: `{ provider, idToken }` (google verificato, apple no)
+POST /api/auth/social-login               Social login: `{ provider, idToken }` (google e apple entrambi verificati)
 POST /api/auth/update-email               Update email (auth required)
 DEL  /api/auth/delete-account             Delete account (auth required)
 *    /api/spese                           CRUD expenses
@@ -58,7 +58,7 @@ Frontend emergency buttons are gated by `REACT_APP_ENABLE_ADMIN_ROUTES` (see `AG
 
 ### Social login (`/api/auth/social-login`)
 - **Google**: verifies the idToken via `oauth2.googleapis.com/tokeninfo` and rejects a non-verified email. Optional `GOOGLE_CLIENT_IDS` (comma-separated, web + iOS client ids) enables the audience check; without it any audience is accepted.
-- **Apple**: `jwt.decode` only — the signature is **not** verified. Anyone can forge an idToken with an arbitrary `sub`/`email` and obtain a session JWT (account takeover). Fix pending; do not expose new clients to it.
+- **Apple**: la firma dell'idToken è verificata con le chiavi pubbliche di Apple (`server/utils/appleTokens.js`): firma RS256, `iss = https://appleid.apple.com`, `exp`. L'`aud` è controllata solo se `APPLE_CLIENT_IDS` (comma-separated) è configurata, e deve elencare sia il bundle id iOS (`com.keape.budget365`) sia il Services ID web. `APPLE_JWKS_URL` esiste solo per i test locali. Prima si usava `jwt.decode`, quindi un token fabbricato con l'email di un altro utente dava una sessione valida sul suo account: non reintrodurre quella lettura senza verifica.
 - Both: existing users are matched/linked by `email`, then by `googleId`/`appleId`.
 
 ## CORS Allowed Origins

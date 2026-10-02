@@ -3,11 +3,17 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import BASE_URL from './config';
 import GoogleSignInButton from './components/GoogleSignInButton';
+import AppleSignInButton from './components/AppleSignInButton';
 import { isGoogleSignInConfigured } from './utils/googleSignIn';
+import { isAppleSignInConfigured } from './utils/appleSignIn';
 
-// Valore inciso al build: se il client id web non e' configurato, il divisore "oppure"
-// e il pulsante Google non devono comparire (nemmeno da soli).
+// Valori incisi al build: senza client id web (Google) o Services ID (Apple) il
+// rispettivo pulsante non viene mostrato, e il divisore "oppure" non compare da solo.
 const GOOGLE_ENABLED = isGoogleSignInConfigured();
+const APPLE_ENABLED = isAppleSignInConfigured();
+const SOCIAL_ENABLED = GOOGLE_ENABLED || APPLE_ENABLED;
+
+const SOCIAL_LABELS = { google: 'Google', apple: 'Apple' };
 
 function Login() {
   const [username, setUsername] = useState('');
@@ -43,15 +49,17 @@ function Login() {
     navigate('/');
   }, [navigate]);
 
-  // Il token Google viene verificato dal backend (`/api/auth/social-login`), che restituisce
-  // il JWT di sessione già usato dal login con password.
-  const handleGoogleCredential = useCallback(async (idToken) => {
+  // Il token del provider viene verificato dal backend (`/api/auth/social-login`), che
+  // restituisce il JWT di sessione già usato dal login con password.
+  const finishSocialLogin = useCallback(async (provider, idToken, socialUser) => {
     setError('');
     setSocialLoading(true);
     try {
       const response = await axios.post(`${BASE_URL}/api/auth/social-login`, {
-        provider: 'google',
-        idToken
+        provider,
+        idToken,
+        // Apple manda nome ed email solo al primo accesso, dall'app come dal browser.
+        ...(socialUser ? { user: socialUser } : {})
       });
 
       if (response.data?.token) {
@@ -59,19 +67,30 @@ function Login() {
       } else {
         setError('Token non ricevuto dal server');
       }
-    } catch (googleError) {
-      console.error('Errore login Google:', googleError.response?.data || googleError.message);
-      if (googleError.response) {
-        setError(googleError.response.data.message || 'Accesso con Google non riuscito');
-      } else if (googleError.request) {
+    } catch (socialError) {
+      const label = SOCIAL_LABELS[provider] || provider;
+      console.error(`Errore login ${label}:`, socialError.response?.data || socialError.message);
+      if (socialError.response) {
+        setError(socialError.response.data.message || `Accesso con ${label} non riuscito`);
+      } else if (socialError.request) {
         setError('Errore di connessione al server');
       } else {
-        setError('Accesso con Google non riuscito');
+        setError(`Accesso con ${label} non riuscito`);
       }
     } finally {
       setSocialLoading(false);
     }
   }, [finishLogin]);
+
+  const handleGoogleCredential = useCallback(
+    (idToken) => finishSocialLogin('google', idToken),
+    [finishSocialLogin]
+  );
+
+  const handleAppleCredential = useCallback(
+    (idToken, appleUser) => finishSocialLogin('apple', idToken, appleUser),
+    [finishSocialLogin]
+  );
 
   const handleSocialError = useCallback((message) => setError(message), []);
 
@@ -195,7 +214,7 @@ function Login() {
             </button>
           </div>
 
-          {GOOGLE_ENABLED && (
+          {SOCIAL_ENABLED && (
             <>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -208,6 +227,12 @@ function Login() {
 
               <GoogleSignInButton
                 onCredential={handleGoogleCredential}
+                onError={handleSocialError}
+                disabled={socialLoading}
+              />
+
+              <AppleSignInButton
+                onCredential={handleAppleCredential}
                 onError={handleSocialError}
                 disabled={socialLoading}
               />

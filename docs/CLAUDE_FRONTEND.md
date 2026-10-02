@@ -75,7 +75,9 @@ Emergency admin UI in `BudgetSettings.js` is hidden unless `REACT_APP_ENABLE_ADM
 - Pulsante Google nel login web, sotto il divisore "oppure" (stessa posizione della app iOS).
 - `REACT_APP_GOOGLE_CLIENT_ID` **deve** essere un OAuth client di tipo *Web application* del progetto Google Cloud del progetto iOS: il client iOS non funziona nel browser. L'origine del sito va autorizzata in console (Origini JavaScript autorizzate). Come `REACT_APP_API_URL`, è inlinata al build: cambiarla richiede un rebuild del sito statico.
 - Flusso: GIS restituisce l'`id_token` → `POST /api/auth/social-login` (`provider: 'google'`) → il backend risponde `{ token, username }` → il token va in `localStorage` come nel login con password.
-- Sign in with Apple web non implementato (serve Services ID + verifica dominio + chiave .p8 in Apple Developer).
+- Pulsante Apple accanto a quello Google. `REACT_APP_APPLE_SERVICES_ID` è il **Services ID** (Apple Developer → Identifiers → Services IDs), non il bundle id della app iOS; inlinata al build come le altre.
+- L'URL di ritorno è `<origine>/login` e deve essere elencato fra i *Return URLs* del Services ID: la pagina che avvia l'accesso e l'URL di ritorno devono avere la stessa origine, quindi **il pulsante Apple non è provabile in locale**, solo sul sito in produzione. Non serve alcuna chiave `.p8`: si verifica l'id-token, non si scambia il codice.
+- File coinvolti: `src/components/GoogleSignInButton.js`, `src/components/AppleSignInButton.js`, `src/utils/googleSignIn.js`, `src/utils/appleSignIn.js`. Nessuno dei due pulsanti renderizza senza la propria variabile, e il divisore "oppure" compare solo se almeno uno dei due è configurato.
 
 ## Conventions
 - **Pages**: PascalCase `.js` directly in `/src/` (flat, no subdirectory)

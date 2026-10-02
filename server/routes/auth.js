@@ -11,6 +11,7 @@ const TransazionePeriodica = require('../models/TransazionePeriodica');
 const Otp = require('../models/Otp');
 const nodemailer = require('nodemailer');
 const { debugLog, logError } = require('../utils/logger');
+const { verifyAppleIdToken } = require('../utils/appleTokens');
 const router = express.Router();
 
 // Configure Nodemailer Transporter
@@ -354,10 +355,21 @@ router.post('/social-login', async (req, res) => {
       email = googleData.email;
       name = googleData.name;
     } else if (provider === 'apple') {
-      // NOTE: In production, verify idToken signature with Apple Public Keys
-      const decoded = jwt.decode(idToken);
-      socialId = decoded.sub;
-      email = decoded.email;
+      // La firma è verificata con le chiavi pubbliche di Apple (server/utils/appleTokens.js).
+      // Prima si usava jwt.decode, cioè ci si fidava del contenuto del token: bastava
+      // fabbricarne uno con l'email di un altro utente per entrare nel suo account.
+      let appleClaims;
+      try {
+        appleClaims = await verifyAppleIdToken(idToken);
+      } catch (error) {
+        // Token scaduto, malformato, firma non valida o emesso per un'altra app:
+        // non è un errore del server.
+        debugLog('⚠️ Social Login: token Apple rifiutato:', error.message);
+        return res.status(401).json({ message: "Token Apple non valido" });
+      }
+
+      socialId = appleClaims.sub;
+      email = appleClaims.email;
       // Apple only sends name on the first login in the 'user' object from RN
       name = socialUser?.name?.firstName ? `${socialUser.name.firstName} ${socialUser.name.lastName}` : email;
     } else {
