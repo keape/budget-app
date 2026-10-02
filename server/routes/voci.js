@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const Attivita = require('../models/Attivita');
+const Debito = require('../models/Debito');
 const Componente = require('../models/Componente');
 const TipoVoce = require('../models/TipoVoce');
 const Spesa = require('../models/Spesa');
@@ -14,9 +15,33 @@ const patrimonio = require('../services/patrimonio');
 const router = express.Router();
 
 // Le Voci patrimoniali: i conti (contanti e conti correnti nella Fetta 1; investimenti,
-// immobili, veicoli e beni nella Fetta 3) e le loro Componenti.
+// immobili, veicoli e beni nella Fetta 3) e i Debiti (mutui, finanziamenti, carte), con le
+// loro Componenti. Le due specie vivono in due collezioni (ADR-0006): le rotte qui sotto
+// lavorano su una o sull'altra a seconda del Tipo scelto, e quando la specie non è indicata
+// la deducono cercando in tutte e due.
 
 const idValido = (valore) => mongoose.Types.ObjectId.isValid(String(valore || ''));
+
+// Trova una Voce in una delle due collezioni. La specie può arrivare dal client; se non
+// arriva, o se è sbagliata, si guarda anche nell'altra: una risposta «non trovata» sbagliata
+// è peggio di una lettura in più.
+async function trovaVoce(userId, id, specieIndicata) {
+  const ordine = specieIndicata === 'debito' ? ['debito', 'attivita'] : ['attivita', 'debito'];
+  for (const specie of ordine) {
+    const voce = await (specie === 'debito' ? Debito : Attivita).findOne({ _id: id, userId });
+    if (voce) return { voce, specie };
+  }
+  return { voce: null, specie: null };
+}
+
+// Una data di calendario come la scrive un <input type="date">: mezzanotte UTC, che è il
+// modo in cui il resto dell'app scrive le date. Una data con l'ora si prende com'è.
+function dataScelta(valore) {
+  const testo = String(valore || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(testo)) return new Date(`${testo}T00:00:00.000Z`);
+  const data = new Date(valore);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
 
 // GET /api/voci — le Voci dell'utente con il valore calcolato, più il catalogo dei Tipi.
 router.get('/', authenticateToken, async (req, res) => {
@@ -69,10 +94,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/voci — crea un'Attività (un conto) e la sua Componente predefinita.
+// POST /api/voci — crea una Voce: un'Attività (un conto, un bene) o un Debito, secondo la
+// specie del Tipo scelto (ADR-0006). La Voce nasce con la sua Componente predefinita.
+//
+// Un Debito nasce con il residuo di oggi, che è il suo valore di partenza: si registra come
+// Rettifica (importo negativo, perché il residuo è l'opposto dei Movimenti) con origine di
+// sistema, così è riconoscibile come la fotografia iniziale e non come una correzione
+// dell'utente. Del piano bastano residuo, rata e scadenza: il resto lo ricava il Debito.
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { nome, tipoId, note } = req.body;
+    const { nome, tipoId, note, importo, rata, scadenza, tasso, categoriaRata, giornoRata } = req.body;
     if (!nome || !String(nome).trim()) {
       return res.status(400).json({ success: false, error: 'Il nome della voce è obbligatorio' });
     }
@@ -84,11 +115,73 @@ router.post('/', authenticateToken, async (req, res) => {
     if (!tipo) {
       return res.status(400).json({ success: false, error: 'Tipo di voce non trovato' });
     }
+
     if (tipo.specie === 'debito') {
-      return res.status(400).json({
-        success: false,
-        error: 'I Debiti saranno gestiti in una fetta successiva',
-        message: 'Oggi si possono creare solo Attività (denaro e beni).'
+      const residuo = Number(importo);
+      if (!Number.isFinite(residuo) || residuo <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Indica il residuo del debito',
+          message: 'Quanto devi oggi: è il valore di partenza del debito.'
+        });
+      }
+
+      const rataNumerica = Number(rata);
+      const dataScadenza = dataScelta(scadenza);
+      // Con un piano di ammortamento rata e scadenza sono obbligatorie: senza, il debito non
+      // ha modo di dire quanto manca. Una carta di credito non ha piano, e ha solo il residuo.
+      if (tipo.pianoAmmortamento) {
+        if (!Number.isFinite(rataNumerica) || rataNumerica <= 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Indica la rata',
+            message: `Per un debito di tipo «${tipo.nome}» la rata è necessaria.`
+          });
+        }
+        if (!dataScadenza) {
+          return res.status(400).json({
+            success: false,
+            error: 'Indica la scadenza',
+            message: 'La data dell\'ultima rata: da lì il debito conta le rate che restano.'
+          });
+        }
+      }
+
+      const debito = await Debito.create({
+        userId: req.user.userId,
+        nome: String(nome).trim(),
+        tipoId: tipo._id,
+        note: note ? String(note) : '',
+        rata: Number.isFinite(rataNumerica) && rataNumerica > 0 ? rataNumerica : undefined,
+        scadenza: dataScadenza || undefined,
+        tasso: Number.isFinite(Number(tasso)) && Number(tasso) > 0 ? Number(tasso) : undefined,
+        giornoRata: Number(giornoRata) >= 1 && Number(giornoRata) <= 31 ? Number(giornoRata) : undefined,
+        categoriaRata: categoriaRata ? String(categoriaRata).trim() : ''
+      });
+
+      const componente = await patrimonio.componentePredefinita(req.user.userId, 'debito', debito._id);
+      await Rettifica.create({
+        userId: req.user.userId,
+        voceSpecie: 'debito',
+        voceId: debito._id,
+        componenteId: componente._id,
+        importo: -Math.abs(residuo),
+        descrizione: 'Residuo iniziale',
+        origine: 'sistema'
+      });
+
+      debugLog('✅ Debito creato:', debito.nome, residuo);
+      return res.status(201).json({
+        success: true,
+        message: `Debito "${debito.nome}" creato con un residuo di ${residuo}`,
+        data: {
+          id: debito._id,
+          nome: debito.nome,
+          tipoId: debito.tipoId,
+          specie: 'debito',
+          componenteId: componente._id,
+          residuo
+        }
       });
     }
 
@@ -105,7 +198,7 @@ router.post('/', authenticateToken, async (req, res) => {
     return res.status(201).json({
       success: true,
       message: `Voce "${voce.nome}" creata`,
-      data: { id: voce._id, nome: voce.nome, tipoId: voce.tipoId, componenteId: componente._id }
+      data: { id: voce._id, nome: voce.nome, tipoId: voce.tipoId, specie: 'attivita', componenteId: componente._id }
     });
   } catch (err) {
     logError('❌ Errore nella creazione della voce patrimoniale:', err);
@@ -113,11 +206,13 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// PATCH /api/voci/:id — rinomina, cambia Tipo, archivia o ripristina.
+// PATCH /api/voci/:id — rinomina, cambia Tipo, archivia o ripristina; per un Debito anche
+// il piano (rata, scadenza, tasso, categoria della rata, giorno). Cambiare il piano non
+// scrive Movimenti: cambia solo i calcoli della prossima rata.
 router.patch('/:id', authenticateToken, async (req, res) => {
   try {
-    const { nome, tipoId, note, archiviata } = req.body;
-    const voce = await Attivita.findOne({ _id: req.params.id, userId: req.user.userId });
+    const { nome, tipoId, note, archiviata, rata, scadenza, tasso, categoriaRata, giornoRata } = req.body;
+    const { voce, specie } = await trovaVoce(req.user.userId, req.params.id, req.body.voceSpecie || req.query.specie);
     if (!voce) {
       return res.status(404).json({ success: false, error: 'Voce patrimoniale non trovata' });
     }
@@ -133,14 +228,32 @@ router.patch('/:id', authenticateToken, async (req, res) => {
     if (tipoId !== undefined) {
       const tipo = await TipoVoce.findOne({ _id: tipoId, userId: req.user.userId });
       if (!tipo) return res.status(400).json({ success: false, error: 'Tipo di voce non trovato' });
-      if (tipo.specie === 'debito') {
-        return res.status(400).json({ success: false, error: 'Un\'Attività non può diventare un Debito' });
+      if (tipo.specie !== specie) {
+        return res.status(400).json({
+          success: false,
+          error: specie === 'debito' ? 'Un\'Debito non può diventare un\'Attività' : 'Un\'Attività non può diventare un Debito',
+          message: 'La specie è dell\'entità, non del Tipo: per cambiarla si crea una Voce nuova.'
+        });
       }
       voce.tipoId = tipo._id;
     }
 
+    if (specie === 'debito') {
+      if (rata !== undefined) voce.rata = Number(rata) > 0 ? Number(rata) : undefined;
+      if (scadenza !== undefined) voce.scadenza = dataScelta(scadenza) || undefined;
+      if (tasso !== undefined) {
+        voce.tasso = Number(tasso) > 0 ? Number(tasso) : undefined;
+        // Un tasso scritto a mano non è più «ricavato»: il numero è dell'utente.
+        voce.tassoRicavato = false;
+      }
+      if (categoriaRata !== undefined) voce.categoriaRata = String(categoriaRata).trim();
+      if (giornoRata !== undefined && Number(giornoRata) >= 1 && Number(giornoRata) <= 31) {
+        voce.giornoRata = Number(giornoRata);
+      }
+    }
+
     await voce.save();
-    return res.json({ success: true, data: voce });
+    return res.json({ success: true, data: { ...voce.toObject(), specie } });
   } catch (err) {
     logError('❌ Errore nella modifica della voce patrimoniale:', err);
     return res.status(500).json({ success: false, error: 'Errore nella modifica della voce patrimoniale' });
@@ -155,12 +268,12 @@ router.patch('/:id', authenticateToken, async (req, res) => {
 // Le Fotografie mensili già scritte restano com'erano: sono la misura del passato.
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const voce = await Attivita.findOne({ _id: req.params.id, userId: req.user.userId });
+    const { voce, specie } = await trovaVoce(req.user.userId, req.params.id, req.body?.voceSpecie || req.query.specie);
     if (!voce) {
       return res.status(404).json({ success: false, error: 'Voce patrimoniale non trovata' });
     }
 
-    const componenti = await Componente.find({ voceSpecie: 'attivita', voceId: voce._id });
+    const componenti = await Componente.find({ voceSpecie: specie, voceId: voce._id });
     const ids = componenti.map((c) => c._id);
 
     if (!ids.length) {
@@ -189,6 +302,14 @@ router.delete('/:id', authenticateToken, async (req, res) => {
           $or: [{ 'da.componenteId': { $in: ids } }, { 'a.componenteId': { $in: ids } }]
         }),
         Rettifica.deleteMany({ userId: req.user.userId, componenteId: { $in: ids } }),
+        // Le rate di un Debito scrivono una Spesa sul CONTO che paga, non sul Debito: senza
+        // questa riga la cancellazione di un Debito lascerebbe in giro gli interessi pagati.
+        specie === 'debito'
+          ? Spesa.deleteMany({ userId: req.user.userId, rataDebitoId: voce._id })
+          : Promise.resolve(),
+        specie === 'debito'
+          ? Trasferimento.deleteMany({ userId: req.user.userId, rataDebitoId: voce._id })
+          : Promise.resolve(),,
         // Le ricorrenze che puntavano a questo conto tornano senza conto indicato: le loro
         // transazioni finiranno sul Conto principale invece di fallire.
         TransazionePeriodica.updateMany(
@@ -198,10 +319,10 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       ]);
     }
 
-    await Componente.deleteMany({ voceSpecie: 'attivita', voceId: voce._id });
+    await Componente.deleteMany({ voceSpecie: specie, voceId: voce._id });
     await voce.deleteOne();
 
-    debugLog('🗑️ Voce eliminata:', voce.nome, conteggi);
+    debugLog('🗑️ Voce eliminata:', specie, voce.nome, conteggi);
     return res.json({
       success: true,
       message: conteggi.totale
@@ -215,11 +336,11 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/voci/:id/componenti — aggiunge un pezzo alla Voce (Fetta 3: i gioielli,
-// i titoli). Nella Fetta 1 i conti di cassa ne hanno una sola, creata da sola.
+// POST /api/voci/:id/componenti — aggiunge un pezzo alla Voce (i gioielli di un conto
+// Beni, la liquidità di un conto investimenti, la seconda tranche di un finanziamento).
 router.post('/:id/componenti', authenticateToken, async (req, res) => {
   try {
-    const voce = await Attivita.findOne({ _id: req.params.id, userId: req.user.userId });
+    const { voce, specie } = await trovaVoce(req.user.userId, req.params.id, req.body.voceSpecie || req.query.specie);
     if (!voce) {
       return res.status(404).json({ success: false, error: 'Voce patrimoniale non trovata' });
     }
@@ -235,7 +356,7 @@ router.post('/:id/componenti', authenticateToken, async (req, res) => {
 
     const componente = await Componente.create({
       userId: req.user.userId,
-      voceSpecie: 'attivita',
+      voceSpecie: specie,
       voceId: voce._id,
       nome: String(nome).trim(),
       valorizzazione: modalita,

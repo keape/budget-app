@@ -1,21 +1,25 @@
 const mongoose = require('mongoose');
 const TipoVoce = require('../models/TipoVoce');
 const Attivita = require('../models/Attivita');
+const Debito = require('../models/Debito');
 const Componente = require('../models/Componente');
 const Trasferimento = require('../models/Trasferimento');
 const Rettifica = require('../models/Rettifica');
 const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
 const Fotografia = require('../models/Fotografia');
+const servizioDebiti = require('./debiti');
 
-// Motore del Patrimonio (Fetta 1: conti di cassa).
+// Motore del Patrimonio (Fetta 1: conti di cassa; Fetta 3: i Debiti).
 //
 // Regole che questo modulo è l'unico a conoscere:
 //  - il valore di una Voce è la somma delle sue Componenti (ADR-0002);
 //  - la valorizzazione appartiene alla Componente: a movimenti (Spese, Entrate,
 //    Trasferimenti e Rettifiche), dichiarata (ultima Valutazione) o a mercato (Fetta 2);
 //  - il segno della Voce deriva dall'entità: le Attività sommano, i Debiti sottraggono
-//    (ADR-0005);
+//    (ADR-0005). Su un Debito il valore della Componente a movimenti è il RESIDUO, cioè
+//    l'opposto della somma dei suoi Movimenti: è qui, in un punto solo, che viene applicato
+//    quel segno (`valoreComponente`, `serieComponente`);
 //  - Spese ed Entrate hanno il segno già normalizzato dalle rotte (spesa negativa,
 //    entrata positiva); i Trasferimenti hanno importo positivo e la direzione nella
 //    coppia da → a; le Rettifiche portano un delta con segno.
@@ -153,15 +157,18 @@ async function risolviVoce(userId, voceId, voceSpecie = 'attivita') {
     return { voce, componente, specie: 'attivita' };
   }
 
-  if (voceSpecie !== 'attivita') {
-    throw new ErroreVoce('I Debiti saranno gestiti in una fetta successiva');
+  if (voceSpecie !== 'attivita' && voceSpecie !== 'debito') {
+    throw new ErroreVoce('Specie di voce non riconosciuta');
   }
 
-  const voce = await Attivita.findOne({ _id: voceId, userId });
+  const specie = voceSpecie === 'debito' ? 'debito' : 'attivita';
+  const voce = specie === 'debito'
+    ? await Debito.findOne({ _id: voceId, userId })
+    : await Attivita.findOne({ _id: voceId, userId });
   if (!voce) throw new ErroreVoce('Voce patrimoniale non trovata');
 
-  const componente = await componentePredefinita(userId, 'attivita', voce._id);
-  return { voce, componente, specie: 'attivita' };
+  const componente = await componentePredefinita(userId, specie, voce._id);
+  return { voce, componente, specie };
 }
 
 // ---------------------------------------------------------------------------
@@ -199,9 +206,14 @@ async function saldiPerComponente(userId) {
 }
 
 // Il valore di una Componente dipende dalla sua valorizzazione, non dalla Voce.
-function valoreComponente(componente, saldoMovimenti) {
+// Su un Debito il valore è il residuo: l'opposto della somma dei suoi Movimenti, perché una
+// Voce che sottrae si legge al contrario di una che somma. Una Componente dichiarata su un
+// Debito tiene invece il residuo dichiarato dall'utente, che è già positivo per come è
+// stato scritto: lì non c'è nulla da ribaltare.
+function valoreComponente(componente, saldoMovimenti, specie = 'attivita') {
   if (componente.valorizzazione === 'movimenti') {
-    return arrotonda(saldoMovimenti || 0);
+    const saldo = arrotonda(saldoMovimenti || 0);
+    return specie === 'debito' ? arrotonda(-saldo) : saldo;
   }
   // 'dichiarata' e, per ora, 'mercato': il prezzo arriva dal motore titoli nella Fetta 2.
   const dichiarato = componente.valutazione ?? componente.costoAcquisto ?? 0;
@@ -276,12 +288,14 @@ async function flussiMensiliPerComponente(userId) {
   return perComponente;
 }
 
-// Somma cumulata mese per mese: il valore del conto alla fine di ogni mese.
-function serieCumulata(mesi, asse) {
+// Somma cumulata mese per mese: il valore del conto alla fine di ogni mese. Su un Debito la
+// curva che interessa è il residuo, che è l'opposto della somma dei Movimenti.
+function serieCumulata(mesi, asse, specie = 'attivita') {
+  const segno = specie === 'debito' ? -1 : 1;
   let totale = 0;
   return asse.map((m) => {
     totale = arrotonda(totale + ((mesi && mesi.get(m)) || 0));
-    return totale;
+    return arrotonda(segno * totale);
   });
 }
 
@@ -309,10 +323,10 @@ function serieDichiarata(componente, asse) {
   });
 }
 
-function serieComponente(componente, flussi, asse) {
+function serieComponente(componente, flussi, asse, specie = 'attivita') {
   if (componente.valorizzazione === 'movimenti') {
     const flusso = flussi.get(String(componente._id));
-    return serieCumulata(flusso ? flusso.mesi : null, asse);
+    return serieCumulata(flusso ? flusso.mesi : null, asse, specie);
   }
   return serieDichiarata(componente, asse);
 }
@@ -323,12 +337,13 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
   const { conSerieCompleta = false } = opzioni;
   await assicuraCatalogoTipi(userId);
 
-  const [tipi, voci, componenti, saldi, flussi] = await Promise.all([
+  const [tipi, voci, entitaDebito, componenti, saldi, flussi] = await Promise.all([
     TipoVoce.find({ userId }),
     // Tutte le Voci, anche quelle chiuse: le chiuse non entrano nel Patrimonio ma devono
     // restare leggibili, altrimenti il loro storico sparisce senza che nessuno possa
     // riaprirlo.
     Attivita.find({ userId }),
+    Debito.find({ userId }),
     Componente.find({ userId, chiusa: false }).sort({ createdAt: 1 }),
     saldiPerComponente(userId),
     flussiMensiliPerComponente(userId)
@@ -354,7 +369,7 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
     const sue = componentiPerVoce.get(`${specie}:${String(voceEntita._id)}`) || [];
 
     // Serie della Voce: somma, mese per mese, delle serie delle sue Componenti.
-    const serieComponenti = sue.map((c) => serieComponente(c, flussi, asse));
+    const serieComponenti = sue.map((c) => serieComponente(c, flussi, asse, specie));
     const serie = asse.map((_, i) => arrotonda(serieComponenti.reduce((somma, s) => somma + (s[i] || 0), 0)));
     const ultimoMovimento = sue.reduce((massimo, c) => {
       const flusso = flussi.get(String(c._id));
@@ -366,7 +381,7 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
       id: c._id,
       nome: c.nome,
       valorizzazione: c.valorizzazione,
-      valore: valoreComponente(c, saldi.get(String(c._id))),
+      valore: valoreComponente(c, saldi.get(String(c._id)), specie),
       costoAcquisto: c.costoAcquisto ?? null,
       valutazione: c.valutazione ?? null
     }));
@@ -396,12 +411,13 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
   const perNome = (a, b) => a.nome.localeCompare(b.nome);
   const attive = voci.filter((v) => !v.archiviata).sort(perNome);
   const chiuse = voci.filter((v) => v.archiviata).sort(perNome);
+  const debitiAttivi = entitaDebito.filter((d) => !d.archiviata).sort(perNome);
+  const debitiChiusi = entitaDebito.filter((d) => d.archiviata).sort(perNome);
 
   const vociAttivita = attive.map((v) => costruisci(v, 'attivita'));
   const vociAttivitaChiuse = chiuse.map((v) => costruisci(v, 'attivita', false));
-  // I Debiti esistono come specie (ADR-0005) ma la loro collezione arriva con la Fetta 3.
-  const vociDebito = [];
-  const vociDebitoChiuse = [];
+  const vociDebito = debitiAttivi.map((d) => costruisci(d, 'debito'));
+  const vociDebitoChiuse = debitiChiusi.map((d) => costruisci(d, 'debito', false));
 
   const gruppi = {
     denaro: { totale: 0, voci: [] },
@@ -417,7 +433,7 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
   const attivita = arrotonda(
     [...vociAttivita, ...vociDebito].filter((v) => v.specie === 'attivita').reduce((s, v) => s + v.valore, 0)
   );
-  const debiti = arrotonda(
+  const totaleDebiti = arrotonda(
     [...vociAttivita, ...vociDebito].filter((v) => v.specie === 'debito').reduce((s, v) => s + v.valore, 0)
   );
 
@@ -432,9 +448,9 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
   const tutteLeAttivita = [...vociAttivita, ...vociDebito];
 
   return {
-    patrimonio: arrotonda(attivita - debiti),
+    patrimonio: arrotonda(attivita - totaleDebiti),
     attivita,
-    debiti,
+    debiti: totaleDebiti,
     gruppi,
     voci: tutteLeAttivita,
     chiuse: [...vociAttivitaChiuse, ...vociDebitoChiuse],
@@ -471,8 +487,13 @@ async function riparaMovimentiOrfani(userId) {
 // Tutti i Movimenti registrati su una Voce, di qualunque tipo, dal più recente: Spese,
 // Entrate, Trasferimenti (visti dal lato del conto: entrata o uscita, con la controparte)
 // e Rettifiche. È la lista che il dettaglio del conto mostra sotto il grafico.
-async function movimentiDellaVoce(userId, voceId, limite = 300) {
+//
+// L'importo che esce da qui è sempre l'EFFETTO SUL VALORE DELLA VOCE: su un conto positivo
+// se il saldo sale, su un Debito positivo se il residuo sale (ADR-0005). Così la scheda del
+// Debito non deve ribaltare niente per dire «il residuo è sceso di 285».
+async function movimentiDellaVoce(userId, voceId, limite = 300, specie = 'attivita') {
   const uid = oggettoId(userId);
+  const segno = specie === 'debito' ? -1 : 1;
 
   const [spese, entrate, trasferimenti, rettifiche] = await Promise.all([
     Spesa.find({ userId: uid, voceId }).sort({ data: -1 }).limit(limite).lean(),
@@ -488,18 +509,23 @@ async function movimentiDellaVoce(userId, voceId, limite = 300) {
     if (String(t.a.voceId) !== String(voceId)) idControparti.add(String(t.a.voceId));
   });
   const controparti = idControparti.size
-    ? await Attivita.find({ _id: { $in: [...idControparti] }, userId: uid }).select('nome').lean()
+    ? [
+        ...await Attivita.find({ _id: { $in: [...idControparti] }, userId: uid }).select('nome').lean(),
+        ...await Debito.find({ _id: { $in: [...idControparti] }, userId: uid }).select('nome').lean()
+      ]
     : [];
   const nomePerId = new Map(controparti.map((v) => [String(v._id), v.nome]));
 
   const elenco = [
     ...spese.map((s) => ({
       id: s._id, tipo: 'spesa', data: s.data, descrizione: s.descrizione,
-      categoria: s.categoria, importo: arrotonda(s.importo), origine: 'utente'
+      categoria: s.categoria, importo: arrotonda(s.importo * segno),
+      origine: s.rataId ? 'sistema' : 'utente', rataId: s.rataId || null
     })),
     ...entrate.map((e) => ({
       id: e._id, tipo: 'entrata', data: e.data, descrizione: e.descrizione,
-      categoria: e.categoria, importo: arrotonda(e.importo), origine: 'utente'
+      categoria: e.categoria, importo: arrotonda(e.importo * segno),
+      origine: e.rataId ? 'sistema' : 'utente', rataId: e.rataId || null
     })),
     ...trasferimenti.map((t) => {
       const uscente = String(t.da.voceId) === String(voceId);
@@ -507,12 +533,14 @@ async function movimentiDellaVoce(userId, voceId, limite = 300) {
       return {
         id: t._id, tipo: 'trasferimento', data: t.data, descrizione: t.descrizione,
         controparte: nomePerId.get(String(controparteId)) || 'Voce eliminata',
-        uscente, importo: uscente ? -t.importo : t.importo, origine: t.origine
+        uscente: (uscente ? -t.importo : t.importo) * segno < 0,
+        importo: arrotonda((uscente ? -t.importo : t.importo) * segno),
+        origine: t.origine, rataId: t.rataId || null
       };
     }),
     ...rettifiche.map((r) => ({
       id: r._id, tipo: 'rettifica', data: r.data, descrizione: r.descrizione,
-      importo: arrotonda(r.importo), origine: r.origine
+      importo: arrotonda(r.importo * segno), origine: r.origine, rataId: null
     }))
   ].sort((a, b) => new Date(b.data) - new Date(a.data));
 
@@ -528,11 +556,14 @@ async function dettaglioVoce(userId, voceId) {
   const voce = [...dati.voci, ...dati.chiuse].find((v) => String(v.id) === String(voceId));
   if (!voce) return null;
 
-  const [movimenti, conteggi, tipi] = await Promise.all([
-    movimentiDellaVoce(userId, voceId),
+  const [movimenti, conteggi, tipi, debito] = await Promise.all([
+    movimentiDellaVoce(userId, voceId, 300, voce.specie),
     conteggiMovimentiDellaVoce(userId, voceId),
     // Le impostazioni di un conto cambiano anche il suo Tipo: la scheda deve poterlo mostrare.
-    assicuraCatalogoTipi(userId)
+    assicuraCatalogoTipi(userId),
+    // Il piano di un Debito: quanto manca, quanto costa ancora e la prossima rata. Si
+    // calcola qui perché il client non deve rifare i conti per mostrarli (ADR-0004).
+    voce.specie === 'debito' ? Debito.findOne({ _id: voceId, userId }).lean() : null
   ]);
 
   return {
@@ -540,6 +571,7 @@ async function dettaglioVoce(userId, voceId) {
     asse: dati.asse,
     movimenti,
     conteggi,
+    piano: debito ? servizioDebiti.piano(debito, voce.valore) : null,
     tipi: tipi.map((t) => ({
       id: t._id,
       nome: t.nome,

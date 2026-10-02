@@ -19,6 +19,7 @@ const tipiVoceRoutes = require('./routes/tipiVoce');
 const patrimonioRoutes = require('./routes/patrimonio');
 const trasferimentiRoutes = require('./routes/trasferimenti');
 const rettificheRoutes = require('./routes/rettifiche');
+const debitiRoutes = require('./routes/debiti');
 
 const app = express();
 
@@ -139,6 +140,7 @@ app.use('/api/tipi-voce', tipiVoceRoutes);
 app.use('/api/patrimonio', patrimonioRoutes);
 app.use('/api/trasferimenti', trasferimentiRoutes);
 app.use('/api/rettifiche', rettificheRoutes);
+app.use('/api/debiti', debitiRoutes);
 
 // Root test route
 app.get('/', (req, res) => {

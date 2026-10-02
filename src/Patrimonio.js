@@ -24,9 +24,22 @@ import {
   variazione
 } from './utils/patrimonioFormat';
 
-// Il Patrimonio: ogni riga è un conto (un'Attività o, quando ci saranno, un Debito),
-// raggruppata per Tipo. In alto il totale e la sua curva; a destra la sintesi per Tipo e
+// Il Patrimonio: ogni riga è un conto — un'Attività o un Debito, le due specie dell'ADR-0005
+// — raggruppata per Tipo. In alto il totale e la sua curva; a destra la sintesi per Tipo e
 // gli ultimi trasferimenti. Cliccando un conto si apre la sua scheda.
+
+// La forma vuota del modulo «Nuovo conto». I campi del piano servono solo ai Debiti: di un
+// Debito bastano il residuo, la rata e la scadenza, e il tasso, se non lo si conosce, lo
+// ricava il backend da quei tre (services/debiti.js).
+const VOCE_VUOTA = {
+  nome: '',
+  tipoId: '',
+  importo: '',
+  rata: '',
+  scadenza: '',
+  tasso: '',
+  categoriaRata: ''
+};
 
 const IconaFreccia = ({ giu = false, destra = false }) => (
   <svg
@@ -81,7 +94,10 @@ function Patrimonio() {
   const [gruppiChiusi, setGruppiChiusi] = useState({});
   const [pannello, setPannello] = useState(null);
 
-  const [nuovaVoce, setNuovaVoce] = useState({ nome: '', tipoId: '' });
+  const [nuovaVoce, setNuovaVoce] = useState(VOCE_VUOTA);
+  // Le categorie di spesa: servono solo a proporre la categoria della rata di un Debito, e
+  // si caricano la prima volta che si apre il modulo su un Tipo di Debito.
+  const [categorieSpese, setCategorieSpese] = useState([]);
   const [nuovoTrasferimento, setNuovoTrasferimento] = useState({
     daVoceId: '',
     aVoceId: '',
@@ -171,13 +187,64 @@ function Patrimonio() {
   const tipiPassivi = tipiDebito(dati?.tipi);
   const tipoScelto = (dati?.tipi || []).find((t) => String(t.id) === String(nuovaVoce.tipoId));
   const naturaScelta = naturaTipo(tipoScelto);
+  const eDebito = Boolean(tipoScelto && tipoScelto.specie === 'debito');
+  const conPiano = Boolean(eDebito && tipoScelto.pianoAmmortamento);
+
+  // La categoria della rata è un suggerimento: si carica quando serve e, se non arriva, si
+  // scrive a mano. Da sola non blocca nulla.
+  useEffect(() => {
+    if (!eDebito || categorieSpese.length) return;
+    fetchWithRetry('/api/categorie', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setCategorieSpese(res.data?.categorie?.spese || []))
+      .catch(() => {});
+  }, [eDebito, categorieSpese.length, token]);
+
+  // Scegliendo un Tipo di Debito, la categoria della rata si propone da sé: il nome del Tipo
+  // («Mutui») e la categoria dell'utente («Mutuo») non coincidono mai esattamente.
+  useEffect(() => {
+    if (!conPiano || nuovaVoce.categoriaRata || !categorieSpese.length) return;
+    const nome = String(tipoScelto.nome || '').toLowerCase();
+    const radice = nome.slice(0, Math.max(nome.length - 1, 3));
+    const simile = categorieSpese.find((c) => {
+      const categoria = String(c).toLowerCase();
+      return nome.startsWith(categoria) || categoria.startsWith(radice);
+    });
+    if (simile) setNuovaVoce((v) => ({ ...v, categoriaRata: simile }));
+  }, [conPiano, nuovaVoce.categoriaRata, categorieSpese, tipoScelto]);
 
   const creaVoce = async (e) => {
     e.preventDefault();
-    if (await chiama('POST', '/api/voci', nuovaVoce)) {
-      setNuovaVoce({ nome: '', tipoId: '' });
+    setErrore(null);
+
+    const corpo = { nome: nuovaVoce.nome, tipoId: nuovaVoce.tipoId };
+    if (eDebito) {
+      corpo.importo = Number(nuovaVoce.importo);
+      if (!Number.isFinite(corpo.importo) || corpo.importo <= 0) {
+        setErrore('Indica quanto devi oggi: è il residuo di partenza del debito.');
+        return;
+      }
+      if (conPiano && !(Number(nuovaVoce.rata) > 0)) {
+        setErrore('Indica la rata: per un mutuo o un finanziamento è il numero che si conosce sempre.');
+        return;
+      }
+      if (conPiano && !nuovaVoce.scadenza) {
+        setErrore('Indica la scadenza: è la data dell\'ultima rata, e da lì il debito conta le rate che restano.');
+        return;
+      }
+      if (Number(nuovaVoce.rata) > 0) corpo.rata = Number(nuovaVoce.rata);
+      if (nuovaVoce.scadenza) corpo.scadenza = nuovaVoce.scadenza;
+      if (Number(nuovaVoce.tasso) > 0) corpo.tasso = Number(nuovaVoce.tasso);
+      if (nuovaVoce.categoriaRata) corpo.categoriaRata = nuovaVoce.categoriaRata;
+    }
+
+    if (await chiama('POST', '/api/voci', corpo)) {
+      setNuovaVoce(VOCE_VUOTA);
       setPannello(null);
-      setAvviso('Conto creato. Registra un movimento o trasferiscici del denaro.');
+      setAvviso(
+        eDebito
+          ? 'Debito creato con il residuo di oggi. Nella sua scheda trovi quanto manca, quanto costa ancora di interessi e il pulsante per registrare la rata.'
+          : 'Conto creato. Registra un movimento o trasferiscici del denaro.'
+      );
     }
   };
 
@@ -329,18 +396,100 @@ function Patrimonio() {
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="DEBITI — quello che devi (in arrivo)">
+              <optgroup label="DEBITI — quello che devi">
                 {tipiPassivi.map((t) => (
-                  <option key={String(t.id)} value={String(t.id)} disabled>
+                  <option key={String(t.id)} value={String(t.id)}>
                     {t.nome} — debito
                   </option>
                 ))}
               </optgroup>
             </select>
-            <button type="submit" className={bottonePrimario} disabled={!!tipoScelto && tipoScelto.specie === 'debito'}>
-              Crea conto
-            </button>
+            <button type="submit" className={bottonePrimario}>{eDebito ? 'Crea debito' : 'Crea conto'}</button>
           </div>
+
+          {/* Il piano di un Debito. Tre dati sono indispensabili — quanto devi, la rata e la
+              scadenza — e da quelli il backend ricava le rate che restano e il tasso. Una
+              carta di credito non ha piano: ha solo il residuo, che si muove con le spese. */}
+          {eDebito && (
+            <div className="mt-4 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/60 dark:bg-rose-950/20 p-3">
+              <h3 className="text-xs font-semibold text-rose-800 dark:text-rose-200">
+                {conPiano ? 'Il piano del debito' : 'Quanto devi oggi'}
+              </h3>
+              <p className="mt-1 text-xs text-rose-800/80 dark:text-rose-200/80">
+                {conPiano
+                  ? 'Bastano il residuo, la rata e la scadenza: le rate che restano e il tasso li ricava l\'app. Il residuo è quello di oggi, non quello iniziale del finanziamento.'
+                  : 'Il residuo di partenza: da qui in poi si muove con i movimenti (un acquisto lo alza, un versamento lo abbassa).'}
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="block text-xs text-gray-600 dark:text-gray-300">
+                  Importo che devi oggi (€)
+                  <input
+                    className={`${campi} mt-1`}
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={nuovaVoce.importo}
+                    onChange={(e) => setNuovaVoce({ ...nuovaVoce, importo: e.target.value })}
+                    required
+                  />
+                </label>
+                {conPiano && (
+                  <>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300">
+                      Rata (€)
+                      <input
+                        className={`${campi} mt-1`}
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={nuovaVoce.rata}
+                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, rata: e.target.value })}
+                        required
+                      />
+                    </label>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300">
+                      Scadenza (data dell'ultima rata)
+                      <input
+                        className={`${campi} mt-1`}
+                        type="date"
+                        value={nuovaVoce.scadenza}
+                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, scadenza: e.target.value })}
+                        required
+                      />
+                    </label>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300">
+                      Tasso annuo % (facoltativo)
+                      <input
+                        className={`${campi} mt-1`}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Se non lo sai, lascialo vuoto"
+                        value={nuovaVoce.tasso}
+                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, tasso: e.target.value })}
+                      />
+                    </label>
+                    <label className="block text-xs text-gray-600 dark:text-gray-300">
+                      Categoria della rata
+                      <input
+                        className={`${campi} mt-1`}
+                        type="text"
+                        list="categorie-rata"
+                        placeholder="es. Mutuo"
+                        value={nuovaVoce.categoriaRata}
+                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, categoriaRata: e.target.value })}
+                      />
+                      <datalist id="categorie-rata">
+                        {categorieSpese.map((c) => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
+                    </label>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">
             {naturaScelta ? (
@@ -565,7 +714,13 @@ function Patrimonio() {
                       </span>
                       <span className="font-semibold text-gray-900 dark:text-white">{gruppo.nome}</span>
                       {gruppo.delta !== 0 && (
-                        <Variazione valore={gruppo.delta} className={`text-xs ${gruppo.delta >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`} />
+                        <Variazione valore={gruppo.delta} className={`text-xs ${
+                          // Su un Debito la variazione buona è quella che scende: il residuo che
+                          // cala è debito rimborsato, non ricchezza perduta.
+                          (gruppo.debito ? gruppo.delta <= 0 : gruppo.delta >= 0)
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : 'text-red-700 dark:text-red-400'
+                        }`} />
                       )}
                       <span className="ml-auto font-semibold tabular-nums text-gray-900 dark:text-white">{euro(gruppo.totale)}</span>
                     </button>
@@ -685,7 +840,7 @@ function Patrimonio() {
                 ) : (
                   <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                     {sezione.titolo === 'Debiti'
-                      ? 'Mutui, finanziamenti e carte arrivano con la prossima fetta.'
+                      ? 'Nessun debito registrato. Aggiungine uno da «Nuovo conto», scegliendo un tipo della sezione DEBITI.'
                       : 'Nessuna voce in questo gruppo.'}
                   </p>
                 )}

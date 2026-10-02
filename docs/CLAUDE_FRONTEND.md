@@ -16,8 +16,8 @@
 - `ForgotPassword.js`, `ResetPassword.js`, `ChangePassword.js` — Password management
 - `AboutUs.js` — About page
 - `Savings.js` — modulo risparmio (sospeso: il piano di allocazione è una sessione a sé)
-- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme e sintesi. "Nuovo conto" apre una modale con la creazione e la gestione dei Tipi di voce (rinomina, denaro/bene, archivia, elimina)
-- `ContoDettaglio.js` — scheda di un conto: andamento e suoi Movimenti, con modifica ed eliminazione per ciascun movimento (rotta `/patrimonio/:voceId`)
+- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme e sintesi. "Nuovo conto" apre una modale con la creazione e la gestione dei Tipi di voce (rinomina, denaro/bene, archivia, elimina); scegliendo un Tipo della sezione **DEBITI** la modale chiede il piano del debito (residuo di oggi, rata, scadenza, tasso facoltativo, categoria della rata)
+- `ContoDettaglio.js` — scheda di un conto: andamento e suoi Movimenti, con modifica ed eliminazione per ciascun movimento (rotta `/patrimonio/:voceId`). Per un **Debito** la stessa scheda mostra il residuo, il piano (rata, rate che restano, prossima rata, interessi che restano), le rate registrate con l'annullamento, "Registra la rata" (le due quote sono modificabili) e "Aggiorna il residuo" (si dichiara il residuo vero, non una differenza)
 - `Home_backup.js`, `Home_new.js` — Legacy backups (NOT used by App.js)
 
 ## Route Map
@@ -110,7 +110,7 @@ Emergency admin UI in `BudgetSettings.js` is hidden unless `REACT_APP_ENABLE_ADM
 - Loading state: `LoadingSpinner` component; `isLoading` boolean in hooks
 - API response: `{ success: true/false, data?, error?, message? }`
 - **BudgetSettings `mese`**: 0-indexed (0 = January, 11 = December) — JS Date convention
-- **Il conto su ogni movimento**: `Transazioni.js` carica `/api/voci` e precompila il conto (ultimo usato in `localStorage['b365.ultimaVoce']`, altrimenti il Conto principale). Le risposte di `/api/voci` e `/api/patrimonio` usano il lessico del glossario: Voce, Attività, Componente, Trasferimento, Rettifica, Fotografia. `fetchWithRetry(path, { method, headers, params, data })` accetta il corpo della richiesta.
+- **Il conto su ogni movimento**: `Transazioni.js` carica `/api/voci` e precompila il conto (ultimo usato in `localStorage['b365.ultimaVoce']`, altrimenti il Conto principale). L'elenco comprende anche i **Debiti**: una Spesa registrata su un Debito (una carta di credito) ne alza il residuo invece di svuotare un conto. Le risposte di `/api/voci` e `/api/patrimonio` usano il lessico del glossario: Voce, Attività, Debito, Componente, Trasferimento, Rettifica, Fotografia. `fetchWithRetry(path, { method, headers, params, data })` accetta il corpo della richiesta.
 
 ## Testing
 ```bash

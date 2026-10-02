@@ -49,8 +49,16 @@ Parola d'uso per un'Attività che non è denaro: immobili, veicoli, beni di valo
 _Avoid_: asset, proprietà, cespite
 
 **Debito**:
-Somma dovuta il cui residuo è indicato dall'utente, calcolato dalle rate o modificato dai suoi Movimenti: mutui, finanziamenti, carte di credito.
+Somma dovuta il cui residuo si legge dai suoi Movimenti: mutui, finanziamenti, carte di credito. È la seconda specie di Voce patrimoniale e sottrae dal Patrimonio.
 _Avoid_: liability, passività
+
+**Residuo**:
+Quanto si deve ancora su un Debito. È il valore della sua Componente, cioè **l'opposto della somma dei suoi Movimenti** (ADR-0011): l'erogazione di un mutuo lo alza, la quota capitale della rata lo abbassa, una spesa fatta con la carta lo alza, un rimborso lo abbassa. Non è un campo, e non si dichiara al posto dei Movimenti: si corregge con il residuo vero.
+_Avoid_: saldo (il saldo è di un conto), importo del debito, capitale residuo
+
+**Erogazione**:
+Il denaro che un Debito mette a disposizione quando nasce o quando si allarga: un Trasferimento dal Debito al conto che lo incassa. Non è un'Entrata e non entra nel budget — il patrimonio non cambia, cambiano le sue due parti.
+_Avoid_: prestito, accreditamento, liquidità
 
 **Movimento**:
 Qualunque scrittura registrata su una Voce patrimoniale: una Spesa, un'Entrata, un Trasferimento o una Rettifica. Appartiene sempre a una Voce e alla sua Componente predefinita.
@@ -94,10 +102,10 @@ Il valore del Patrimonio registrato alla chiusura di un mese. Quella del mese in
 ### Debiti
 
 **Rata**:
-Il pagamento periodico di un Debito.
+Il pagamento periodico di un Debito. Si divide in due quote e genera due Movimenti: la quota interessi è una Spesa sul conto che paga, la quota capitale è un Trasferimento dal conto al Debito.
 
 **Quota capitale**:
-La parte della Rata che abbassa il residuo del Debito.
+La parte della Rata che abbassa il residuo del Debito. Non è un costo: è denaro che si sposta dal conto al debito.
 
 **Quota interessi**:
 La parte della Rata che è un costo e non abbassa il residuo.

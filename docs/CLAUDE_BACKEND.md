@@ -42,6 +42,7 @@ GET  /api/voci/:id                        Scheda di un conto: valore, serie mese
 *    /api/tipi-voce                      Catalogo dei Tipi dell'utente: CRUD (la specie non si modifica; i Tipi `sistema` si rinominano/archiviano, il DELETE risponde 409)
 *    /api/trasferimenti                  Movimenti tra due Voci: GET, POST, PUT, DELETE — fuori dal budget
 *    /api/rettifiche                     Variazioni di una sola Voce (delta con segno): GET, POST, PATCH, DELETE — fuori dal budget
+*    /api/debiti                          Debiti (ADR-0004): GET /:id (residuo e piano), POST /:id/rate (registra una rata), GET /:id/rate, DELETE /:id/rate/:rataId (annulla la rata), POST /:id/residuo (dichiara il residuo vero)
 ```
 
 ### Patrimonio (`/server/services/patrimonio.js`)
@@ -50,6 +51,10 @@ Unico posto dove si calcola il patrimonio: il valore di una Voce è la somma del
 **Serie mensili.** Ogni Voce porta la sua `sparkline` (ultime 12 mensilità) e il `deltaMese`; `dettaglioVoce` restituisce la `serie` intera, i `movimenti` e i `conteggi`. La serie di un conto **non** viene dalle Fotografie ma dalla somma cumulata dei suoi Movimenti (`flussiMensiliPerComponente`, mesi in `Europe/Rome`), quindi ha storia anche per i mesi in cui nessuno ha aperto l'app; per una Componente dichiarata la curva è la sequenza delle sue Valutazioni. La curva del **patrimonio complessivo** resta invece quella delle Fotografie (ADR-0009); `serieRicostruita` è solo il ripiego finché non ci sono due Fotografie.
 
 **Conti chiusi.** `calcolaPatrimonio` legge tutte le Voci ma somma solo quelle non `archiviata`; le chiuse tornano in `chiuse` per l'elenco `Conti chiusi` e per la loro scheda, che resta apribile. Chiusura ed eliminazione: ADR-0010.
+
+**Debiti (ADR-0004).** Un Debito è una Voce che si legge al contrario di un conto: **il valore della sua Componente a movimenti è il residuo, cioè l'opposto della somma dei suoi Movimenti**. Il segno si applica in un punto solo — `valoreComponente` e `serieCumulata` ricevono la specie — e da lì lo ereditano serie, `deltaMese` e Fotografie. Conseguenze: l'erogazione di un mutuo (Trasferimento dal Debito al conto) alza il residuo, la quota capitale della rata (Trasferimento dal conto al Debito) lo abbassa, una Spesa registrata sul Debito (un acquisto con la carta, che resta negativa in archivio) lo alza, un'Entrata lo abbassa. Il residuo di partenza si scrive come Rettifica con `origine: 'sistema'` e descrizione «Residuo iniziale»: il valore di una Voce non si dichiara mai al posto dei Movimenti. `movimentiDellaVoce` restituisce l'importo come **effetto sul valore della Voce** (su un Debito: positivo se il residuo sale), così la scheda del Debito non ribalta nulla.
+
+**Piano e rata (`services/debiti.js`).** Di un Debito bastano residuo, rata e scadenza: le rate che restano sono i mesi fra la prossima rata e la scadenza (`Europe/Rome`, non il fuso del server) e il tasso, se non è dichiarato, si ricava per bisezione da quei tre (`tassoImplicito`, `tassoRicavato: true`). La rata è mensile e costante: quota interessi = residuo × tasso mensile, quota capitale = rata − interessi, e l'ultima rata si abbassa al residuo che resta. `POST /api/debiti/:id/rate` scrive **due** Movimenti con lo stesso `rataId`: la Spesa degli interessi sul conto che paga (categoria `categoriaRata` del Debito, altrimenti il nome del Tipo) e il Trasferimento della quota capitale dal conto al Debito. Il Patrimonio scende quindi degli interessi e non della rata. Una seconda rata nello stesso mese risponde 409 senza `conferma: true`. Le rate si ritrovano dal Debito grazie a `rataDebitoId` (la Spesa sta sul conto) e `DELETE /api/debiti/:id/rate/:rataId` le annulla entrambe.
 
 ## Authentication Middleware
 ```js
@@ -87,6 +92,7 @@ If `CORS_ORIGINS` is absent, `server/index.js` falls back to its `defaultCorsOri
 | `TransazionePeriodica` | userId, importo, categoria, descrizione, tipo_ripetizione (8 types), configurazione, data_inizio, data_fine, attiva, transazioni_generate, **voceId** |
 | `TipoVoce` | userId, nome, specie (`attivita`\|`debito`), denaro, pianoAmmortamento, sistema, archiviato; unico `{userId, nome}` |
 | `Attivita` | Voce patrimoniale che somma: userId, nome, tipoId, note, archiviata |
+| `Debito` | Voce patrimoniale che sottrae (ADR-0005/0006): userId, nome, tipoId, note, archiviata + piano (rata, scadenza, tasso, tassoRicavato, giornoRata, categoriaRata). Il **residuo non è un campo**: è la sua Componente a movimenti, col segno ribaltato |
 | `Componente` | userId, voceSpecie + voceId, nome, valorizzazione (`movimenti`\|`mercato`\|`dichiarata`), predefinita, costoAcquisto, valutazione + storico `valutazioni`, chiusa, realizzo |
 | `Trasferimento` | userId, da/a (`voceSpecie`+`voceId`+`componenteId`), importo (positivo), data, descrizione, origine |
 | `Rettifica` | userId, voceSpecie + voceId + componenteId, importo (delta con segno), data, descrizione, origine |
@@ -98,9 +104,12 @@ If `CORS_ORIGINS` is absent, `server/index.js` falls back to its `defaultCorsOri
 
 **importo convention**: `Spesa.importo` always **negative**; `Entrata.importo` always **positive**. `Trasferimento.importo` è sempre positivo (la direzione la dà la coppia da → a); `Rettifica.importo` è un delta con segno.
 
+**Movimenti di una rata**: `Spesa` e `Trasferimento` hanno `rataId` (la rata) e `rataDebitoId` (il Debito) sui soli Movimenti generati da `POST /api/debiti/:id/rate`. La Spesa degli interessi è registrata sul **conto** che paga: senza `rataDebitoId` non si ritroverebbe partendo dal Debito.
+
 ## Services (`/server/services/`)
 - `emailService.js` — Singleton. nodemailer. Falls back to console mock if `EMAIL_USER`/`EMAIL_PASS` absent.
 - `patrimonio.js` — unico motore del Patrimonio (valore delle Componenti, gruppi, Fotografie, precondizioni). Vedi la sezione Patrimonio più sopra.
+- `debiti.js` — la meccanica di un Debito (ADR-0004): rate residue dalla scadenza, tasso implicito, quota interessi e quota capitale, piano. Calcolo puro, senza database.
 
 ## Conventions
 - **Routes**: one file per resource in `/server/routes/`, exports router

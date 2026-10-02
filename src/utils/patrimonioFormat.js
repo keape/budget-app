@@ -124,7 +124,9 @@ export const naturaTipo = (tipo) => {
   if (tipo.specie === 'debito') {
     return {
       titolo: 'Debito',
-      testo: 'Quello che devi: riduce il patrimonio. I Debiti arrivano con la fetta successiva.'
+      testo: tipo.pianoAmmortamento
+        ? 'Quello che devi: sottrae dal patrimonio e scende con le rate. Di un mutuo o di un finanziamento servono il residuo di oggi, la rata e la scadenza.'
+        : 'Quello che devi: sottrae dal patrimonio. Il residuo si muove con i movimenti — una spesa fatta con la carta lo alza, un versamento lo abbassa.'
     };
   }
   return tipo.denaro

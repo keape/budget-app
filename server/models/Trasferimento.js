@@ -42,6 +42,15 @@ const trasferimentoSchema = new mongoose.Schema(
       type: String,
       enum: ['utente', 'sistema'],
       default: 'utente'
+    },
+    // Presente solo sulla quota capitale di una rata di un Debito, con lo stesso valore
+    // della Spesa degli interessi della stessa rata: è l'identificativo della rata.
+    rataId: {
+      type: mongoose.Schema.Types.ObjectId
+    },
+    // Il Debito a cui la rata appartiene (vedi models/Spesa.js).
+    rataDebitoId: {
+      type: mongoose.Schema.Types.ObjectId
     }
   },
   { timestamps: true }
@@ -50,5 +59,7 @@ const trasferimentoSchema = new mongoose.Schema(
 trasferimentoSchema.index({ userId: 1, data: -1 });
 trasferimentoSchema.index({ 'da.componenteId': 1 });
 trasferimentoSchema.index({ 'a.componenteId': 1 });
+trasferimentoSchema.index({ userId: 1, rataId: 1 });
+trasferimentoSchema.index({ userId: 1, rataDebitoId: 1 });
 
 module.exports = mongoose.model('Trasferimento', trasferimentoSchema);
