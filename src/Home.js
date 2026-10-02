@@ -197,7 +197,7 @@ function Home() {
               onClick={() => navigate('/filtri')}
               className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-xl font-bold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl mx-2 mb-2"
             >
-              🔍 Ricerca e Filtri
+              📋 Transazioni
             </button>
             <button
               onClick={() => navigate('/budget/settings')}

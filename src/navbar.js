@@ -57,7 +57,7 @@ function Navbar() {
             }`}
             aria-current={location.pathname === '/filtri' ? 'page' : undefined}
           >
-            Ricerca e Filtri
+            Transazioni
           </Link>
           <Link
             to="/budget"

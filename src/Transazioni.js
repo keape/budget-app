@@ -438,7 +438,7 @@ function Transazioni() {
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200 shadow-md hover:shadow-lg flex items-center space-x-2 mx-auto"
         >
           <span>🔍</span>
-          <span>Vai ai Filtri e Ricerca Transazioni</span>
+          <span>Vedi tutte le transazioni</span>
         </button>
         
         <button
