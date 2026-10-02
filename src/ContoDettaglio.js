@@ -580,6 +580,7 @@ function ContoDettaglio() {
                 {[
                   { etichetta: 'Rata', valore: euro(piano.rata) },
                   { etichetta: 'Rate che restano', valore: String(piano.rate) },
+                  { etichetta: 'Scadenza (ultima rata)', valore: piano.scadenza ? dataBreve(piano.scadenza) : '—' },
                   { etichetta: 'Prossima rata', valore: dataBreve(piano.prossimaRata) },
                   { etichetta: 'Di cui interessi', valore: euro(piano.interessi) },
                   { etichetta: 'Di cui capitale', valore: euro(piano.capitale) },
@@ -592,9 +593,8 @@ function ContoDettaglio() {
                 ))}
               </dl>
               <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                Ultima rata {piano.ultimaRataIl ? dataBreve(piano.ultimaRataIl) : '—'}. Della rata, solo gli
-                interessi sono un costo: il capitale è denaro che si sposta dal conto al debito, e per questo
-                il patrimonio scende di {euro(piano.interessi)} e non di {euro(piano.rata)}.
+                Della rata, solo gli interessi sono un costo: il capitale è denaro che si sposta dal conto al
+                debito, e per questo il patrimonio scende di {euro(piano.interessi)} e non di {euro(piano.rata)}.
               </p>
             </>
           ) : (

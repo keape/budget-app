@@ -59,10 +59,15 @@ async function assicuraCatalogoTipi(userId) {
 
   // L'ordine è una preferenza dell'utente: si corregge solo sui Tipi del catalogo che non
   // l'hanno mai ricevuto o che sono rimasti a un catalogo precedente, e solo se diverso.
+  // Con l'ordine si riallinea anche `pianoAmmortamento`, che non si modifica da nessuna
+  // parte: un Tipo del catalogo che ce l'ha diverso è un dato rimasto indietro. `denaro`
+  // invece è una scelta dell'utente — l'app lascia decidere se un Tipo è denaro o bene —
+  // e non si tocca.
   const daRiordinare = esistenti.filter((t) => {
     if (!t.sistema) return false;
     const previsto = TipoVoce.CATALOGO_INIZIALE.find((c) => c.nome.toLowerCase() === t.nome.trim().toLowerCase());
-    return previsto && previsto.ordine !== t.ordine;
+    if (!previsto) return false;
+    return previsto.ordine !== t.ordine || Boolean(previsto.pianoAmmortamento) !== Boolean(t.pianoAmmortamento);
   });
 
   if (mancanti.length > 0) {
@@ -81,7 +86,12 @@ async function assicuraCatalogoTipi(userId) {
     await TipoVoce.bulkWrite(
       daRiordinare.map((t) => {
         const previsto = TipoVoce.CATALOGO_INIZIALE.find((c) => c.nome.toLowerCase() === t.nome.trim().toLowerCase());
-        return { updateOne: { filter: { _id: t._id }, update: { $set: { ordine: previsto.ordine } } } };
+        return {
+          updateOne: {
+            filter: { _id: t._id },
+            update: { $set: { ordine: previsto.ordine, pianoAmmortamento: Boolean(previsto.pianoAmmortamento) } }
+          }
+        };
       })
     );
   }

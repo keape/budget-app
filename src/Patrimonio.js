@@ -223,8 +223,11 @@ function Patrimonio() {
         setErrore('Indica quanto devi oggi: è il residuo di partenza del debito.');
         return;
       }
+      // Rata e scadenza sono indispensabili quando il Tipo ha un piano di ammortamento
+      // (mutui e finanziamenti); su una carta di credito restano facoltative, perché
+      // obbligare una scadenza dove non esiste costringerebbe a inventare un numero.
       if (conPiano && !(Number(nuovaVoce.rata) > 0)) {
-        setErrore('Indica la rata: per un mutuo o un finanziamento è il numero che si conosce sempre.');
+        setErrore('Indica la rata: insieme alla scadenza è quello che si ricorda sempre di un mutuo.');
         return;
       }
       if (conPiano && !nuovaVoce.scadenza) {
@@ -418,7 +421,7 @@ function Patrimonio() {
               <p className="mt-1 text-xs text-rose-800/80 dark:text-rose-200/80">
                 {conPiano
                   ? 'Bastano il residuo, la rata e la scadenza: le rate che restano e il tasso li ricava l\'app. Il residuo è quello di oggi, non quello iniziale del finanziamento.'
-                  : 'Il residuo di partenza: da qui in poi si muove con i movimenti (un acquisto lo alza, un versamento lo abbassa).'}
+                  : 'Il residuo di partenza: da qui in poi si muove con i movimenti (un acquisto lo alza, un versamento lo abbassa). Se conosci anche rata e scadenza, scrivile: da quelle il debito conta le rate che restano e ricava il tasso. Una carta di credito non le ha, e si possono lasciare vuote.'}
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block text-xs text-gray-600 dark:text-gray-300">
@@ -433,60 +436,56 @@ function Patrimonio() {
                     required
                   />
                 </label>
-                {conPiano && (
-                  <>
-                    <label className="block text-xs text-gray-600 dark:text-gray-300">
-                      Rata (€)
-                      <input
-                        className={`${campi} mt-1`}
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={nuovaVoce.rata}
-                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, rata: e.target.value })}
-                        required
-                      />
-                    </label>
-                    <label className="block text-xs text-gray-600 dark:text-gray-300">
-                      Scadenza (data dell'ultima rata)
-                      <input
-                        className={`${campi} mt-1`}
-                        type="date"
-                        value={nuovaVoce.scadenza}
-                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, scadenza: e.target.value })}
-                        required
-                      />
-                    </label>
-                    <label className="block text-xs text-gray-600 dark:text-gray-300">
-                      Tasso annuo % (facoltativo)
-                      <input
-                        className={`${campi} mt-1`}
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="Se non lo sai, lascialo vuoto"
-                        value={nuovaVoce.tasso}
-                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, tasso: e.target.value })}
-                      />
-                    </label>
-                    <label className="block text-xs text-gray-600 dark:text-gray-300">
-                      Categoria della rata
-                      <input
-                        className={`${campi} mt-1`}
-                        type="text"
-                        list="categorie-rata"
-                        placeholder="es. Mutuo"
-                        value={nuovaVoce.categoriaRata}
-                        onChange={(e) => setNuovaVoce({ ...nuovaVoce, categoriaRata: e.target.value })}
-                      />
-                      <datalist id="categorie-rata">
-                        {categorieSpese.map((c) => (
-                          <option key={c} value={c} />
-                        ))}
-                      </datalist>
-                    </label>
-                  </>
-                )}
+                <label className="block text-xs text-gray-600 dark:text-gray-300">
+                  Rata (€){conPiano ? '' : ' — facoltativa'}
+                  <input
+                    className={`${campi} mt-1`}
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={nuovaVoce.rata}
+                    onChange={(e) => setNuovaVoce({ ...nuovaVoce, rata: e.target.value })}
+                    required={conPiano}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600 dark:text-gray-300">
+                  Scadenza (data dell'ultima rata){conPiano ? '' : ' — facoltativa'}
+                  <input
+                    className={`${campi} mt-1`}
+                    type="date"
+                    value={nuovaVoce.scadenza}
+                    onChange={(e) => setNuovaVoce({ ...nuovaVoce, scadenza: e.target.value })}
+                    required={conPiano}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600 dark:text-gray-300">
+                  Tasso annuo % (facoltativo)
+                  <input
+                    className={`${campi} mt-1`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Se non lo sai, lascialo vuoto"
+                    value={nuovaVoce.tasso}
+                    onChange={(e) => setNuovaVoce({ ...nuovaVoce, tasso: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600 dark:text-gray-300">
+                  Categoria della rata
+                  <input
+                    className={`${campi} mt-1`}
+                    type="text"
+                    list="categorie-rata"
+                    placeholder="es. Mutuo"
+                    value={nuovaVoce.categoriaRata}
+                    onChange={(e) => setNuovaVoce({ ...nuovaVoce, categoriaRata: e.target.value })}
+                  />
+                  <datalist id="categorie-rata">
+                    {categorieSpese.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </label>
               </div>
             </div>
           )}
