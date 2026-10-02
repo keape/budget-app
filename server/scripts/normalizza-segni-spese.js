@@ -36,6 +36,7 @@ const conta = (Mod, filtro) =>
   Mod.aggregate([{ $match: filtro }, { $group: { _id: null, n: { $sum: 1 }, t: { $sum: '$importo' } } }]).then(riepilogo);
 
 // Scrive a blocchi: sono migliaia di documenti e un bulkWrite unico sarebbe troppo grande.
+// Il file di rollback è JSON-lines compatto: una riga per collezione, rileggibile cosi com'è.
 async function normalizza(Mod, filtro, trasforma, fileRollback) {
   const documenti = await Mod.find(filtro, { importo: 1 }).lean();
   if (documenti.length === 0) return 0;
@@ -49,8 +50,37 @@ async function normalizza(Mod, filtro, trasforma, fileRollback) {
   fs.appendFileSync(fileRollback, JSON.stringify({
     collezione: Mod.modelName,
     documenti: documenti.map((d) => ({ _id: d._id, importoPrecedente: d.importo }))
-  }, null, 2) + '\n', 'utf8');
+  }) + '\n', 'utf8');
   return documenti.length;
+}
+
+// Legge il file di rollback anche se è stato scritto indentato su più righe (formato usato
+// dalla prima esecuzione): separa gli oggetti contando le graffe, fuori dalle stringhe.
+function leggiRollback(percorso) {
+  const testo = fs.readFileSync(percorso, 'utf8');
+  // Caso normale: una riga per oggetto.
+  const righe = testo.trim().split('\n').filter((r) => r.trim());
+  if (righe.every((r) => { try { JSON.parse(r); return true; } catch (_) { return false; } })) {
+    return righe.map((r) => JSON.parse(r));
+  }
+  const oggetti = [];
+  let profondita = 0, inizio = -1, inStringa = false, escape = false;
+  for (let i = 0; i < testo.length; i++) {
+    const c = testo[i];
+    if (inStringa) {
+      if (escape) escape = false;
+      else if (c === '\\') escape = true;
+      else if (c === '"') inStringa = false;
+      continue;
+    }
+    if (c === '"') inStringa = true;
+    else if (c === '{') { if (profondita === 0) inizio = i; profondita++; }
+    else if (c === '}') {
+      profondita--;
+      if (profondita === 0 && inizio >= 0) { oggetti.push(JSON.parse(testo.slice(inizio, i + 1))); inizio = -1; }
+    }
+  }
+  return oggetti;
 }
 
 (async () => {
@@ -60,7 +90,7 @@ async function normalizza(Mod, filtro, trasforma, fileRollback) {
   console.log('Database:', uri.replace(/\/\/[^@]*@/, '//***@').replace(/\?.*$/, ''));
 
   if (daRollback) {
-    const righe = fs.readFileSync(daRollback, 'utf8').trim().split('\n').map((r) => JSON.parse(r));
+    const righe = leggiRollback(daRollback);
     let ripristinati = 0;
     for (const riga of righe) {
       const Mod = riga.collezione === 'Entrata' ? Entrata : Spesa;
