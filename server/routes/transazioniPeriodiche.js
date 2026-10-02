@@ -255,10 +255,20 @@ router.post('/genera', authenticateToken, async (req, res) => {
       const dateDaGenerare = calcolaDateMancanti(abbonamento);
 
       // La Voce della ricorrenza, o il Conto principale: ogni Movimento generato porta il conto.
+      // Se il conto indicato non esiste più (è stato eliminato), la ricorrenza non si blocca:
+      // le sue transazioni finiscono sul Conto principale e la ricorrenza resta senza conto.
       let destinazione = null;
       if (dateDaGenerare.length > 0) {
-        const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, abbonamento.voceId);
-        destinazione = { voceSpecie: specie, voceId: voce._id, componenteId: componente._id };
+        try {
+          const { voce, componente, specie } = await patrimonio.risolviVoce(req.user.userId, abbonamento.voceId);
+          destinazione = { voceSpecie: specie, voceId: voce._id, componenteId: componente._id };
+        } catch (destinazioneErr) {
+          if (!(destinazioneErr instanceof patrimonio.ErroreVoce)) throw destinazioneErr;
+          console.warn(`⚠️ Conto della ricorrenza "${abbonamento.descrizione}" non trovato: uso il Conto principale`);
+          const { voce, componente } = await patrimonio.assicuraContoPrincipale(req.user.userId);
+          destinazione = { voceSpecie: 'attivita', voceId: voce._id, componenteId: componente._id };
+          if (abbonamento.voceId) await TransazionePeriodica.updateOne({ _id: abbonamento._id }, { $unset: { voceId: '' } });
+        }
       }
 
       for (const data of dateDaGenerare) {

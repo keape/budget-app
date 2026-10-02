@@ -197,6 +197,12 @@ function Patrimonio() {
     }
   };
 
+  const riapriConto = async (id, nome) => {
+    if (await chiama('PATCH', `/api/voci/${id}`, { archiviata: false })) {
+      setAvviso(`Conto "${nome}" riaperto: torna nel patrimonio con la sua storia.`);
+    }
+  };
+
   const campi = 'w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
   const bottoneSecondario = 'px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
   const bottonePrimario = 'px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
@@ -456,6 +462,46 @@ function Patrimonio() {
                 );
               })}
             </section>
+
+            {(dati.chiuse || []).length > 0 && (
+              <section className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                <button
+                  type="button"
+                  onClick={() => setGruppiChiusi({ ...gruppiChiusi, __chiuse: !gruppiChiusi.__chiuse })}
+                  aria-expanded={!gruppiChiusi.__chiuse}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
+                >
+                  <span className="text-gray-400 dark:text-gray-500">
+                    <IconaFreccia giu={!gruppiChiusi.__chiuse} />
+                  </span>
+                  <span className="font-semibold text-gray-900 dark:text-white">Conti chiusi</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{dati.chiuse.length}</span>
+                  <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                    fuori dal patrimonio
+                  </span>
+                </button>
+
+                {gruppiChiusi.__chiuse && dati.chiuse.map((voce) => (
+                  <div key={String(voce.id)} className="flex items-center gap-3 pl-11 pr-4 py-3 border-t border-gray-100 dark:border-gray-800">
+                    <Link to={`/patrimonio/${voce.id}`} className="min-w-0 flex-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                      <span className="block truncate font-medium text-gray-600 dark:text-gray-300">{voce.nome}</span>
+                      <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                        {voce.tipo ? voce.tipo.nome : 'Senza tipo'} ·{' '}
+                        {voce.ultimoMovimento ? `ultimo movimento ${dataRelativa(voce.ultimoMovimento)}` : 'nessun movimento'}
+                      </span>
+                    </Link>
+                    <span className="tabular-nums text-sm text-gray-500 dark:text-gray-400">{euro(voce.valore)}</span>
+                    <button
+                      type="button"
+                      onClick={() => riapriConto(voce.id, voce.nome)}
+                      className="rounded text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    >
+                      riapri
+                    </button>
+                  </div>
+                ))}
+              </section>
+            )}
           </div>
 
           <aside className="space-y-5">

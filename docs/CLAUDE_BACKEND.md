@@ -36,8 +36,8 @@ GET  /api/savings/portfolio               Cumulative portfolio across all months
 GET  /api/patrimonio                     Patrimonio, gruppi, voci con serie mensile, tipi e Fotografie (la GET scrive la Fotografia del mese)
 GET  /api/patrimonio/fotografie          Storico delle Fotografie, senza scrivere
 POST /api/patrimonio/fotografie          Scrive la Fotografia di un mese { anno, mese? }
-GET  /api/voci/:id                        Scheda di un conto: valore, serie mese per mese e suoi Movimenti
-*    /api/voci                           Voci patrimoniali (conti, beni): CRUD + POST /:id/componenti
+GET  /api/voci/:id                        Scheda di un conto: valore, serie mese per mese, suoi Movimenti e `conteggi` per tipo
+*    /api/voci                           Voci patrimoniali (conti, beni): CRUD + POST /:id/componenti. DELETE con `?conMovimenti=true` cancella anche i suoi Movimenti (vedi ADR-0010)
 *    /api/componenti                     Componenti di una Voce: PATCH (nome, costo, nuova Valutazione, chiusura), DELETE
 *    /api/tipi-voce                      Catalogo dei Tipi dell'utente: CRUD (la specie non si modifica)
 *    /api/trasferimenti                  Movimenti tra due Voci: GET, POST, DELETE — fuori dal budget
@@ -47,7 +47,9 @@ GET  /api/voci/:id                        Scheda di un conto: valore, serie mese
 ### Patrimonio (`/server/services/patrimonio.js`)
 Unico posto dove si calcola il patrimonio: il valore di una Voce è la somma delle sue Componenti, e la valorizzazione della Componente decide come si ottiene (`movimenti`: Spese + Entrate − Trasferimenti uscenti + entranti + Rettifiche; `dichiarata`/`mercato`: ultima Valutazione, altrimenti costo di acquisto). Il servizio garantisce anche le precondizioni — catalogo Tipi iniziale, Conto principale, Componente predefinita — e ripara i Movimenti orfani assegnandoli al Conto principale. **Spese ed Entrate hanno sempre `voceId` + `componenteId`**: le rotte li risolvono da sé quando il client non li manda.
 
-**Serie mensili.** Ogni Voce porta la sua `sparkline` (ultime 12 mensilità) e il `deltaMese`; `dettaglioVoce` restituisce la `serie` intera e i `movimenti`. La serie di un conto **non** viene dalle Fotografie ma dalla somma cumulata dei suoi Movimenti (`flussiMensiliPerComponente`, mesi in `Europe/Rome`), quindi ha storia anche per i mesi in cui nessuno ha aperto l'app; per una Componente dichiarata la curva è la sequenza delle sue Valutazioni. La curva del **patrimonio complessivo** resta invece quella delle Fotografie (ADR-0009); `serieRicostruita` è solo il ripiego finché non ci sono due Fotografie.
+**Serie mensili.** Ogni Voce porta la sua `sparkline` (ultime 12 mensilità) e il `deltaMese`; `dettaglioVoce` restituisce la `serie` intera, i `movimenti` e i `conteggi`. La serie di un conto **non** viene dalle Fotografie ma dalla somma cumulata dei suoi Movimenti (`flussiMensiliPerComponente`, mesi in `Europe/Rome`), quindi ha storia anche per i mesi in cui nessuno ha aperto l'app; per una Componente dichiarata la curva è la sequenza delle sue Valutazioni. La curva del **patrimonio complessivo** resta invece quella delle Fotografie (ADR-0009); `serieRicostruita` è solo il ripiego finché non ci sono due Fotografie.
+
+**Conti chiusi.** `calcolaPatrimonio` legge tutte le Voci ma somma solo quelle non `archiviata`; le chiuse tornano in `chiuse` per l'elenco `Conti chiusi` e per la loro scheda, che resta apribile. Chiusura ed eliminazione: ADR-0010.
 
 ## Authentication Middleware
 ```js

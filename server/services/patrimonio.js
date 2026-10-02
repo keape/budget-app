@@ -325,7 +325,10 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
 
   const [tipi, voci, componenti, saldi, flussi] = await Promise.all([
     TipoVoce.find({ userId }),
-    Attivita.find({ userId, archiviata: false }).sort({ nome: 1 }),
+    // Tutte le Voci, anche quelle chiuse: le chiuse non entrano nel Patrimonio ma devono
+    // restare leggibili, altrimenti il loro storico sparisce senza che nessuno possa
+    // riaprirlo.
+    Attivita.find({ userId }),
     Componente.find({ userId, chiusa: false }).sort({ createdAt: 1 }),
     saldiPerComponente(userId),
     flussiMensiliPerComponente(userId)
@@ -346,7 +349,7 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
 
   const serieDiTutteLeVoci = [];
 
-  const costruisci = (voceEntita, specie) => {
+  const costruisci = (voceEntita, specie, contribuisce = true) => {
     const tipo = tipoPerId.get(String(voceEntita.tipoId));
     const sue = componentiPerVoce.get(`${specie}:${String(voceEntita._id)}`) || [];
 
@@ -368,12 +371,15 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
       valutazione: c.valutazione ?? null
     }));
 
-    serieDiTutteLeVoci.push(serie);
+    // La curva ricostruita del Patrimonio somma i conti aperti: un conto chiuso non fa
+    // più parte del Patrimonio, quindi non contribuisce alla sua serie.
+    if (contribuisce) serieDiTutteLeVoci.push(serie);
 
     return {
       id: voceEntita._id,
       nome: voceEntita.nome,
       specie,
+      archiviata: voceEntita.archiviata === true,
       tipo: tipo ? { id: tipo._id, nome: tipo.nome, specie: tipo.specie, denaro: tipo.denaro, ordine: tipo.ordine } : null,
       gruppo: specie === 'debito' ? 'debiti' : GRUPPO_DA_TIPO(tipo),
       valore: arrotonda(dettaglio.reduce((somma, c) => somma + c.valore, 0)),
@@ -387,9 +393,15 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
     };
   };
 
-  const vociAttivita = voci.map((v) => costruisci(v, 'attivita'));
+  const perNome = (a, b) => a.nome.localeCompare(b.nome);
+  const attive = voci.filter((v) => !v.archiviata).sort(perNome);
+  const chiuse = voci.filter((v) => v.archiviata).sort(perNome);
+
+  const vociAttivita = attive.map((v) => costruisci(v, 'attivita'));
+  const vociAttivitaChiuse = chiuse.map((v) => costruisci(v, 'attivita', false));
   // I Debiti esistono come specie (ADR-0005) ma la loro collezione arriva con la Fetta 3.
   const vociDebito = [];
+  const vociDebitoChiuse = [];
 
   const gruppi = {
     denaro: { totale: 0, voci: [] },
@@ -417,12 +429,15 @@ async function calcolaPatrimonio(userId, opzioni = {}) {
     arrotonda(serieDiTutteLeVoci.reduce((somma, serie) => somma + (serie[i] || 0), 0))
   );
 
+  const tutteLeAttivita = [...vociAttivita, ...vociDebito];
+
   return {
     patrimonio: arrotonda(attivita - debiti),
     attivita,
     debiti,
     gruppi,
-    voci: [...vociAttivita, ...vociDebito],
+    voci: tutteLeAttivita,
+    chiuse: [...vociAttivitaChiuse, ...vociDebitoChiuse],
     asse,
     serieRicostruita
   };
@@ -505,14 +520,54 @@ async function movimentiDellaVoce(userId, voceId, limite = 300) {
 }
 
 // Tutto quello che serve alla scheda di un conto: la Voce con il suo valore, la sua serie
-// mensile e i suoi Movimenti. Restituisce null se la Voce non è dell'utente.
+// mensile, i suoi Movimenti e quanti sono (per poter dire, prima di cancellare, quante
+// transazioni si stanno per perdere). Trova anche i conti chiusi. Restituisce null se la
+// Voce non è dell'utente.
 async function dettaglioVoce(userId, voceId) {
   const dati = await calcolaPatrimonio(userId, { conSerieCompleta: true });
-  const voce = dati.voci.find((v) => String(v.id) === String(voceId));
+  const voce = [...dati.voci, ...dati.chiuse].find((v) => String(v.id) === String(voceId));
   if (!voce) return null;
 
-  const movimenti = await movimentiDellaVoce(userId, voceId);
-  return { voce, asse: dati.asse, movimenti };
+  const [movimenti, conteggi, tipi] = await Promise.all([
+    movimentiDellaVoce(userId, voceId),
+    conteggiMovimentiDellaVoce(userId, voceId),
+    // Le impostazioni di un conto cambiano anche il suo Tipo: la scheda deve poterlo mostrare.
+    assicuraCatalogoTipi(userId)
+  ]);
+
+  return {
+    voce,
+    asse: dati.asse,
+    movimenti,
+    conteggi,
+    tipi: tipi.map((t) => ({
+      id: t._id,
+      nome: t.nome,
+      specie: t.specie,
+      denaro: t.denaro,
+      ordine: t.ordine,
+      archiviato: t.archiviato
+    }))
+  };
+}
+
+// Quanti Movimenti tocca una Voce, per tipo: è il numero che compare nella conferma prima
+// di un'eliminazione, che non si annulla.
+async function conteggiMovimentiDellaVoce(userId, voceId) {
+  const uid = oggettoId(userId);
+  const [spese, entrate, trasferimenti, rettifiche] = await Promise.all([
+    Spesa.countDocuments({ userId: uid, voceId }),
+    Entrata.countDocuments({ userId: uid, voceId }),
+    Trasferimento.countDocuments({ userId: uid, $or: [{ 'da.voceId': voceId }, { 'a.voceId': voceId }] }),
+    Rettifica.countDocuments({ userId: uid, voceId })
+  ]);
+  return {
+    spese,
+    entrate,
+    trasferimenti,
+    rettifiche,
+    totale: spese + entrate + trasferimenti + rettifiche
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -574,6 +629,7 @@ module.exports = {
   calcolaPatrimonio,
   dettaglioVoce,
   movimentiDellaVoce,
+  conteggiMovimentiDellaVoce,
   riparaMovimentiOrfani,
   salvaFotografia,
   fotografiaDelMeseCorrente

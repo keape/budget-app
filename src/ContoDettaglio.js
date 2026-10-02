@@ -11,6 +11,7 @@ import {
   euro,
   filtraPeriodo,
   puntiDaSerie,
+  tipiAttivita,
   variazione
 } from './utils/patrimonioFormat';
 
@@ -59,6 +60,9 @@ function ContoDettaglio() {
   const [periodo, setPeriodo] = useState('1a');
   const [pannello, setPannello] = useState(null);
   const [rettifica, setRettifica] = useState({ importo: '', descrizione: '' });
+  // Le impostazioni del conto: nome, tipo, chiusura, eliminazione.
+  const [impostazioni, setImpostazioni] = useState({ nome: '', tipoId: '' });
+  const [confermaNome, setConfermaNome] = useState('');
 
   const token = localStorage.getItem('token');
   const intestazioni = { Authorization: `Bearer ${token}` };
@@ -67,6 +71,10 @@ function ContoDettaglio() {
     try {
       const res = await fetchWithRetry(`/api/voci/${voceId}`, { headers: intestazioni });
       setDati(res.data.data);
+      setImpostazioni({
+        nome: res.data.data.voce.nome,
+        tipoId: res.data.data.voce.tipo ? String(res.data.data.voce.tipo.id) : ''
+      });
       setErrore(null);
     } catch (err) {
       console.error('Errore nel caricamento del conto:', err);
@@ -129,6 +137,59 @@ function ContoDettaglio() {
     }
   };
 
+  // Salva nome e tipo insieme: sono la stessa cosa, "come si chiama questo conto e che cosa è".
+  const salvaImpostazioni = async (e) => {
+    e.preventDefault();
+    setErrore(null);
+    setAvviso(null);
+    try {
+      await fetchWithRetry(`/api/voci/${voceId}`, {
+        method: 'PATCH',
+        headers: intestazioni,
+        data: { nome: impostazioni.nome, tipoId: impostazioni.tipoId }
+      });
+      setAvviso('Impostazioni salvate.');
+      await carica();
+    } catch (err) {
+      setErrore(err?.response?.data?.error || 'Impostazioni non salvate');
+    }
+  };
+
+  const cambiaStatoConto = async (archiviata) => {
+    setErrore(null);
+    setAvviso(null);
+    try {
+      await fetchWithRetry(`/api/voci/${voceId}`, {
+        method: 'PATCH',
+        headers: intestazioni,
+        data: { archiviata }
+      });
+      setAvviso(
+        archiviata
+          ? 'Conto chiuso: non entra più nel patrimonio e i suoi movimenti restano leggibili.'
+          : 'Conto riaperto: torna nel patrimonio con la sua storia.'
+      );
+      await carica();
+    } catch (err) {
+      setErrore(err?.response?.data?.error || 'Operazione non riuscita');
+    }
+  };
+
+  // Cancellare un conto porta via la sua storia: si fa solo scrivendo il suo nome.
+  const eliminaConto = async () => {
+    setErrore(null);
+    setAvviso(null);
+    try {
+      await fetchWithRetry(`/api/voci/${voceId}?conMovimenti=true`, {
+        method: 'DELETE',
+        headers: intestazioni
+      });
+      navigate('/patrimonio');
+    } catch (err) {
+      setErrore(err?.response?.data?.message || 'Eliminazione non riuscita');
+    }
+  };
+
   const registraMovimento = () => {
     localStorage.setItem('b365.ultimaVoce', String(voceId));
     navigate('/transazioni');
@@ -175,7 +236,14 @@ function ContoDettaglio() {
 
       <div className="mt-3 mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{voce.nome}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{voce.nome}</h1>
+            {voce.archiviata && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                chiuso
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">{voce.tipo ? voce.tipo.nome : 'Senza tipo'}</p>
           <p className="mt-2 text-4xl font-bold tabular-nums text-gray-900 dark:text-white">{euro(voce.valore)}</p>
           {deltaP !== null && (
@@ -188,6 +256,9 @@ function ContoDettaglio() {
           <button type="button" className={bottoneSecondario} onClick={() => setPannello(pannello === 'rettifica' ? null : 'rettifica')}>
             Rettifica
           </button>
+          <button type="button" className={bottoneSecondario} onClick={() => setPannello(pannello === 'impostazioni' ? null : 'impostazioni')}>
+            Impostazioni
+          </button>
           <button type="button" className={bottonePrimario} onClick={registraMovimento}>
             Registra un movimento
           </button>
@@ -199,6 +270,104 @@ function ContoDettaglio() {
       )}
       {avviso && (
         <div className="mb-4 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">{avviso}</div>
+      )}
+
+      {pannello === 'impostazioni' && (
+        <div className="mb-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Impostazioni del conto</h2>
+
+          {/* Nome e tipo: la stessa domanda — come si chiama e che cosa è. */}
+          <form onSubmit={salvaImpostazioni} className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+            <label className="text-xs text-gray-500 dark:text-gray-400 sm:col-span-3">
+              Nome e tipo
+            </label>
+            <input
+              className={campi}
+              type="text"
+              value={impostazioni.nome}
+              onChange={(e) => setImpostazioni({ ...impostazioni, nome: e.target.value })}
+              required
+            />
+            <select
+              className={campi}
+              value={impostazioni.tipoId}
+              onChange={(e) => setImpostazioni({ ...impostazioni, tipoId: e.target.value })}
+            >
+              {tipiAttivita(dati.tipi).map((t) => (
+                <option key={String(t.id)} value={String(t.id)}>
+                  {t.nome} — {t.denaro ? 'denaro' : 'bene materiale'}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className={bottonePrimario}>Salva</button>
+          </form>
+
+          {/* Chiudere conserva i movimenti: è l'alternativa all'eliminazione. */}
+          <div className="mt-6 border-t border-gray-100 dark:border-gray-800 pt-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Chiudi il conto</h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Il conto esce dal patrimonio e non compare più nell'elenco, ma <strong className="font-semibold text-gray-700 dark:text-gray-200">tutte
+              le transazioni registrate restano</strong> nella sua scheda e nello storico. Si può riaprire
+              quando vuoi.
+            </p>
+            {!voce.archiviata && Math.abs(voce.valore) > 0.005 && (
+              <p className="mt-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                Questo conto ha ancora {euro(voce.valore)}: chiudendolo quel valore esce dal patrimonio.
+                Se è denaro che hai spostato, registra prima il trasferimento sul conto dove si trova adesso.
+              </p>
+            )}
+            <div className="mt-3 flex items-center gap-2">
+              {voce.archiviata ? (
+                <button type="button" className={bottoneSecondario} onClick={() => cambiaStatoConto(false)}>
+                  Riapri il conto
+                </button>
+              ) : (
+                <button type="button" className={bottoneSecondario} onClick={() => cambiaStatoConto(true)}>
+                  Chiudi il conto
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Eliminare distrugge la storia: si conferma scrivendo il nome del conto. */}
+          <div className="mt-6 border-t border-red-100 dark:border-red-900/40 pt-4">
+            <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Elimina il conto</h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Cancella il conto <strong className="font-semibold text-gray-700 dark:text-gray-200">e tutte le sue transazioni</strong>
+              {dati.conteggi && dati.conteggi.totale > 0
+                ? ` (${dati.conteggi.totale}: ${[
+                    dati.conteggi.spese ? `${dati.conteggi.spese} spese` : null,
+                    dati.conteggi.entrate ? `${dati.conteggi.entrate} entrate` : null,
+                    dati.conteggi.trasferimenti ? `${dati.conteggi.trasferimenti} trasferimenti` : null,
+                    dati.conteggi.rettifiche ? `${dati.conteggi.rettifiche} rettifiche` : null
+                  ].filter(Boolean).join(', ')})`
+                : ''}.
+              {' '}Un trasferimento cancella anche la sua controparte sull'altro conto, e le Fotografie
+              mensili già scritte restano come misurate. <strong className="font-semibold text-gray-700 dark:text-gray-200">Non si annulla.</strong>
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <input
+                className={campi}
+                type="text"
+                placeholder={`Scrivi "${voce.nome}" per confermare`}
+                value={confermaNome}
+                onChange={(e) => setConfermaNome(e.target.value)}
+              />
+              <button
+                type="button"
+                disabled={confermaNome.trim() !== voce.nome}
+                onClick={eliminaConto}
+                className={`px-3 py-2 text-sm font-semibold rounded-lg transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 ${
+                  confermaNome.trim() === voce.nome
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Elimina il conto e le sue transazioni
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {pannello === 'rettifica' && (

@@ -31,6 +31,7 @@ router.get('/', authenticateToken, async (req, res) => {
         debiti: dati.debiti,
         gruppi: dati.gruppi,
         voci: dati.voci,
+        chiuse: dati.chiuse,
         // L'asse dei mesi e la curva ricostruita dai conti attuali servono al grafico
         // d'insieme finché non ci sono almeno due Fotografie (ADR-0009).
         asse: dati.asse,

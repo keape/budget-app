@@ -7,6 +7,7 @@ const Spesa = require('../models/Spesa');
 const Entrata = require('../models/Entrata');
 const Trasferimento = require('../models/Trasferimento');
 const Rettifica = require('../models/Rettifica');
+const TransazionePeriodica = require('../models/TransazionePeriodica');
 const { authenticateToken } = require('./auth');
 const { debugLog, logError } = require('../utils/logger');
 const patrimonio = require('../services/patrimonio');
@@ -146,7 +147,12 @@ router.patch('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// DELETE /api/voci/:id — solo se la Voce non ha Movimenti: altrimenti si archivia.
+// DELETE /api/voci/:id — senza `conMovimenti` si rifiuta la cancellazione di una Voce che ha
+// Movimenti (409) e si suggerisce di chiuderla, così lo storico non sparisce per sbaglio.
+// Con `?conMovimenti=true` si cancellano anche tutti i suoi Movimenti: compreso ogni
+// Trasferimento che la coinvolge, che tocca anche l'altro conto. È l'unica operazione che
+// distrugge movimenti, quindi si fa su richiesta esplicita.
+// Le Fotografie mensili già scritte restano com'erano: sono la misura del passato.
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const voce = await Attivita.findOne({ _id: req.params.id, userId: req.user.userId });
@@ -156,26 +162,53 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     const componenti = await Componente.find({ voceSpecie: 'attivita', voceId: voce._id });
     const ids = componenti.map((c) => c._id);
-    const [spese, entrate, uscite, entrateTrasferite, rettifiche] = await Promise.all([
-      ids.length ? Spesa.countDocuments({ componenteId: { $in: ids } }) : 0,
-      ids.length ? Entrata.countDocuments({ componenteId: { $in: ids } }) : 0,
-      ids.length ? Trasferimento.countDocuments({ 'da.componenteId': { $in: ids } }) : 0,
-      ids.length ? Trasferimento.countDocuments({ 'a.componenteId': { $in: ids } }) : 0,
-      ids.length ? Rettifica.countDocuments({ componenteId: { $in: ids } }) : 0
-    ]);
-    const movimenti = spese + entrate + uscite + entrateTrasferite + rettifiche;
 
-    if (movimenti > 0) {
+    if (!ids.length) {
+      await voce.deleteOne();
+      return res.json({ success: true, message: 'Voce patrimoniale eliminata', cancellati: null });
+    }
+
+    const conteggi = await patrimonio.conteggiMovimentiDellaVoce(req.user.userId, voce._id);
+    const conMovimenti = req.query.conMovimenti === 'true' || req.body?.conMovimenti === true;
+
+    if (conteggi.totale > 0 && !conMovimenti) {
       return res.status(409).json({
         success: false,
         error: 'La voce ha movimenti registrati',
-        message: `Questa voce ha ${movimenti} movimenti: archiviala invece di cancellarla, così i movimenti restano leggibili.`
+        message: `Questa voce ha ${conteggi.totale} movimenti: chiudila invece di cancellarla, così i movimenti restano leggibili. Cancellandola insieme ai movimenti, l'operazione non si annulla.`,
+        conteggi
       });
+    }
+
+    if (conteggi.totale > 0) {
+      await Promise.all([
+        Spesa.deleteMany({ userId: req.user.userId, componenteId: { $in: ids } }),
+        Entrata.deleteMany({ userId: req.user.userId, componenteId: { $in: ids } }),
+        Trasferimento.deleteMany({
+          userId: req.user.userId,
+          $or: [{ 'da.componenteId': { $in: ids } }, { 'a.componenteId': { $in: ids } }]
+        }),
+        Rettifica.deleteMany({ userId: req.user.userId, componenteId: { $in: ids } }),
+        // Le ricorrenze che puntavano a questo conto tornano senza conto indicato: le loro
+        // transazioni finiranno sul Conto principale invece di fallire.
+        TransazionePeriodica.updateMany(
+          { userId: req.user.userId, voceId: voce._id },
+          { $unset: { voceId: '' } }
+        )
+      ]);
     }
 
     await Componente.deleteMany({ voceSpecie: 'attivita', voceId: voce._id });
     await voce.deleteOne();
-    return res.json({ success: true, message: 'Voce patrimoniale eliminata' });
+
+    debugLog('🗑️ Voce eliminata:', voce.nome, conteggi);
+    return res.json({
+      success: true,
+      message: conteggi.totale
+        ? `Voce eliminata con ${conteggi.totale} movimenti`
+        : 'Voce patrimoniale eliminata',
+      cancellati: conteggi
+    });
   } catch (err) {
     logError('❌ Errore nell\'eliminazione della voce patrimoniale:', err);
     return res.status(500).json({ success: false, error: 'Errore nell\'eliminazione della voce patrimoniale' });

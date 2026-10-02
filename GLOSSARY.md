@@ -37,6 +37,9 @@ _Avoid_: account, wallet
 **Conto principale**:
 L'Attività di tipo Contanti o Conti correnti che riceve i Movimenti già registrati e che il sistema propone come origine dei Trasferimenti.
 
+**Conto chiuso**:
+Un conto archiviato: fuori dal Patrimonio e dall'elenco dei conti aperti, ma con tutti i suoi Movimenti conservati e leggibili. Si può riaprire. Diverso dall'**eliminazione**, che cancella il conto e i suoi Movimenti e non si annulla.
+
 **Conto investimenti**:
 Un'Attività di tipo Investimenti: contiene i titoli di un intermediario e la liquidità non ancora investita (Interactive Brokers, Directa, Fineco).
 _Avoid_: conto titoli, deposito titoli, conto broker
