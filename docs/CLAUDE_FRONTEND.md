@@ -15,6 +15,9 @@
 - `Login.js`, `Register.js` — Authentication
 - `ForgotPassword.js`, `ResetPassword.js`, `ChangePassword.js` — Password management
 - `AboutUs.js` — About page
+- `Savings.js` — modulo risparmio (sospeso: il piano di allocazione è una sessione a sé)
+- `Patrimonio.js` — elenco dei conti (Voci) raggruppati per Tipo, con grafico d'insieme e sintesi
+- `ContoDettaglio.js` — scheda di un conto: andamento e suoi Movimenti (rotta `/patrimonio/:voceId`)
 - `Home_backup.js`, `Home_new.js` — Legacy backups (NOT used by App.js)
 
 ## Route Map
@@ -24,6 +27,9 @@
 /budget              Budget view (protected)
 /budget/settings     Budget settings (protected)
 /filtri              Filters/reports (protected)
+/patrimonio          Elenco dei conti con grafico e sintesi (protected)
+/patrimonio/:voceId  Scheda di un conto: andamento e movimenti (protected)
+/savings             Risparmio (protected)
 /change-password     (protected)
 /about-us            (protected)
 /login               Auth (public)
@@ -40,6 +46,10 @@
 - `BudgetTable.js` — Budget data table
 - `LoadingSpinner.js` — Reusable loading indicator
 - `MonthlySummaryChart.js` — Monthly summary chart
+- `PatrimonioRiepilogo.js` — blocco centrale della Home: patrimonio, gruppi Denaro/Beni/Debiti, grafico
+- `SerieChart.js` — grafico a area di una serie mensile (patrimonio complessivo o singolo conto)
+- `Sparkline.js` — traccia compatta accanto a un conto nell'elenco (SVG disegnato a mano)
+- `SelettorePeriodo.js` — periodo del grafico (1 mese / 6 mesi / 1 anno / tutto)
 - `NotificationBar.js` — In-app notifications
 - `GoogleSignInButton.js` — pulsante ufficiale "Accedi con Google" (Google Identity Services); renderizzato solo se `REACT_APP_GOOGLE_CLIENT_ID` è impostata
 - `OTPVerification.js` — OTP input
@@ -52,6 +62,9 @@
 - `useAuth.js` — JWT decode/expiry, `isAuthenticated`, `logout`, `getToken`
 - `useBudgetData.js` — fetches spese/entrate/budgetSettings for month/year
 - `useBudgetCalculations.js` — budget vs actual, chart data, sorting
+
+## Utilità (`/src/utils/`)
+- `patrimonioFormat.js` — importi, etichette dei mesi, date relative, punti delle serie, colori dei Tipi
 
 ## Key Files
 - `ThemeContext.js` — dark/light mode; persists to localStorage; `useTheme()` → `{ darkMode, toggleDarkMode }`

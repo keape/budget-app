@@ -21,6 +21,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const dati = await patrimonio.calcolaPatrimonio(userId);
     const fotografia = await patrimonio.fotografiaDelMeseCorrente(userId, dati);
     const fotografie = await Fotografia.find({ userId }).sort({ anno: 1, mese: 1 });
+    const tipi = await patrimonio.assicuraCatalogoTipi(userId);
 
     return res.json({
       success: true,
@@ -30,6 +31,19 @@ router.get('/', authenticateToken, async (req, res) => {
         debiti: dati.debiti,
         gruppi: dati.gruppi,
         voci: dati.voci,
+        // L'asse dei mesi e la curva ricostruita dai conti attuali servono al grafico
+        // d'insieme finché non ci sono almeno due Fotografie (ADR-0009).
+        asse: dati.asse,
+        serieRicostruita: dati.serieRicostruita,
+        tipi: tipi.map((t) => ({
+          id: t._id,
+          nome: t.nome,
+          specie: t.specie,
+          denaro: t.denaro,
+          pianoAmmortamento: t.pianoAmmortamento,
+          sistema: t.sistema,
+          archiviato: t.archiviato
+        })),
         fotografiaCorrente: fotografia,
         fotografie: fotografie.map((f) => ({
           anno: f.anno,

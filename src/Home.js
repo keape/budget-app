@@ -211,9 +211,7 @@ function Home() {
           {/* Patrimonio: il blocco centrale della vista generale */}
           {patrimonio && (
             <PatrimonioRiepilogo
-              patrimonio={patrimonio.patrimonio}
-              gruppi={patrimonio.gruppi}
-              fotografie={patrimonio.fotografie}
+              dati={patrimonio}
               onApri={() => navigate('/patrimonio')}
             />
           )}

@@ -14,6 +14,7 @@ import ResetPassword from './ResetPassword';
 import AboutUs from './AboutUs';
 import Savings from './Savings';
 import Patrimonio from './Patrimonio';
+import ContoDettaglio from './ContoDettaglio';
 import Navbar from './navbar';
 import ProtectedRoute from './ProtectedRoute';
 import { ThemeProvider } from './ThemeContext';
@@ -118,6 +119,16 @@ function App() {
                   <Navbar />
                   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <Patrimonio />
+                  </div>
+                </>
+              </ProtectedRoute>
+            } />
+            <Route path="/patrimonio/:voceId" element={
+              <ProtectedRoute>
+                <>
+                  <Navbar />
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <ContoDettaglio />
                   </div>
                 </>
               </ProtectedRoute>

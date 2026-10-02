@@ -188,16 +188,133 @@ function valoreComponente(componente, saldoMovimenti) {
   return arrotonda(dichiarato);
 }
 
-// Ricalcola il Patrimonio dell'utente: voci per gruppo, totali, dettaglio per Componente.
-async function calcolaPatrimonio(userId) {
+// ---------------------------------------------------------------------------
+// Serie mensili: la storia di un singolo conto
+// ---------------------------------------------------------------------------
+// Il grafico del Patrimonio complessivo nasce dalle Fotografie (ADR-0009), che esistono
+// solo da quando la funzione è in uso. La storia di UN conto invece si ricostruisce dal
+// conto stesso: per una Componente a movimenti il valore è esattamente la somma dei suoi
+// Movimenti, quindi la curva si ricava dai Movimenti registrati — anche quelli di due anni
+// fa — invece di aspettare le Fotografie. Per una Componente dichiarata la curva è la
+// sequenza delle sue Valutazioni.
+
+const MESE_ROMA = { $dateToString: { format: '%Y-%m', date: '$data', timezone: 'Europe/Rome' } };
+
+function chiaveMese(data) {
+  return new Date(data).toISOString().slice(0, 7);
+}
+
+function meseCorrenteChiave() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit' })
+    .format(new Date())
+    .slice(0, 7);
+}
+
+// Tutti i mesi fra due chiavi 'AAAA-MM', estremi inclusi: l'asse orizzontale dei grafici
+// non deve avere buchi, altrimenti una curva piatta sembra un salto.
+function elencoMesi(da, a) {
+  const mesi = [];
+  let [anno, mese] = da.split('-').map(Number);
+  const [annoFine, meseFine] = a.split('-').map(Number);
+  while (anno < annoFine || (anno === annoFine && mese <= meseFine)) {
+    mesi.push(`${anno}-${String(mese).padStart(2, '0')}`);
+    mese += 1;
+    if (mese > 12) { mese = 1; anno += 1; }
+  }
+  return mesi;
+}
+
+// Entrate e uscite di ogni Componente, raggruppate per mese, più l'ultimo movimento.
+async function flussiMensiliPerComponente(userId) {
+  const uid = oggettoId(userId);
+  const gruppo = (campoId) => ({ _id: { c: campoId, m: MESE_ROMA }, totale: { $sum: '$importo' }, ultimo: { $max: '$data' } });
+
+  const [spese, entrate, uscite, entrateTrasferite, rettifiche] = await Promise.all([
+    Spesa.aggregate([{ $match: { userId: uid, componenteId: { $ne: null } } }, { $group: gruppo('$componenteId') }]),
+    Entrata.aggregate([{ $match: { userId: uid, componenteId: { $ne: null } } }, { $group: gruppo('$componenteId') }]),
+    Trasferimento.aggregate([{ $match: { userId: uid } }, { $group: gruppo('$da.componenteId') }]),
+    Trasferimento.aggregate([{ $match: { userId: uid } }, { $group: gruppo('$a.componenteId') }]),
+    Rettifica.aggregate([{ $match: { userId: uid } }, { $group: gruppo('$componenteId') }])
+  ]);
+
+  const perComponente = new Map();
+  const aggiungi = (righe, segno) => righe.forEach((r) => {
+    if (!r._id || !r._id.c) return;
+    const id = String(r._id.c);
+    if (!perComponente.has(id)) perComponente.set(id, { mesi: new Map(), ultimo: null });
+    const voce = perComponente.get(id);
+    voce.mesi.set(r._id.m, (voce.mesi.get(r._id.m) || 0) + segno * r.totale);
+    if (!voce.ultimo || r.ultimo > voce.ultimo) voce.ultimo = r.ultimo;
+  });
+
+  aggiungi(spese, 1);          // le Spese hanno importo negativo
+  aggiungi(entrate, 1);
+  aggiungi(uscite, -1);
+  aggiungi(entrateTrasferite, 1);
+  aggiungi(rettifiche, 1);
+
+  return perComponente;
+}
+
+// Somma cumulata mese per mese: il valore del conto alla fine di ogni mese.
+function serieCumulata(mesi, asse) {
+  let totale = 0;
+  return asse.map((m) => {
+    totale = arrotonda(totale + ((mesi && mesi.get(m)) || 0));
+    return totale;
+  });
+}
+
+// Per una Componente dichiarata o a mercato la curva è a gradini: il valore resta quello
+// dell'ultima Valutazione finché non ne arriva una nuova.
+function serieDichiarata(componente, asse) {
+  const punti = [];
+  if (componente.costoAcquisto !== undefined && componente.costoAcquisto !== null) {
+    punti.push({ mese: chiaveMese(componente.dataCosto || componente.createdAt), valore: componente.costoAcquisto });
+  }
+  (componente.valutazioni || []).forEach((v) => punti.push({ mese: chiaveMese(v.data), valore: v.valore }));
+  if (componente.valutazione !== undefined && componente.valutazione !== null) {
+    punti.push({ mese: chiaveMese(componente.dataValutazione || componente.updatedAt || componente.createdAt), valore: componente.valutazione });
+  }
+  punti.sort((a, b) => (a.mese < b.mese ? -1 : 1));
+
+  let corrente = 0;
+  let indice = 0;
+  return asse.map((m) => {
+    while (indice < punti.length && punti[indice].mese <= m) {
+      corrente = punti[indice].valore;
+      indice += 1;
+    }
+    return arrotonda(corrente);
+  });
+}
+
+function serieComponente(componente, flussi, asse) {
+  if (componente.valorizzazione === 'movimenti') {
+    const flusso = flussi.get(String(componente._id));
+    return serieCumulata(flusso ? flusso.mesi : null, asse);
+  }
+  return serieDichiarata(componente, asse);
+}
+
+// Il Patrimonio dell'utente più la serie mensile di ogni Voce: la sparkline nella lista e
+// il grafico del singolo conto escono da qui, senza ricalcolare nulla due volte.
+async function calcolaPatrimonio(userId, opzioni = {}) {
+  const { conSerieCompleta = false } = opzioni;
   await assicuraCatalogoTipi(userId);
 
-  const [tipi, voci, componenti, saldi] = await Promise.all([
+  const [tipi, voci, componenti, saldi, flussi] = await Promise.all([
     TipoVoce.find({ userId }),
     Attivita.find({ userId, archiviata: false }).sort({ nome: 1 }),
     Componente.find({ userId, chiusa: false }).sort({ createdAt: 1 }),
-    saldiPerComponente(userId)
+    saldiPerComponente(userId),
+    flussiMensiliPerComponente(userId)
   ]);
+
+  const mesiConMovimenti = [];
+  flussi.forEach((flusso) => flusso.mesi.forEach((_, m) => mesiConMovimenti.push(m)));
+  mesiConMovimenti.sort();
+  const asse = elencoMesi(mesiConMovimenti[0] || meseCorrenteChiave(), meseCorrenteChiave());
 
   const tipoPerId = new Map(tipi.map((t) => [String(t._id), t]));
   const componentiPerVoce = new Map();
@@ -207,9 +324,21 @@ async function calcolaPatrimonio(userId) {
     componentiPerVoce.get(chiave).push(c);
   });
 
+  const serieDiTutteLeVoci = [];
+
   const costruisci = (voceEntita, specie) => {
     const tipo = tipoPerId.get(String(voceEntita.tipoId));
     const sue = componentiPerVoce.get(`${specie}:${String(voceEntita._id)}`) || [];
+
+    // Serie della Voce: somma, mese per mese, delle serie delle sue Componenti.
+    const serieComponenti = sue.map((c) => serieComponente(c, flussi, asse));
+    const serie = asse.map((_, i) => arrotonda(serieComponenti.reduce((somma, s) => somma + (s[i] || 0), 0)));
+    const ultimoMovimento = sue.reduce((massimo, c) => {
+      const flusso = flussi.get(String(c._id));
+      if (!flusso || !flusso.ultimo) return massimo;
+      return !massimo || flusso.ultimo > massimo ? flusso.ultimo : massimo;
+    }, null);
+
     const dettaglio = sue.map((c) => ({
       id: c._id,
       nome: c.nome,
@@ -218,15 +347,23 @@ async function calcolaPatrimonio(userId) {
       costoAcquisto: c.costoAcquisto ?? null,
       valutazione: c.valutazione ?? null
     }));
-    const valore = arrotonda(dettaglio.reduce((somma, c) => somma + c.valore, 0));
+
+    serieDiTutteLeVoci.push(serie);
+
     return {
       id: voceEntita._id,
       nome: voceEntita.nome,
       specie,
       tipo: tipo ? { id: tipo._id, nome: tipo.nome, specie: tipo.specie, denaro: tipo.denaro } : null,
       gruppo: specie === 'debito' ? 'debiti' : GRUPPO_DA_TIPO(tipo),
-      valore,
-      componenti: dettaglio
+      valore: arrotonda(dettaglio.reduce((somma, c) => somma + c.valore, 0)),
+      componenti: dettaglio,
+      ultimoMovimento,
+      // La lista mostra solo la coda della serie (le ultime 12 mensilità), il grafico del
+      // singolo conto chiede la serie intera.
+      sparkline: serie.slice(-12),
+      deltaMese: arrotonda(serie[serie.length - 1] - (serie[serie.length - 2] ?? serie[serie.length - 1] ?? 0)),
+      ...(conSerieCompleta ? { serie } : {})
     };
   };
 
@@ -252,12 +389,22 @@ async function calcolaPatrimonio(userId) {
     [...vociAttivita, ...vociDebito].filter((v) => v.specie === 'debito').reduce((s, v) => s + v.valore, 0)
   );
 
+  // Serie d'insieme ricostruita dai conti che esistono oggi: serve solo finché non ci sono
+  // almeno due Fotografie (la Fotografia è la fonte di verità del Patrimonio, ADR-0009).
+  // Vale finché tutti i conti sono a movimenti: un bene dichiarato comparirebbe come un
+  // salto nel mese in cui è stato creato, ed è il motivo per cui non è la fonte ufficiale.
+  const serieRicostruita = asse.map((_, i) =>
+    arrotonda(serieDiTutteLeVoci.reduce((somma, serie) => somma + (serie[i] || 0), 0))
+  );
+
   return {
     patrimonio: arrotonda(attivita - debiti),
     attivita,
     debiti,
     gruppi,
-    voci: [...vociAttivita, ...vociDebito]
+    voci: [...vociAttivita, ...vociDebito],
+    asse,
+    serieRicostruita
   };
 }
 
@@ -280,6 +427,72 @@ async function riparaMovimentiOrfani(userId) {
   ]);
 
   return (r1.modifiedCount || 0) + (r2.modifiedCount || 0);
+}
+
+// ---------------------------------------------------------------------------
+// Dettaglio di un conto: la sua storia e i suoi Movimenti
+// ---------------------------------------------------------------------------
+
+// Tutti i Movimenti registrati su una Voce, di qualunque tipo, dal più recente: Spese,
+// Entrate, Trasferimenti (visti dal lato del conto: entrata o uscita, con la controparte)
+// e Rettifiche. È la lista che il dettaglio del conto mostra sotto il grafico.
+async function movimentiDellaVoce(userId, voceId, limite = 300) {
+  const uid = oggettoId(userId);
+
+  const [spese, entrate, trasferimenti, rettifiche] = await Promise.all([
+    Spesa.find({ userId: uid, voceId }).sort({ data: -1 }).limit(limite).lean(),
+    Entrata.find({ userId: uid, voceId }).sort({ data: -1 }).limit(limite).lean(),
+    Trasferimento.find({ userId: uid, $or: [{ 'da.voceId': voceId }, { 'a.voceId': voceId }] })
+      .sort({ data: -1 }).limit(limite).lean(),
+    Rettifica.find({ userId: uid, voceId }).sort({ data: -1 }).limit(limite).lean()
+  ]);
+
+  const idControparti = new Set();
+  trasferimenti.forEach((t) => {
+    if (String(t.da.voceId) !== String(voceId)) idControparti.add(String(t.da.voceId));
+    if (String(t.a.voceId) !== String(voceId)) idControparti.add(String(t.a.voceId));
+  });
+  const controparti = idControparti.size
+    ? await Attivita.find({ _id: { $in: [...idControparti] }, userId: uid }).select('nome').lean()
+    : [];
+  const nomePerId = new Map(controparti.map((v) => [String(v._id), v.nome]));
+
+  const elenco = [
+    ...spese.map((s) => ({
+      id: s._id, tipo: 'spesa', data: s.data, descrizione: s.descrizione,
+      categoria: s.categoria, importo: arrotonda(s.importo), origine: 'utente'
+    })),
+    ...entrate.map((e) => ({
+      id: e._id, tipo: 'entrata', data: e.data, descrizione: e.descrizione,
+      categoria: e.categoria, importo: arrotonda(e.importo), origine: 'utente'
+    })),
+    ...trasferimenti.map((t) => {
+      const uscente = String(t.da.voceId) === String(voceId);
+      const controparteId = uscente ? t.a.voceId : t.da.voceId;
+      return {
+        id: t._id, tipo: 'trasferimento', data: t.data, descrizione: t.descrizione,
+        controparte: nomePerId.get(String(controparteId)) || 'Voce eliminata',
+        uscente, importo: uscente ? -t.importo : t.importo, origine: t.origine
+      };
+    }),
+    ...rettifiche.map((r) => ({
+      id: r._id, tipo: 'rettifica', data: r.data, descrizione: r.descrizione,
+      importo: arrotonda(r.importo), origine: r.origine
+    }))
+  ].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+  return elenco.slice(0, limite);
+}
+
+// Tutto quello che serve alla scheda di un conto: la Voce con il suo valore, la sua serie
+// mensile e i suoi Movimenti. Restituisce null se la Voce non è dell'utente.
+async function dettaglioVoce(userId, voceId) {
+  const dati = await calcolaPatrimonio(userId, { conSerieCompleta: true });
+  const voce = dati.voci.find((v) => String(v.id) === String(voceId));
+  if (!voce) return null;
+
+  const movimenti = await movimentiDellaVoce(userId, voceId);
+  return { voce, asse: dati.asse, movimenti };
 }
 
 // ---------------------------------------------------------------------------
@@ -339,6 +552,8 @@ module.exports = {
   saldiPerComponente,
   valoreComponente,
   calcolaPatrimonio,
+  dettaglioVoce,
+  movimentiDellaVoce,
   riparaMovimentiOrfani,
   salvaFotografia,
   fotografiaDelMeseCorrente

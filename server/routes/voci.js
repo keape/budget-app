@@ -48,6 +48,26 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// GET /api/voci/:id — la scheda di un conto: valore, storia mese per mese e Movimenti.
+// Prima di leggerla ripara gli eventuali Movimenti senza Componente, altrimenti la lista
+// del conto mostrerebbe meno movimenti di quelli che il conto contiene.
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    if (!idValido(req.params.id)) {
+      return res.status(400).json({ success: false, error: 'Voce non valida' });
+    }
+    await patrimonio.riparaMovimentiOrfani(req.user.userId);
+    const dettaglio = await patrimonio.dettaglioVoce(req.user.userId, req.params.id);
+    if (!dettaglio) {
+      return res.status(404).json({ success: false, error: 'Voce patrimoniale non trovata' });
+    }
+    return res.json({ success: true, data: dettaglio });
+  } catch (err) {
+    logError('❌ Errore nel dettaglio della voce patrimoniale:', err);
+    return res.status(500).json({ success: false, error: 'Errore nel dettaglio della voce patrimoniale' });
+  }
+});
+
 // POST /api/voci — crea un'Attività (un conto) e la sua Componente predefinita.
 router.post('/', authenticateToken, async (req, res) => {
   try {

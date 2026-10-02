@@ -1,15 +1,68 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PatrimonioChart from './components/PatrimonioChart';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import SerieChart from './components/SerieChart';
+import Sparkline from './components/Sparkline';
+import SelettorePeriodo from './components/SelettorePeriodo';
 import { fetchWithRetry } from './utils/fetchWithRetry';
+import {
+  COLORE_TIPO,
+  conSegno,
+  dataBreve,
+  dataRelativa,
+  etichettaVariazione,
+  euro,
+  filtraPeriodo,
+  percentuale,
+  puntiDaFotografie,
+  puntiDaSerie,
+  raggruppaPerTipo,
+  variazione
+} from './utils/patrimonioFormat';
 
-// Gestione del Patrimonio: le Voci (i conti), i Trasferimenti, le Rettifiche e il catalogo
-// dei Tipi. La vista di sintesi sta nella Home; qui si amministra.
+// Il Patrimonio: ogni riga è un conto (un'Attività o, quando ci saranno, un Debito),
+// raggruppata per Tipo. In alto il totale e la sua curva; a destra la sintesi per Tipo e
+// gli ultimi trasferimenti. Cliccando un conto si apre la sua scheda.
 
-const euro = (valore) =>
-  `€${Number(valore || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const IconaFreccia = ({ giu = false, destra = false }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    className={`shrink-0 transition-transform duration-150 ${destra ? '' : giu ? '-rotate-90' : ''}`}
+  >
+    {destra ? <path d="M9 6l6 6-6 6" /> : <path d="M6 9l6 6 6-6" />}
+  </svg>
+);
 
-const oggi = () => new Date().toISOString().split('T')[0];
+const Variazione = ({ valore, className = '' }) => {
+  if (valore === null || valore === undefined) return null;
+  const su = valore >= 0;
+  return (
+    <span className={`inline-flex items-center gap-1 tabular-nums ${className}`}>
+      <svg
+        viewBox="0 0 24 24"
+        width="12"
+        height="12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        className={su ? '' : 'rotate-180'}
+      >
+        <path d="M12 19V5M5 12l7-7 7 7" />
+      </svg>
+      {conSegno(valore)}
+    </span>
+  );
+};
 
 function Patrimonio() {
   const navigate = useNavigate();
@@ -17,40 +70,37 @@ function Patrimonio() {
   const [errore, setErrore] = useState(null);
   const [avviso, setAvviso] = useState(null);
 
-  const [voci, setVoci] = useState([]);
-  const [gruppi, setGruppi] = useState(null);
-  const [patrimonio, setPatrimonio] = useState(0);
-  const [tipi, setTipi] = useState([]);
-  const [fotografie, setFotografie] = useState([]);
+  const [dati, setDati] = useState(null);
   const [trasferimenti, setTrasferimenti] = useState([]);
+  const [periodo, setPeriodo] = useState('1a');
+  const [gruppiChiusi, setGruppiChiusi] = useState({});
+  const [pannello, setPannello] = useState(null);
 
   const [nuovaVoce, setNuovaVoce] = useState({ nome: '', tipoId: '' });
-  const [nuovoTrasferimento, setNuovoTrasferimento] = useState({ daVoceId: '', aVoceId: '', importo: '', data: oggi(), descrizione: '' });
-  const [nuovaRettifica, setNuovaRettifica] = useState({ voceId: '', importo: '', descrizione: '' });
-  const [nuovoTipo, setNuovoTipo] = useState({ nome: '', specie: 'attivita', denaro: true });
+  const [nuovoTrasferimento, setNuovoTrasferimento] = useState({
+    daVoceId: '',
+    aVoceId: '',
+    importo: '',
+    data: new Date().toISOString().split('T')[0],
+    descrizione: ''
+  });
+  const [nuovoTipo, setNuovoTipo] = useState({ nome: '', denaro: true });
 
   const token = localStorage.getItem('token');
   const intestazioni = { Authorization: `Bearer ${token}` };
 
   const carica = useCallback(async () => {
-    setCaricamento(true);
     try {
-      const [vociRes, patrimonioRes, trasferimentiRes] = await Promise.all([
-        fetchWithRetry('/api/voci', { headers: intestazioni }),
+      const [patrimonioRes, trasferimentiRes] = await Promise.all([
         fetchWithRetry('/api/patrimonio', { headers: intestazioni }),
-        fetchWithRetry('/api/trasferimenti', { headers: intestazioni })
+        fetchWithRetry('/api/trasferimenti', { headers: intestazioni, params: { limit: 50 } })
       ]);
-
-      setVoci(vociRes.data.data.voci || []);
-      setGruppi(vociRes.data.data.gruppi || null);
-      setPatrimonio(vociRes.data.data.patrimonio || 0);
-      setTipi(vociRes.data.data.tipi || []);
-      setFotografie(patrimonioRes.data.data.fotografie || []);
+      setDati(patrimonioRes.data.data);
       setTrasferimenti(trasferimentiRes.data.data || []);
       setErrore(null);
     } catch (err) {
       console.error('Errore nel caricamento del patrimonio:', err);
-      setErrore('Impossibile caricare il patrimonio. Riprova.');
+      setErrore('Impossibile caricare il patrimonio. Controlla la connessione e riprova.');
     } finally {
       setCaricamento(false);
     }
@@ -72,339 +122,397 @@ function Patrimonio() {
       await carica();
       return true;
     } catch (err) {
-      const messaggio = err?.response?.data?.message || err?.response?.data?.error || 'Operazione non riuscita';
-      setErrore(messaggio);
+      setErrore(err?.response?.data?.message || err?.response?.data?.error || 'Operazione non riuscita');
       return false;
     }
   };
+
+  // La curva d'insieme: le Fotografie quando ce ne sono almeno due (è la misura ufficiale),
+  // altrimenti quella ricostruita dai movimenti dei conti che esistono oggi.
+  const curvaMisurata = (dati?.fotografie || []).length >= 2;
+  const puntiTotali = useMemo(() => {
+    if (!dati) return [];
+    return curvaMisurata
+      ? puntiDaFotografie(dati.fotografie)
+      : puntiDaSerie(dati.asse, dati.serieRicostruita);
+  }, [dati, curvaMisurata]);
+
+  const puntiVisibili = useMemo(() => filtraPeriodo(puntiTotali, periodo), [puntiTotali, periodo]);
+  const deltaP = variazione(puntiVisibili);
+
+  const gruppi = useMemo(() => raggruppaPerTipo(dati?.voci || []), [dati]);
+
+  const sintesi = useMemo(() => {
+    const voci = dati?.voci || [];
+    const perTipo = (elenco) => {
+      const mappa = new Map();
+      elenco.forEach((v) => {
+        const nome = v.tipo ? v.tipo.nome : 'Senza tipo';
+        if (!mappa.has(nome)) mappa.set(nome, { nome, totale: 0 });
+        mappa.get(nome).totale += v.valore;
+      });
+      return [...mappa.values()].sort((a, b) => b.totale - a.totale);
+    };
+    return {
+      attivita: perTipo(voci.filter((v) => v.specie === 'attivita')),
+      debiti: perTipo(voci.filter((v) => v.specie === 'debito'))
+    };
+  }, [dati]);
+
+  const tipiAttivi = (dati?.tipi || []).filter((t) => !t.archiviato && t.specie === 'attivita');
 
   const creaVoce = async (e) => {
     e.preventDefault();
     if (await chiama('POST', '/api/voci', nuovaVoce)) {
       setNuovaVoce({ nome: '', tipoId: '' });
-      setAvviso('Voce creata.');
+      setPannello(null);
+      setAvviso('Conto creato. Registra un movimento o trasferiscici del denaro.');
     }
   };
 
   const creaTrasferimento = async (e) => {
     e.preventDefault();
-    if (!nuovoTrasferimento.daVoceId || !nuovoTrasferimento.aVoceId) {
-      setErrore('Indica la voce di origine e quella di destinazione.');
+    if (!nuovoTrasferimento.aVoceId) {
+      setErrore('Indica il conto di destinazione.');
       return;
     }
     if (await chiama('POST', '/api/trasferimenti', nuovoTrasferimento)) {
-      setNuovoTrasferimento({ daVoceId: '', aVoceId: '', importo: '', data: oggi(), descrizione: '' });
-      setAvviso('Trasferimento registrato: il valore si è spostato tra le due voci, il budget non cambia.');
-    }
-  };
-
-  const creaRettifica = async (e) => {
-    e.preventDefault();
-    if (!nuovaRettifica.voceId) {
-      setErrore('Indica la voce da rettificare.');
-      return;
-    }
-    if (await chiama('POST', '/api/rettifiche', nuovaRettifica)) {
-      setNuovaRettifica({ voceId: '', importo: '', descrizione: '' });
-      setAvviso('Rettifica registrata.');
+      setNuovoTrasferimento({ daVoceId: '', aVoceId: '', importo: '', data: new Date().toISOString().split('T')[0], descrizione: '' });
+      setPannello(null);
+      setAvviso('Trasferimento registrato: il valore si è spostato fra i due conti, il budget non cambia.');
     }
   };
 
   const creaTipo = async (e) => {
     e.preventDefault();
-    if (await chiama('POST', '/api/tipi-voce', nuovoTipo)) {
-      setNuovoTipo({ nome: '', specie: 'attivita', denaro: true });
+    if (await chiama('POST', '/api/tipi-voce', { ...nuovoTipo, specie: 'attivita' })) {
+      setNuovoTipo({ nome: '', denaro: true });
       setAvviso('Tipo creato.');
     }
   };
 
-  const tipiAttivi = tipi.filter((t) => !t.archiviato && t.specie === 'attivita');
+  const campi = 'w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const bottoneSecondario = 'px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+  const bottonePrimario = 'px-3 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500';
+
+  if (caricamento) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-4">
+        <div className="h-7 w-40 rounded bg-gray-200 dark:bg-gray-800 animate-pulse" />
+        <div className="h-64 rounded-xl bg-gray-100 dark:bg-gray-800/60 animate-pulse" />
+        <div className="h-40 rounded-xl bg-gray-100 dark:bg-gray-800/60 animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">💼 Patrimonio</h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
-        I conti, il valore di ogni voce, i trasferimenti fra conti e le rettifiche. Il patrimonio
-        complessivo è {euro(patrimonio)}.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Patrimonio</h1>
+        <div className="flex items-center gap-2">
+          <button type="button" className={bottoneSecondario} onClick={() => setPannello(pannello === 'trasferimento' ? null : 'trasferimento')}>
+            Trasferimento
+          </button>
+          <button type="button" className={bottonePrimario} onClick={() => setPannello(pannello === 'conto' ? null : 'conto')}>
+            Nuovo conto
+          </button>
+        </div>
+      </div>
 
       {errore && (
-        <div className="mb-4 p-4 bg-red-100 dark:bg-red-900/30 border border-red-400 text-red-700 dark:text-red-300 rounded-lg">
+        <div className="mb-4 rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-800 dark:text-red-200">
           {errore}
         </div>
       )}
       {avviso && (
-        <div className="mb-4 p-4 bg-green-100 dark:bg-green-900/30 border border-green-400 text-green-700 dark:text-green-300 rounded-lg">
+        <div className="mb-4 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
           {avviso}
         </div>
       )}
 
-      {caricamento ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+      {pannello === 'conto' && (
+        <form onSubmit={creaVoce} className="mb-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Nuovo conto</h2>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <input
+              className={campi}
+              type="text"
+              placeholder="Nome (es. Conto Fineco, Contanti in casa)"
+              value={nuovaVoce.nome}
+              onChange={(e) => setNuovaVoce({ ...nuovaVoce, nome: e.target.value })}
+              required
+            />
+            <select
+              className={campi}
+              value={nuovaVoce.tipoId}
+              onChange={(e) => setNuovaVoce({ ...nuovaVoce, tipoId: e.target.value })}
+              required
+            >
+              <option value="">Tipo di voce</option>
+              {tipiAttivi.map((t) => (
+                <option key={String(t.id)} value={t.id}>
+                  {t.nome} {t.denaro ? '· denaro' : '· bene materiale'}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className={bottonePrimario}>Crea conto</button>
+          </div>
+        </form>
+      )}
+
+      {pannello === 'trasferimento' && (
+        <div className="mb-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Trasferimento fra conti</h2>
+          <p className="mt-1 mb-3 text-xs text-gray-500 dark:text-gray-400">
+            Sposta valore da un conto all'altro: non è una spesa né un'entrata e non entra nel budget.
+          </p>
+          <form onSubmit={creaTrasferimento} className="grid gap-3 sm:grid-cols-5">
+            <select className={campi} value={nuovoTrasferimento.daVoceId} onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, daVoceId: e.target.value })}>
+              <option value="">Da (Conto principale)</option>
+              {(dati?.voci || []).map((v) => (
+                <option key={String(v.id)} value={v.id}>{v.nome}</option>
+              ))}
+            </select>
+            <select className={campi} value={nuovoTrasferimento.aVoceId} onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, aVoceId: e.target.value })} required>
+              <option value="">A quale conto</option>
+              {(dati?.voci || []).map((v) => (
+                <option key={String(v.id)} value={v.id}>{v.nome}</option>
+              ))}
+            </select>
+            <input className={campi} type="number" step="0.01" min="0.01" placeholder="Importo" value={nuovoTrasferimento.importo} onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, importo: e.target.value })} required />
+            <input className={campi} type="date" value={nuovoTrasferimento.data} onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, data: e.target.value })} />
+            <button type="submit" className={bottonePrimario}>Trasferisci</button>
+          </form>
+
+          {trasferimenti.length > 0 && (
+            <ul className="mt-4 divide-y divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
+              {trasferimenti.map((t) => (
+                <li key={String(t._id)} className="flex items-center gap-3 py-2 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400 tabular-nums w-20 shrink-0">{dataBreve(t.data)}</span>
+                  <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">
+                    {t.daNome} → {t.aNome}
+                    {t.descrizione ? <span className="text-gray-400 dark:text-gray-500"> · {t.descrizione}</span> : null}
+                    {t.origine === 'sistema' ? <span className="text-gray-400 dark:text-gray-500"> · generato</span> : null}
+                  </span>
+                  <span className="font-medium tabular-nums text-gray-900 dark:text-white">{euro(t.importo)}</span>
+                  <button
+                    type="button"
+                    onClick={() => chiama('DELETE', `/api/trasferimenti/${t._id}`)}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                  >
+                    elimina
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {(dati?.voci || []).length === 0 ? (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Qui ogni riga sarà un conto</h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-400">
+            Un conto è una <strong className="font-semibold text-gray-900 dark:text-white">voce patrimoniale</strong>: il conto in banca, la carta,
+            i contanti in casa. Il patrimonio è la somma delle Attività meno i Debiti, e ogni spesa o
+            entrata che registri finisce su uno di questi conti.
+          </p>
+          <button type="button" className={`${bottonePrimario} mt-4`} onClick={() => setPannello('conto')}>
+            Crea il primo conto
+          </button>
         </div>
       ) : (
-        <div className="space-y-8">
-          <PatrimonioChart fotografie={fotografie} />
+        <div className="grid gap-5 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-5">
+            <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Patrimonio complessivo</p>
+                  <p className="text-4xl font-bold tabular-nums text-gray-900 dark:text-white">{euro(dati.patrimonio)}</p>
+                  {deltaP !== null && (
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      <Variazione valore={deltaP} className={deltaP >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'} />
+                      <span className="ml-1.5">{etichettaVariazione(periodo)}</span>
+                    </p>
+                  )}
+                </div>
+                <SelettorePeriodo valore={periodo} onChange={setPeriodo} />
+              </div>
 
-          {/* Voci patrimoniali */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Conti e voci patrimoniali</h2>
+              <div className="mt-4">
+                {puntiVisibili.length >= 2 ? (
+                  <SerieChart punti={puntiVisibili} colore={dati.patrimonio < 0 ? '#e11d48' : '#6366f1'} />
+                ) : (
+                  <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                    La curva comincia da questo mese: la prima Fotografia misurata è {dati.fotografie[0]
+                      ? `${dati.fotografie[0].mese + 1}/${dati.fotografie[0].anno}`
+                      : 'di questo mese'}, e il secondo punto arriva il mese prossimo.
+                  </p>
+                )}
+              </div>
 
-            {voci.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 italic mb-4">
-                Non hai ancora una voce patrimoniale. Crea il primo conto qui sotto.
-              </p>
-            ) : (
-              <div className="space-y-3 mb-6">
-                {voci.map((voce) => (
-                  <div key={String(voce.id)} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/40">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-semibold text-gray-800 dark:text-white">{voce.nome}</span>
-                        <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                          {voce.tipo ? voce.tipo.nome : 'senza tipo'} · {voce.gruppo}
+              {!curvaMisurata && puntiVisibili.length >= 2 && (
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Curva ricostruita dai movimenti dei conti che esistono oggi: da questo mese la Fotografia
+                  mensile la sostituisce con il valore misurato.
+                </p>
+              )}
+            </section>
+
+            <section className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+              {gruppi.map((gruppo) => {
+                const chiuso = gruppiChiusi[gruppo.nome];
+                return (
+                  <div key={gruppo.nome} className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+                    <button
+                      type="button"
+                      onClick={() => setGruppiChiusi({ ...gruppiChiusi, [gruppo.nome]: !chiuso })}
+                      aria-expanded={!chiuso}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
+                    >
+                      <span className="text-gray-400 dark:text-gray-500">
+                        <IconaFreccia giu={!!chiuso} />
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-white">{gruppo.nome}</span>
+                      {gruppo.delta !== 0 && (
+                        <Variazione valore={gruppo.delta} className={`text-xs ${gruppo.delta >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`} />
+                      )}
+                      <span className="ml-auto font-semibold tabular-nums text-gray-900 dark:text-white">{euro(gruppo.totale)}</span>
+                    </button>
+
+                    {!chiuso && gruppo.voci.map((voce) => (
+                      <Link
+                        key={String(voce.id)}
+                        to={`/patrimonio/${voce.id}`}
+                        className="group flex items-center gap-3 pl-11 pr-4 py-3 border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gray-100 dark:bg-gray-800 text-base" aria-hidden="true">
+                          {gruppo.emoji}
                         </span>
-                      </div>
-                      <span className="font-bold text-gray-800 dark:text-white">{euro(voce.valore)}</span>
-                    </div>
-                    <ul className="mt-2 space-y-1">
-                      {voce.componenti.map((c) => (
-                        <li key={String(c.id)} className="flex justify-between text-sm text-gray-600 dark:text-gray-300">
-                          <span>
-                            {c.nome}
-                            <span className="text-gray-400 dark:text-gray-500"> · {c.valorizzazione}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium text-gray-900 dark:text-white">{voce.nome}</span>
+                          <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                            {voce.ultimoMovimento ? `ultimo movimento ${dataRelativa(voce.ultimoMovimento)}` : 'nessun movimento'}
+                            {voce.componenti.length > 1 ? ` · ${voce.componenti.length} componenti` : ''}
                           </span>
-                          <span>{euro(c.valore)}</span>
+                        </span>
+                        <span className="hidden sm:block text-gray-400 dark:text-gray-500">
+                          <Sparkline valori={voce.sparkline} />
+                        </span>
+                        <span className="text-right">
+                          <span className="block font-semibold tabular-nums text-gray-900 dark:text-white">{euro(voce.valore)}</span>
+                          {voce.deltaMese !== 0 && (
+                            <span className="block text-xs tabular-nums text-gray-500 dark:text-gray-400">{conSegno(voce.deltaMese)}</span>
+                          )}
+                        </span>
+                        <span className="text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500">
+                          <IconaFreccia destra />
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })}
+            </section>
+          </div>
+
+          <aside className="space-y-5">
+            {[{ titolo: 'Attività', totale: dati.attivita, voci: sintesi.attivita, base: '#6366f1' },
+              { titolo: 'Debiti', totale: dati.debiti, voci: sintesi.debiti, base: '#e11d48' }].map((sezione, indiceSezione) => (
+              <section key={sezione.titolo} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+                <div className="flex items-baseline justify-between">
+                  <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">{sezione.titolo}</h2>
+                  <span className="text-lg font-bold tabular-nums text-gray-900 dark:text-white">{euro(sezione.totale)}</span>
+                </div>
+
+                {sezione.voci.length > 0 ? (
+                  <>
+                    <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800" role="presentation">
+                      {sezione.voci.map((tipo, i) => (
+                        <span
+                          key={tipo.nome}
+                          style={{
+                            width: `${Math.max(percentuale(tipo.totale, sezione.totale), 2)}%`,
+                            background: COLORE_TIPO[(i + indiceSezione * 3) % COLORE_TIPO.length]
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <ul className="mt-3 space-y-1.5">
+                      {sezione.voci.map((tipo, i) => (
+                        <li key={tipo.nome} className="flex items-center gap-2 text-sm">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: COLORE_TIPO[(i + indiceSezione * 3) % COLORE_TIPO.length] }}
+                            aria-hidden="true"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-gray-700 dark:text-gray-300">{tipo.nome}</span>
+                          <span className="tabular-nums text-gray-900 dark:text-white">{euro(tipo.totale)}</span>
                         </li>
                       ))}
                     </ul>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <form onSubmit={creaVoce} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input
-                className="px-4 py-3 rounded-lg border-2 border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                type="text"
-                placeholder="Nome della voce (es. Conto Fineco, Contanti)"
-                value={nuovaVoce.nome}
-                onChange={(e) => setNuovaVoce({ ...nuovaVoce, nome: e.target.value })}
-                required
-              />
-              <select
-                className="px-4 py-3 rounded-lg border-2 border-blue-300 dark:border-blue-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                value={nuovaVoce.tipoId}
-                onChange={(e) => setNuovaVoce({ ...nuovaVoce, tipoId: e.target.value })}
-                required
-              >
-                <option value="">Tipo di voce</option>
-                {tipiAttivi.map((t) => (
-                  <option key={String(t.id)} value={t.id}>
-                    {t.nome} {t.denaro ? '(denaro)' : '(bene)'}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg"
-              >
-                Aggiungi voce
-              </button>
-            </form>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Le voci con tipo Investimenti, Immobili, Veicoli e Beni di valore si useranno nelle prossime
-              fette: oggi il patrimonio si regge sui conti di denaro.
-            </p>
-          </section>
-
-          {/* Trasferimenti */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold mb-1 text-gray-800 dark:text-white">Trasferimenti</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Spostano valore tra due conti (bonifico al broker, prelievo, giroconto). Non entrano nel
-              budget: non sono né una spesa né un'entrata.
-            </p>
-
-            <form onSubmit={creaTrasferimento} className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
-              <select
-                className="px-4 py-3 rounded-lg border-2 border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                value={nuovoTrasferimento.daVoceId}
-                onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, daVoceId: e.target.value })}
-              >
-                <option value="">Da (Conto principale)</option>
-                {voci.map((v) => (
-                  <option key={String(v.id)} value={v.id}>{v.nome}</option>
-                ))}
-              </select>
-              <select
-                className="px-4 py-3 rounded-lg border-2 border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                value={nuovoTrasferimento.aVoceId}
-                onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, aVoceId: e.target.value })}
-              >
-                <option value="">A (obbligatorio)</option>
-                {voci.map((v) => (
-                  <option key={String(v.id)} value={v.id}>{v.nome}</option>
-                ))}
-              </select>
-              <input
-                className="px-4 py-3 rounded-lg border-2 border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                type="number"
-                step="0.01"
-                placeholder="Importo"
-                value={nuovoTrasferimento.importo}
-                onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, importo: e.target.value })}
-                required
-              />
-              <input
-                className="px-4 py-3 rounded-lg border-2 border-indigo-300 dark:border-indigo-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                type="date"
-                value={nuovoTrasferimento.data}
-                onChange={(e) => setNuovoTrasferimento({ ...nuovoTrasferimento, data: e.target.value })}
-              />
-              <button
-                type="submit"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg"
-              >
-                Trasferisci
-              </button>
-            </form>
+                  </>
+                ) : (
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    {sezione.titolo === 'Debiti'
+                      ? 'Mutui, finanziamenti e carte arrivano con la prossima fetta.'
+                      : 'Nessuna voce in questo gruppo.'}
+                  </p>
+                )}
+              </section>
+            ))}
 
             {trasferimenti.length > 0 && (
-              <ul className="space-y-2">
-                {trasferimenti.slice(0, 20).map((t) => (
-                  <li key={String(t._id)} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/40">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {new Date(t.data).toLocaleDateString('it-IT')} · {t.daNome} → {t.aNome}
-                      {t.descrizione ? ` · ${t.descrizione}` : ''}
-                      {t.origine === 'sistema' ? ' · generato' : ''}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="font-semibold text-gray-800 dark:text-white">{euro(t.importo)}</span>
-                      <button
-                        onClick={() => chiama('DELETE', `/api/trasferimenti/${t._id}`)}
-                        className="text-red-600 dark:text-red-400 text-sm hover:underline"
-                      >
-                        elimina
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Ultimi trasferimenti</h2>
+                <ul className="mt-3 space-y-2">
+                  {trasferimenti.slice(0, 5).map((t) => (
+                    <li key={String(t._id)} className="text-sm">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-gray-700 dark:text-gray-300">{t.daNome} → {t.aNome}</span>
+                        <span className="shrink-0 tabular-nums text-gray-900 dark:text-white">{euro(t.importo)}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{dataBreve(t.data)}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
-          </section>
-
-          {/* Rettifiche */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold mb-1 text-gray-800 dark:text-white">Rettifica di una voce</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Cambia il valore di una sola voce, senza controparte: il saldo vero del conto corrente,
-              un interesse addebitato, una stima corretta. Anche questa non entra nel budget.
-            </p>
-            <form onSubmit={creaRettifica} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <select
-                className="px-4 py-3 rounded-lg border-2 border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                value={nuovaRettifica.voceId}
-                onChange={(e) => setNuovaRettifica({ ...nuovaRettifica, voceId: e.target.value })}
-                required
-              >
-                <option value="">Voce da rettificare</option>
-                {voci.map((v) => (
-                  <option key={String(v.id)} value={v.id}>{v.nome}</option>
-                ))}
-              </select>
-              <input
-                className="px-4 py-3 rounded-lg border-2 border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                type="number"
-                step="0.01"
-                placeholder="Differenza (+ o −)"
-                value={nuovaRettifica.importo}
-                onChange={(e) => setNuovaRettifica({ ...nuovaRettifica, importo: e.target.value })}
-                required
-              />
-              <input
-                className="px-4 py-3 rounded-lg border-2 border-amber-300 dark:border-amber-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                type="text"
-                placeholder="Motivo (facoltativo)"
-                value={nuovaRettifica.descrizione}
-                onChange={(e) => setNuovaRettifica({ ...nuovaRettifica, descrizione: e.target.value })}
-              />
-              <button
-                type="submit"
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-lg"
-              >
-                Rettifica
-              </button>
-            </form>
-          </section>
-
-          {/* Catalogo dei Tipi */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold mb-1 text-gray-800 dark:text-white">Tipi di voce</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Il tipo dice se una voce è denaro o un bene, e per i debiti se ha un piano di ammortamento.
-              Aggiungere un tipo è un dato, non una modifica al programma.
-            </p>
-
-            <div className="flex flex-wrap gap-2 mb-6">
-              {tipi.map((t) => (
-                <span
-                  key={String(t.id)}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    t.specie === 'debito'
-                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                      : t.denaro
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  }`}
-                >
-                  {t.nome}
-                  {t.specie === 'debito' ? ' · debito' : t.denaro ? ' · denaro' : ' · bene'}
-                </span>
-              ))}
-            </div>
-
-            <form onSubmit={creaTipo} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <input
-                className="px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                type="text"
-                placeholder="Nome del tipo (es. Cripto, Barca)"
-                value={nuovoTipo.nome}
-                onChange={(e) => setNuovoTipo({ ...nuovoTipo, nome: e.target.value })}
-                required
-              />
-              <select
-                className="px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                value={nuovoTipo.specie}
-                onChange={(e) => setNuovoTipo({ ...nuovoTipo, specie: e.target.value })}
-              >
-                <option value="attivita">Attività</option>
-                <option value="debito">Debito (prossima fetta)</option>
-              </select>
-              <select
-                className="px-4 py-3 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-                value={nuovoTipo.denaro ? 'denaro' : 'bene'}
-                onChange={(e) => setNuovoTipo({ ...nuovoTipo, denaro: e.target.value === 'denaro' })}
-                disabled={nuovoTipo.specie === 'debito'}
-              >
-                <option value="denaro">È denaro</option>
-                <option value="bene">È un bene materiale</option>
-              </select>
-              <button
-                type="submit"
-                className="bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-lg"
-              >
-                Aggiungi tipo
-              </button>
-            </form>
-          </section>
-
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {gruppi ? `Denaro ${euro(gruppi.denaro.totale)} · Beni ${euro(gruppi.beni.totale)} · Debiti ${euro(gruppi.debiti.totale)}` : ''}
-          </p>
+          </aside>
         </div>
       )}
+
+      <section className="mt-5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Tipi di voce</h2>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Il tipo dice se una voce è denaro o un bene materiale e in quale gruppo compare. Aggiungerne
+          uno è un dato, non una modifica al programma.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(dati?.tipi || []).map((t) => (
+            <span
+              key={String(t.id)}
+              className={`rounded-full px-2.5 py-1 text-xs ${
+                t.specie === 'debito'
+                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                  : t.denaro
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    : 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300'
+              }`}
+            >
+              {t.nome}
+            </span>
+          ))}
+        </div>
+        <form onSubmit={creaTipo} className="mt-4 grid gap-3 sm:grid-cols-4">
+          <input className={campi} type="text" placeholder="Nome del tipo (es. Cripto, Barca)" value={nuovoTipo.nome} onChange={(e) => setNuovoTipo({ ...nuovoTipo, nome: e.target.value })} required />
+          <select className={campi} value={nuovoTipo.denaro ? 'denaro' : 'bene'} onChange={(e) => setNuovoTipo({ ...nuovoTipo, denaro: e.target.value === 'denaro' })}>
+            <option value="denaro">È denaro</option>
+            <option value="bene">È un bene materiale</option>
+          </select>
+          <button type="submit" className={bottoneSecondario}>Aggiungi tipo</button>
+        </form>
+      </section>
     </div>
   );
 }
