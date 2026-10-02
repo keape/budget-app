@@ -66,6 +66,7 @@ npm start        # Terminal 2 — frontend port 3000
 - `MONGODB_URI`, `JWT_SECRET` — stessi valori usati dal backend avviato dalla root
 - `REACT_APP_API_URL` — web frontend backend API URL override
 - `REACT_APP_ENABLE_ADMIN_ROUTES` — shows web emergency maintenance buttons only when `true`
+- `REACT_APP_GOOGLE_CLIENT_ID` — OAuth client **web** per "Accedi con Google" (build-time; l'iOS client id non vale nel browser)
 
 **Deploy**: un solo backend di produzione, `budget-app-ios-backend` (iOS + web + Expo); webapp su sito statico Render. Dettagli in `docs/CLAUDE_BACKEND.md` → Deployment.
 
@@ -77,12 +78,15 @@ npm start        # Terminal 2 — frontend port 3000
 - `FRONTEND_URL` — frontend URL used for password reset links
 - `CORS_ORIGINS` — comma-separated allowed origins, e.g. `https://budget-app-cd5o.onrender.com,https://budget-app-keape.vercel.app,https://budget-app-three-gules.vercel.app`
 - `ENABLE_ADMIN_ROUTES` — must be absent/`false` in production
+- `GOOGLE_CLIENT_IDS` — opzionale, client id OAuth (web + iOS) ammessi come audience dei token Google
 
 **Admin/maintenance route guard**:
 - Backend maintenance/debug routes are disabled by default. Enable only in local/dev by setting `ENABLE_ADMIN_ROUTES=true` in `server/.env`.
 - If the web UI needs to show emergency maintenance buttons, also set `REACT_APP_ENABLE_ADMIN_ROUTES=true` in the frontend env and rebuild/restart React.
 - Never enable these in Render/production unless performing a short, intentional maintenance window; leave absent or `false` after use.
 - Guarded routes include `/api/debug-env`, `/api/migrate-budget-data`, `/api/debug-budget-data`, `/api/emergency-remove-index`, `/api/test-auth`, `/api/fix-transactions`, `/api/budget-settings/emergency-fix`, `/api/budget-settings/remove-unique-index`.
+
+**Social login**: `/api/auth/social-login`. Google verifica davvero l'idToken (tokeninfo); Apple lo decodifica **senza verificare la firma** — bypass di autenticazione noto, in attesa di fix. Dettagli in `docs/CLAUDE_BACKEND.md`.
 
 ## Cross-Platform Conventions
 - **JWT storage**: `localStorage` (web) / `AsyncStorage` (mobile)

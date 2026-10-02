@@ -15,6 +15,7 @@ POST /api/auth/send-otp                   Send OTP email
 POST /api/auth/verify-otp                 Verify OTP code
 POST /api/auth/forgot-password            Trigger password reset email
 POST /api/auth/change-password            Change password (auth required)
+POST /api/auth/social-login               Social login: `{ provider, idToken }` (google verificato, apple no)
 POST /api/auth/update-email               Update email (auth required)
 DEL  /api/auth/delete-account             Delete account (auth required)
 *    /api/spese                           CRUD expenses
@@ -53,7 +54,12 @@ These routes are guarded by `ENABLE_ADMIN_ROUTES=true` and return 404 by default
 - `POST /api/budget-settings/emergency-fix` — removes duplicate budget docs (also requires auth)
 - `POST /api/budget-settings/remove-unique-index` — removes legacy budget unique index (also requires auth)
 
-Frontend emergency buttons in `src/BudgetSettings.js` are hidden unless `REACT_APP_ENABLE_ADMIN_ROUTES=true` is set before starting/building React.
+Frontend emergency buttons are gated by `REACT_APP_ENABLE_ADMIN_ROUTES` (see `AGENTS.md`).
+
+### Social login (`/api/auth/social-login`)
+- **Google**: verifies the idToken via `oauth2.googleapis.com/tokeninfo` and rejects a non-verified email. Optional `GOOGLE_CLIENT_IDS` (comma-separated, web + iOS client ids) enables the audience check; without it any audience is accepted.
+- **Apple**: `jwt.decode` only — the signature is **not** verified. Anyone can forge an idToken with an arbitrary `sub`/`email` and obtain a session JWT (account takeover). Fix pending; do not expose new clients to it.
+- Both: existing users are matched/linked by `email`, then by `googleId`/`appleId`.
 
 ## CORS Allowed Origins
 Set allowed origins with comma-separated `CORS_ORIGINS` in `server/.env` or Render:

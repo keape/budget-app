@@ -33,7 +33,7 @@ const getAuthToken = () => {
 // Axios Request Interceptor
 axios.interceptors.request.use(
   (config) => {
-    const isAuthEndpoint = config.url?.endsWith('/api/auth/login') || config.url?.endsWith('/api/auth/register');
+    const isAuthEndpoint = config.url?.endsWith('/api/auth/login') || config.url?.endsWith('/api/auth/register') || config.url?.endsWith('/api/auth/social-login');
     if (isAuthEndpoint) {
       return config;
     }

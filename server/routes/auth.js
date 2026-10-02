@@ -319,12 +319,37 @@ router.post('/social-login', async (req, res) => {
     const { provider, token, idToken, user: socialUser } = req.body;
     let socialId, email, name;
 
+    if (!idToken) {
+      return res.status(400).json({ message: "idToken è richiesto" });
+    }
+
     if (provider === 'google') {
       const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
       if (!googleRes.ok) {
-        throw new Error(`Google API error: ${googleRes.statusText}`);
+        // Token scaduto, malformato o non emesso da Google: non è un errore del server.
+        debugLog('⚠️ Social Login: token Google rifiutato da tokeninfo', googleRes.status);
+        return res.status(401).json({ message: "Token Google non valido" });
       }
       const googleData = await googleRes.json();
+
+      // L'audience deve essere uno dei nostri client OAuth (web + iOS).
+      // Se la variabile non è configurata si accetta qualsiasi audience, come prima.
+      const allowedAudiences = (process.env.GOOGLE_CLIENT_IDS || '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean);
+
+      if (allowedAudiences.length > 0 && !allowedAudiences.includes(googleData.aud)) {
+        debugLog('⚠️ Social Login: audience Google non autorizzata');
+        return res.status(401).json({ message: "Token Google non valido" });
+      }
+
+      // L'account viene collegato per email: un'email Google non verificata permetterebbe
+      // di agganciarsi all'account esistente di un'altra persona.
+      if (googleData.email_verified === false) {
+        return res.status(401).json({ message: "Email Google non verificata" });
+      }
+
       socialId = googleData.sub;
       email = googleData.email;
       name = googleData.name;

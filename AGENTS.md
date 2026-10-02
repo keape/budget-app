@@ -14,6 +14,7 @@ Read `CLAUDE.md` first for the project map. For backend/API work, also read `doc
 - Do not expose debug, migration, or emergency repair endpoints in production.
 - Do not add raw `console.log` debug output in backend routes. Use `debugLog` from `server/utils/logger.js`; it is silent in production.
 - Use `logError` from `server/utils/logger.js` for route errors so production logs avoid verbose stack/payload dumps.
+- `/api/auth/social-login` with `provider: 'apple'` decodes the idToken with `jwt.decode` and does **not** verify its signature: a forged token yields a valid session for any account. Treat it as an authentication bypass and fix verification before adding any new Apple client.
 
 ## Data Rules
 - `Spesa.importo` must always be stored as a negative number, including update routes: `-Math.abs(Number(importo))`.
@@ -24,6 +25,7 @@ Read `CLAUDE.md` first for the project map. For backend/API work, also read `doc
 - Do not hardcode deployment URLs in application code when an environment variable can carry them.
 - Single production backend for iOS, web and Expo: `https://budget-app-ios-backend.onrender.com` (Render service `budget-app-ios-backend`, rootDir `./server`). Do not reintroduce per-platform backends.
 - Web app: React build served as the Render static site `budget_app` → `https://budget-app-cd5o.onrender.com`. API URL is controlled by `REACT_APP_API_URL`; if absent, `src/config.js` falls back to `http://localhost:5001` in development and to the single backend above in production. React inlines this value at build time, so changing it requires a rebuild.
+- Google Sign-In on the web login page (`src/Login.js`) uses `REACT_APP_GOOGLE_CLIENT_ID`, also inlined at build time. It must be a **Web application** OAuth client from the iOS app's Google Cloud project; the iOS client id is rejected in browsers. The site origin must be listed in Google Cloud → Credentials → Authorized JavaScript origins. Backend: optional `GOOGLE_CLIENT_IDS` (comma-separated) enables the audience check on `/api/auth/social-login`.
 - Backend CORS is controlled by comma-separated `CORS_ORIGINS`. If absent, `server/index.js` uses its `defaultCorsOrigins` allowlist, which must keep the web app origin.
 - Render backend env should include `CORS_ORIGINS`, `FRONTEND_URL`, `MONGODB_URI`, `JWT_SECRET`, email vars, and `ENABLE_ADMIN_ROUTES=false`.
 - iOS and Expo apps hardcode the backend URL (`budget365iOS/src/config.ts`, `BudgetAppExpo/App.tsx`). The published iOS app pins that host, so the Render service behind it must never be deleted or renamed without shipping a new app build first.

@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import BASE_URL from './config';
+import GoogleSignInButton from './components/GoogleSignInButton';
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [socialLoading, setSocialLoading] = useState(false);
   const navigate = useNavigate();
 
   // Verifica se l'utente è già autenticato
@@ -20,6 +22,53 @@ function Login() {
       console.error('Errore nel controllo del token:', error);
     }
   }, [navigate]);
+
+  // Salva il JWT e entra nell'app: stesso percorso per login con password e social login.
+  const finishLogin = useCallback((token) => {
+    try {
+      localStorage.setItem('token', token);
+      if (localStorage.getItem('token') !== token) {
+        // Se il token non è stato salvato correttamente nel localStorage
+        console.warn('Token non salvato in localStorage, provo a procedere comunque...');
+      }
+    } catch (storageError) {
+      console.error('Errore nel salvataggio del token:', storageError);
+      // Anche se c'è un errore nel salvare il token, proviamo a procedere
+    }
+    navigate('/');
+  }, [navigate]);
+
+  // Il token Google viene verificato dal backend (`/api/auth/social-login`), che restituisce
+  // il JWT di sessione già usato dal login con password.
+  const handleGoogleCredential = useCallback(async (idToken) => {
+    setError('');
+    setSocialLoading(true);
+    try {
+      const response = await axios.post(`${BASE_URL}/api/auth/social-login`, {
+        provider: 'google',
+        idToken
+      });
+
+      if (response.data?.token) {
+        finishLogin(response.data.token);
+      } else {
+        setError('Token non ricevuto dal server');
+      }
+    } catch (googleError) {
+      console.error('Errore login Google:', googleError.response?.data || googleError.message);
+      if (googleError.response) {
+        setError(googleError.response.data.message || 'Accesso con Google non riuscito');
+      } else if (googleError.request) {
+        setError('Errore di connessione al server');
+      } else {
+        setError('Accesso con Google non riuscito');
+      }
+    } finally {
+      setSocialLoading(false);
+    }
+  }, [finishLogin]);
+
+  const handleSocialError = useCallback((message) => setError(message), []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,23 +92,7 @@ function Login() {
       });
       
       if (response.data.token) {
-        try {
-          localStorage.setItem('token', response.data.token);
-          
-          // Verifica che il token sia stato effettivamente salvato
-          const savedToken = localStorage.getItem('token');
-          if (savedToken === response.data.token) {
-            navigate('/');
-          } else {
-            // Se il token non è stato salvato correttamente nel localStorage
-            console.warn('Token non salvato in localStorage, provo a procedere comunque...');
-            navigate('/');
-          }
-        } catch (storageError) {
-          console.error('Errore nel salvataggio del token:', storageError);
-          // Anche se c'è un errore nel salvare il token, proviamo a procedere
-          navigate('/');
-        }
+        finishLogin(response.data.token);
       } else {
         setError('Token non ricevuto dal server');
       }
@@ -150,11 +183,33 @@ function Login() {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={socialLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Accedi
             </button>
           </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">oppure</span>
+            </div>
+          </div>
+
+          <GoogleSignInButton
+            onCredential={handleGoogleCredential}
+            onError={handleSocialError}
+            disabled={socialLoading}
+          />
+
+          {socialLoading && (
+            <p className="text-sm text-center text-gray-500 dark:text-gray-400" role="status" aria-live="polite">
+              Accesso in corso…
+            </p>
+          )}
 
           <div className="text-sm text-center space-y-2">
             <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500 block">

@@ -41,6 +41,7 @@
 - `LoadingSpinner.js` — Reusable loading indicator
 - `MonthlySummaryChart.js` — Monthly summary chart
 - `NotificationBar.js` — In-app notifications
+- `GoogleSignInButton.js` — pulsante ufficiale "Accedi con Google" (Google Identity Services); renderizzato solo se `REACT_APP_GOOGLE_CLIENT_ID` è impostata
 - `OTPVerification.js` — OTP input
 - `ResponsiveTable.js` — Mobile-friendly table
 
@@ -54,6 +55,7 @@
 
 ## Key Files
 - `ThemeContext.js` — dark/light mode; persists to localStorage; `useTheme()` → `{ darkMode, toggleDarkMode }`
+- `utils/googleSignIn.js` — loader di Google Identity Services + lettura di `REACT_APP_GOOGLE_CLIENT_ID`
 - `ProtectedRoute.js` — route guard using `useAuth`
 - `navbar.js` — navigation bar (**lowercase filename** — import accordingly)
 - `config.js` — Axios base URL + interceptors (auto-inject JWT, redirect on 401/403)
@@ -68,6 +70,12 @@ const BASE_URL = process.env.REACT_APP_API_URL ||
 Import: `import BASE_URL from '../config';`
 The web app is served by the Render static site `budget_app` (`https://budget-app-cd5o.onrender.com`): set `REACT_APP_API_URL=https://budget-app-ios-backend.onrender.com` in that service's environment, or rely on the code default. Both require a rebuild, because React inlines the value at build time.
 Emergency admin UI in `BudgetSettings.js` is hidden unless `REACT_APP_ENABLE_ADMIN_ROUTES=true`.
+
+## Social login web (`/src/Login.js`)
+- Pulsante Google nel login web, sotto il divisore "oppure" (stessa posizione della app iOS).
+- `REACT_APP_GOOGLE_CLIENT_ID` **deve** essere un OAuth client di tipo *Web application* del progetto Google Cloud del progetto iOS: il client iOS non funziona nel browser. L'origine del sito va autorizzata in console (Origini JavaScript autorizzate). Come `REACT_APP_API_URL`, è inlinata al build: cambiarla richiede un rebuild del sito statico.
+- Flusso: GIS restituisce l'`id_token` → `POST /api/auth/social-login` (`provider: 'google'`) → il backend risponde `{ token, username }` → il token va in `localStorage` come nel login con password.
+- Sign in with Apple web non implementato (serve Services ID + verifica dominio + chiave .p8 in Apple Developer).
 
 ## Conventions
 - **Pages**: PascalCase `.js` directly in `/src/` (flat, no subdirectory)
