@@ -35,8 +35,8 @@ function PatrimonioRiepilogo({ dati, onApri }) {
 
   const sezioni = [
     { chiave: 'denaro', titolo: 'Denaro', vuoto: 'Nessun conto di denaro.' },
-    { chiave: 'beni', titolo: 'Beni', vuoto: 'Immobili, veicoli e beni di valore arrivano con la prossima fetta.' },
-    { chiave: 'debiti', titolo: 'Debiti', vuoto: 'Mutui, finanziamenti e carte arrivano con la prossima fetta.' }
+    { chiave: 'beni', titolo: 'Beni', vuoto: 'Nessun bene: immobili, veicoli e beni di valore si registrano dalla pagina Patrimonio.' },
+    { chiave: 'debiti', titolo: 'Debiti', vuoto: 'Nessun debito: mutui, finanziamenti e carte si registrano dalla pagina Patrimonio.' }
   ];
 
   return (
