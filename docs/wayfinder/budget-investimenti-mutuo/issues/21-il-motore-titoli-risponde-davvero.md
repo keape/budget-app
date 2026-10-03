@@ -5,24 +5,34 @@ Status: open
 
 ## Question
 
-Che cosa fare: **misurare**, una volta, se il motore titoli funziona — in locale e dal backend di produzione — e fissare i numeri che tutto il resto del lavoro dà per scontati.
+Che cosa fare: rispondere a **una** domanda — dall'IP di uscita di Render, il prezzo dei titoli è **aggiornato o fermo**? — e fissare i numeri che tutto il resto del lavoro dà per scontati.
 
-Perché è un biglietto a sé: la ricerca del biglietto «Lo storico dei prezzi dei titoli» ha scoperto che `https://query1.finance.yahoo.com/v8/finance/chart/...` ha risposto **HTTP 406 Not Acceptable** a tutte e quattro le chiamate di prova, senza corpo. Il codice usa `User-Agent: 'Mozilla/5.0 (compatible)'` (`server/routes/instruments.js:6`) e non controlla `response.ok`: se il 406 arriva anche dal server, il motore titoli **è già rotto in produzione** e nessuno se ne accorge, perché il fallimento degrada in silenzio sul prezzo vecchio conservato.
+**La premessa di questo biglietto è stata corretta il 2026-10-03, e la vecchia era sbagliata.** Era nato perché la ricerca di «Lo storico dei prezzi dei titoli» aveva visto `HTTP 406 Not Acceptable` a tutte le chiamate di prova, e ne aveva dedotto che il motore potesse essere rotto in produzione, in silenzio. Le misure in locale con lo **stesso** `User-Agent` del motore (`Mozilla/5.0 (compatible)`, `server/routes/instruments.js:6`) hanno risposto **200**: quel 406 veniva dall'ambiente dell'investigatore, non dal motore. La misura 2 però ha dato il contrario di quello che ci si aspettava — con uno User-Agent di browser vero la risposta è **429** — quindi cambiare User-Agent non è la cura. Le sette misure stanno nei commenti qui sotto.
 
-Le sette misure, in quest'ordine perché ognuna può cambiare le successive:
+Resta **la misura che conta**, e si fa senza rotte di debug e senza toccare i guardrail del repo:
 
-1. una chiamata con lo User-Agent attuale **dal server di produzione** e una in locale: che codice di stato torna?
-2. la stessa con uno User-Agent di browser vero e `Accept: application/json,text/plain,*/*`: cambia qualcosa?
-3. `range=2y&interval=1mo` e `range=5y&interval=1mo`: quanti punti tornano?
-4. la data del primo timestamp mensile: inizio o fine mese?
-5. `meta.currency` su `VWCE.DE` (atteso `EUR`) e su un ticker della Borsa di Londra (atteso `GBp`, cioè pence): è il caso che rompe la somma dei conti;
-6. il verso di `EURUSD=X` (USD per EUR?), letto una volta sul valore della serie;
-7. presenza di `adjclose` con `interval=1mo` e di `events.splits`.
+- **dai dati**, che è la via più pulita e non chiede permessi: in produzione, quanti `Instrument` hanno `lastPrice` vuoto, e quali hanno `priceUpdatedAt` fermo da giorni. È il primo numero da guardare;
+- **dalla rotta che l'app già usa**: `GET /api/instruments/:ticker/price` non è una rotta di manutenzione, è quella che chiama il frontend. Chiamarla sull'indirizzo di produzione con il token dell'app, due volte a più di 15 minuti di distanza (la cache è `PRICE_CACHE_TTL_MS`), e guardare se `priceUpdatedAt` sul documento si muove;
+- **solo se quelle due non bastano**: la shell di Render, oppure — ultima spiaggia — una finestra di manutenzione breve e dichiarata con `ENABLE_ADMIN_ROUTES=true`, da spegnere subito dopo (`AGENTS.md`).
 
-Il comando pronto per le misure 2–7 è nel §0 della nota di ricerca (artefatto `.pi/fusion/01a0fe31-c4b0-71a0-87fa-34231641949e-67332/research-496450dd5175e311ff380ff2c7e6f1be`).
-
-Esito atteso: i sette numeri scritti qui, e la risposta alla domanda che conta: **il prezzo dei titoli, in produzione, è aggiornato o fermo?** Se è fermo, il biglietto «Scaricare e conservare lo storico dei prezzi» parte da lì (User-Agent, `response.ok`, timeout) e non dallo storico.
+Esito atteso: la risposta, con i due numeri che la sostengono (`priceUpdatedAt` fermo da quanti giorni; quanti strumenti senza prezzo). **Se è fermo**, il biglietto «Scaricare e conservare lo storico dei prezzi» parte dalla robustezza (User-Agent, controllo di `response.ok`, timeout) e non dallo storico. **Se è aggiornato**, quel biglietto parte dallo storico — e la robustezza va scritta comunque, perché la `response.ok` che oggi non si controlla è un guasto che aspetta di accadere.
 
 ## Answer
 
 <!-- da scrivere alla chiusura -->
+
+## Comments
+
+**Le sette misure, fatte in locale il 2026-10-03** con `curl` da questa macchina e lo `User-Agent` del motore (`Mozilla/5.0 (compatible)`, `server/routes/instruments.js:6`).
+
+1. **200, non 406.** Chart `range=1d&interval=1d`, chart `range=3mo&interval=1mo` e la ricerca (`/v1/finance/search?q=VWCE`) rispondono tutte **200**. Il 406 non si riproduce.
+2. Con uno User-Agent di browser vero (Chrome) e `Accept: application/json,text/plain,*/*`: **429**. Il senso della misura si è rovesciato: l'UA «da bot» è quello che funziona, quello da browser è quello che viene limitato.
+3. `range=2y&interval=1mo` → **25 punti** (l'asse comincia a novembre 2024, non a ottobre); `range=max&interval=1mo` → **376 punti** (VWCE.DE parte a luglio 2019).
+4. Il timestamp mensile è la **mezzanotte locale della borsa del primo giorno del mese**, e il valore è la chiusura di quel mese: la riga `2026-07-31 22:00 UTC` — che a Berlino è l'1 agosto 00:00 — vale **166,66**, cioè la chiusura del **31 agosto**. Verificato su tre piazze: Tokyo (`7203.T`: 1 agosto 00:00 JST = 31 luglio 15:00 UTC, dove `Europe/Rome` darebbe **luglio** invece di agosto), New York (`AAPL`: 1 agosto 00:00 EDT = 04:00 UTC, dove Roma per caso non sbaglia) e Berlino. Il primo bucket di una serie è l'eccezione: AAPL comincia il **1° dicembre 1984**, VWCE il **29 luglio 2019**, cioè il giorno di quotazione.
+5. Valute: `VWCE.DE` → `EUR`, `ISF.L` → **`GBp`** (pence: la trappola c'è), ma `VUSA.L` → **`GBP`**. Non basta sospettare la piazza di Londra: `meta.currency` va letto a ogni chiamata.
+6. `EURUSD=X` → `currency: USD`, valore **1,1254** = dollari per euro: per convertire in euro si **divide**.
+7. `adjclose` **c'è** con `interval=1mo`. La chiave `events` invece **non compare affatto** quando il ticker non ha frazionamenti: le chiavi della risposta sono solo `indicators`, `meta`, `timestamp`.
+
+**Una trappola di forma che le misure hanno aggiunto**: `range=3mo&interval=1mo` non torna tre righe per tre mesi di finestra, ne torna **quattro** — i due mesi chiusi (agosto e settembre), il bucket del mese nuovo **vuoto** (`close: null`, ottobre) e la riga di **oggi** col prezzo corrente. Vanno scartate in coppia, come i buchi interni, o il mese in corso entra nello storico con un valore che non è una chiusura. Riportata nel biglietto «Scaricare e conservare lo storico dei prezzi», che è dove serve.
+
+**Il comando**: §0 di [`../assets/02-storico-prezzi-titoli.md`](../assets/02-storico-prezzi-titoli.md), la relazione di ricerca ora dentro la mappa.
