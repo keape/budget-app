@@ -107,12 +107,43 @@ _Avoid_: breakdown, composizione, torta
 
 **Rata**:
 Il pagamento periodico di un Debito. Si divide in due quote e genera due Movimenti: la quota interessi è una Spesa sul conto che paga, la quota capitale è un Trasferimento dal conto al Debito.
+_Avoid_: mensilità, installamento
+
+**Durata**:
+Per quanto è stato acceso un Debito con piano di ammortamento, in anni (10, 15, 20, 25, 30, o comunque la si scriva). È il dato che l'utente conosce sempre, anche quando non conosce né il tasso né la data dell'ultima rata.
+
+**Rate pagate**:
+Quante rate sono già state pagate quando il Debito viene registrato. Chi sta pagando la 57ª rata ne ha pagate 56: si conta quella pagata, non quella in corso. Insieme alla Durata dice quante rate restano.
+
+**Estinzione anticipata**:
+Il versamento di capitale che abbassa il residuo fuori dalla Rata. È **parziale** quando resta un residuo (e la banca accorcia la durata o abbassa la rata), **totale** quando il residuo arriva a zero e il Debito si chiude. Non è una Spesa: il capitale non è un costo.
+_Avoid_: rimborso anticipato, prepayment, saldo anticipato
+
+**Tasso ricavato**:
+Il tasso che rende vera l'uguaglianza fra residuo, rata e rate restanti. Contiene tutto quello che la rata contiene oltre agli interessi — premio assicurativo compreso — e per questo riproduce la divisione che ha fatto la banca.
+_Avoid_: tasso effettivo, tasso implicito, TAEG
+
+**Tasso dell'atto**:
+Il tasso nominale annuo scritto nel contratto di mutuo. È il numero pulito: non sa niente di quello che la banca ha messo dentro la rata oltre agli interessi.
+_Avoid_: tasso contrattuale, tasso nominale
 
 **Quota capitale**:
 La parte della Rata che abbassa il residuo del Debito. Non è un costo: è denaro che si sposta dal conto al debito.
 
 **Quota interessi**:
-La parte della Rata che è un costo e non abbassa il residuo.
+La parte della Rata che è un costo e non abbassa il residuo. È un dato della banca, non un calcolo: si legge dal piano di ammortamento o dall'estratto conto, e se dentro c'è anche un premio assicurativo resta lì. La differenza fra la Rata e la Quota interessi è la Quota capitale.
+
+**Debito collegato**:
+Il Debito che grava su una specifica Attività: il mutuo sulla casa che ha finanziato. Un Debito senza collegamento non grava su niente in particolare. Serve a leggere la Quota di proprietà e a non confondere due mutui con due case.
+_Avoid_: mutuo associato, debito garantito
+
+**Quota di possesso**:
+La parte di una Voce che appartiene alla persona, quando la Voce è di più persone: una casa cointestata, un mutuo cointestato. Patrimonio e budget mostrano la quota, non l'intero — il valore dichiarato della Voce resta quello vero (il valore di mercato della casa intera), e la percentuale è solo la lente con cui si legge. Dice di chi è una cosa, non da quando: non ha una data.
+_Avoid_: percentuale, split, contitolarità
+
+**Quota di proprietà**:
+La parte del valore di un'Attività che è davvero della persona: il valore della Voce meno i Debiti collegati. Non è una Componente e non è un valore dichiarato: si legge, e cresce da sé perché è il Debito a scendere. Il valore dell'Attività resta quello di mercato e non si muove con le rate.
+_Avoid_: equity, capitale proprio, quota mia
 
 ### Investimenti
 
@@ -124,3 +155,25 @@ L'insieme delle posizioni detenute, calcolato dalle Allocazioni e dalle vendite.
 
 **Allocazione**:
 Il risparmio di un mese assegnato a una Voce patrimoniale. Assegnarlo registra il Trasferimento dal conto di origine alla destinazione.
+
+### Budget
+
+**Categoria**:
+L'etichetta con cui si classificano le Spese e le Entrate: ristoranti, alimentari, casa, stipendio. Ha un nome, un tipo (uscite o entrate), una Classe — solo per le uscite — e, per le non mensili, un Previsto annuale. È una cosa dell'utente, una per nome: rinominarla o eliminarla è un'operazione sola, non una passata su tutti i mesi.
+_Avoid_: voce di budget, tipo di spesa, etichetta
+
+**Classe della categoria**:
+Come una categoria di uscita si comporta nel tempo: **fissa**, **flessibile** o **non mensile**. È una lettura, non una regola che scrive: una categoria fissa non registra movimenti da sé.
+
+**Categoria fissa**:
+Una categoria di uscita che si ripete uguale ogni mese: affitto, abbonamenti, telefono, palestra, assicurazioni, la rata di un debito. Il previsto è lo stesso ogni mese.
+
+**Categoria flessibile**:
+Una categoria di uscita che cade ogni mese ma con importo diverso: ristoranti, alimentari, shopping, vestiario, arredamento, spese varie. Anche qui il previsto è mensile, e il mese si legge come scostamento da quello.
+
+**Categoria non mensile**:
+Una categoria di uscita che non torna ogni mese: regali, vacanze, un intervento in casa, un computer, dal dentista, spese finanziarie. Il previsto è annuale e il confronto si fa sull'anno; il mese mostra solo quanto è uscito.
+
+**Previsto annuale**:
+Il numero che una categoria non mensile dichiara per l'anno (per esempio 3.000 € per regali e vacanze). Si confronta con quanto è uscito da gennaio a oggi, e il mese non lo divide in dodicesimi.
+_Avoid_: budget annuale (è il previsto di una categoria sola, non il totale dell'anno)
