@@ -22,7 +22,7 @@ Esito atteso: una tabella riuso / incapsulare / buttare, con i file e le righe, 
 
 ## Answer
 
-Relazione completa (41 KB): artefatto `.pi/fusion/01a0fe31-c4b0-71a0-87fa-34231641949e-67332/investigate-6480c0dada1af5eb530f0131b296df7b`. Qui il nocciolo.
+Relazione completa (41 KB): [`../assets/03-riusabile-modulo-risparmio.md`](../assets/03-riusabile-modulo-risparmio.md). Qui il nocciolo.
 
 **«Sospeso» è solo nella documentazione.** `docs/CLAUDE_FRONTEND.md:18` lo dice di `src/Savings.js`, ma la pagina è montata (`src/App.js:106-113`), ha la voce di menu (`src/navbar.js:85-93`), la carta in Home (`src/Home.js:265-277`) e — soprattutto — **l'app iOS la consuma per intero** (`budget365iOS/src/screens/SavingsScreen.tsx:563-683`, `:887-1069`). L'ADR-0008 impegna a non cambiare il formato delle risposte esistenti: «buttare» significa quindi **smettere di scrivere**, non cancellare. È un vincolo da tenere nelle Note della mappa.
 

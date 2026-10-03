@@ -27,7 +27,7 @@ Esito atteso: la chiamata esatta con la forma del dato, i limiti, e la raccomand
 
 ## Answer
 
-Nota completa dell'investigatore (30 KB): artefatto `.pi/fusion/01a0fe31-c4b0-71a0-87fa-34231641949e-67332/research-496450dd5175e311ff380ff2c7e6f1be`. Qui l'essenziale operativo.
+Nota completa dell'investigatore (30 KB): [`../assets/02-storico-prezzi-titoli.md`](../assets/02-storico-prezzi-titoli.md). Qui l'essenziale operativo.
 
 **Il primo fatto non è una buona notizia.** Le quattro chiamate di prova a `query1.finance.yahoo.com/v8/finance/chart/...` hanno risposto **HTTP 406 Not Acceptable**, tutte e quattro, in modo riproducibile, con corpo vuoto. Un client non-browser viene respinto prima di arrivare al codice. `server/routes/instruments.js:6` usa `User-Agent: 'Mozilla/5.0 (compatible)'` — esattamente il tipo di stringa che gli edge classificano come bot — e `GET /:ticker/price` (`:135-136`) va dritto a `response.json()` senza controllare `response.ok`. È quindi plausibile che il **motore titoli sia già rotto in produzione**, in silenzio, perché il fallimento degrada sul prezzo vecchio conservato. Va misurato: biglietto «Il motore titoli risponde davvero?». Finché non è misurato, la forma esatta del JSON resta «contratto noto, non verificato dal vivo».
 
